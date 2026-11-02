@@ -1,0 +1,16 @@
+{
+  "name": "hq",
+  "version": "2.0.0",
+  "private": true,
+  "description": "HQ: live city dashboard for Claude Code. Runs on your PC, uses no tokens.",
+  "main": "app.js",
+  "scripts": {
+    "app": "electron .",
+    "start": "node server.js",
+    "install-hooks": "node install-hooks.js",
+    "remove-hooks": "node install-hooks.js --remove"
+  },
+  "devDependencies": {
+    "electron": "33.2.1"
+  }
+}

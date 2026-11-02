@@ -1,0 +1,21 @@
+{
+  "windows": {
+    "gym-app-a": "Window A",
+    "gym-app-b": "Window B",
+    "gym app": "Main folder"
+  },
+  "projects": [
+    { "name": "FormPal", "match": ["gym app", "gym-app"], "launchFile": "C:\\Users\\arize\\gym app\\LAUNCH.md" },
+    { "name": "Unlock", "match": ["unlock"], "launchFile": "C:\\Users\\arize\\unlock\\LAUNCH.md" },
+    { "name": "ATHLT", "match": ["athlt"], "launchFile": "C:\\Users\\arize\\ATHLT\\LAUNCH.md" }
+  ],
+  "logsFile": "C:\\Users\\arize\\gym app\\logs\\latest.log",
+  "attachLogs": true,
+  "githubRepo": "westari/FormPal",
+  "git": {
+    "mainRepo": "C:\\Users\\arize\\gym app",
+    "mainBranch": "overnight-build",
+    "branches": { "Window A": "work-a", "Window B": "work-b" }
+  },
+  "allowPhone": false
+}

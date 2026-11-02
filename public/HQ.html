@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/hq-live.js"></script>
+<script>window.__resources={"room3d":"/v/63bdb833-d99e-4a49-9150-831dc45db99d.js","threeLib":"/v/bb3491cc-a906-4888-b935-abb881099671.js","logo_youtube_ffffff":"/v/1ad2c7a3-4456-4191-959c-aeebdcd874a1.svg","logo_x_1d2128":"/v/f7ea08c3-f4b2-4153-a03d-b1f8c3bbbe33.svg","logo_instagram_1d2128":"/v/37860c3a-2a0b-4655-a26c-6de9446e2e20.svg","logo_tiktok_ffffff":"/v/7c8448e6-39a6-4048-bd0c-89890998703e.svg","logo_x_ffffff":"/v/da3341e8-831a-4053-bec8-cfe1730cf212.svg","logo_instagram_ffffff":"/v/c578fe96-84ba-43db-9fd6-59759a0cdfca.svg","logo_youtube_1d2128":"/v/50dae5e1-d86a-4c90-8f84-0dd9e3bb33ce.svg","logo_tiktok_1d2128":"/v/c687492d-07ce-46f8-b0b4-f4104ae8ac38.svg","https://unpkg.com/react@18.3.1/umd/react.production.min.js":"/v/abb9ec21-d8b0-45f8-a1ba-b7d930e0eee8.js","https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js":"/v/bd648ed1-42a2-4544-90a8-1c20e9a91db7.js"};</script>
+<script src="/v/de588285-30d6-47fe-ad1d-7f6eb6e3f169.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/v/ecedb829-eee6-4bca-a057-dab27890f550.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/v/76498701-9ef3-46a7-b5ec-0c147e8ad80a.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/v/49ee171a-e81a-4ecc-bbab-804d434d1c56.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/v/02936163-0b9a-4459-8fc9-de7c15cbc1f6.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/v/1d2067b8-709a-4bb8-b1f2-7deb5c7addda.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/ecedb829-eee6-4bca-a057-dab27890f550.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/76498701-9ef3-46a7-b5ec-0c147e8ad80a.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/49ee171a-e81a-4ecc-bbab-804d434d1c56.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/02936163-0b9a-4459-8fc9-de7c15cbc1f6.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/1d2067b8-709a-4bb8-b1f2-7deb5c7addda.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/ecedb829-eee6-4bca-a057-dab27890f550.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/76498701-9ef3-46a7-b5ec-0c147e8ad80a.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/49ee171a-e81a-4ecc-bbab-804d434d1c56.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/02936163-0b9a-4459-8fc9-de7c15cbc1f6.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/1d2067b8-709a-4bb8-b1f2-7deb5c7addda.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/v/ecedb829-eee6-4bca-a057-dab27890f550.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/v/76498701-9ef3-46a7-b5ec-0c147e8ad80a.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/v/49ee171a-e81a-4ecc-bbab-804d434d1c56.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/v/02936163-0b9a-4459-8fc9-de7c15cbc1f6.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/v/1d2067b8-709a-4bb8-b1f2-7deb5c7addda.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/cfc8b686-e0b3-4317-80c0-f837e3582ce6.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/30de33eb-5070-4ea4-ae60-48c01123c998.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* symbols2 */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/93dc32a8-3be9-4dcb-a078-3f963d89693f.woff2") format('woff2');
+  unicode-range: U+2000-2001, U+2004-2008, U+200A, U+23B8-23BD, U+2500-259F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/c0f28609-3fac-4dda-bed0-80dbed14ba4b.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/9b83a283-c100-491c-a886-5c44ddbabf48.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/v/8a426b4a-c7bf-46f9-91a4-1299de8b224e.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/cfc8b686-e0b3-4317-80c0-f837e3582ce6.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/30de33eb-5070-4ea4-ae60-48c01123c998.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* symbols2 */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/93dc32a8-3be9-4dcb-a078-3f963d89693f.woff2") format('woff2');
+  unicode-range: U+2000-2001, U+2004-2008, U+200A, U+23B8-23BD, U+2500-259F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/c0f28609-3fac-4dda-bed0-80dbed14ba4b.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/9b83a283-c100-491c-a886-5c44ddbabf48.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/v/8a426b4a-c7bf-46f9-91a4-1299de8b224e.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>/* fallback */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 300 500;
+  font-display: block;
+  src: url("/v/7764b328-b73a-4a2a-b472-f10542c1a83f.woff2") format('woff2');
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+</style>
+<style>
+html,body{margin:0;background:#1d2630;overflow:hidden;height:100%;}
+a{color:#ffffff;text-decoration:none}a:hover{color:#ffe3c8}
+button,input{font-family:inherit}
+input::placeholder{color:rgba(255,255,255,0.6)}
+@keyframes hq-ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.6);opacity:0}}
+@keyframes hq-breathe{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes hq-drift{0%,100%{transform:translateX(0)}50%{transform:translateX(60px)}}
+@keyframes hq-twinkle{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes hq-pop{from{opacity:0;transform:translate(-50%,-50%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes hq-fade{from{opacity:0}to{opacity:1}}
+@keyframes hq-up{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes hq-tag{0%{opacity:0;transform:translateX(-6px)}12%,80%{opacity:1;transform:translateX(0)}100%{opacity:0}}
+@keyframes hq-wave{0%{background-position:0 0}100%{background-position:0 24px}}
+</style>
+</helmet>
+<div style="position:relative; width:100vw; height:100vh; min-height:820px; margin:0 auto; overflow:hidden; font-family:'Geist',-apple-system,'SF Pro Text',sans-serif; color:#ffffff; -webkit-font-smoothing:antialiased;">
+
+  <div style="position:absolute; inset:0; background:{{ th.sky }}; transition:background 2s;"></div>
+  <div style="position:absolute; inset:0; opacity:{{ th.stars }}; transition:opacity 2s; background:radial-gradient(1.5px 1.5px at 8% 12%, #fff, transparent), radial-gradient(1px 1px at 18% 30%, #fff, transparent), radial-gradient(1.5px 1.5px at 27% 8%, #fff, transparent), radial-gradient(1px 1px at 36% 22%, #dfe8ff, transparent), radial-gradient(1px 1px at 44% 6%, #fff, transparent), radial-gradient(1.5px 1.5px at 57% 18%, #fff, transparent), radial-gradient(1px 1px at 66% 9%, #fff, transparent), radial-gradient(1px 1px at 74% 28%, #dfe8ff, transparent), radial-gradient(1.5px 1.5px at 83% 14%, #fff, transparent), radial-gradient(1px 1px at 92% 24%, #fff, transparent), radial-gradient(1px 1px at 13% 40%, #fff, transparent), radial-gradient(1px 1px at 88% 38%, #fff, transparent); animation:hq-twinkle 5s ease-in-out infinite;"></div>
+  <div style="position:absolute; left:{{ th.sunX }}; top:{{ th.sunY }}; width:{{ th.sunSize }}; height:{{ th.sunSize }}; border-radius:50%; background:{{ th.sun }}; box-shadow:0 0 80px 30px {{ th.glow }}; transition:all 2s;"></div>
+  <div style="position:absolute; left:15%; right:15%; top:{{ th.glowY }}; height:380px; border-radius:50%; background:radial-gradient(ellipse at center, {{ th.glow }}, transparent 70%); transition:all 2s;"></div>
+
+  <div style="position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 45%, transparent 55%, rgba(12,18,22,0.4) 100%); pointer-events:none;"></div>
+
+  <div ref="{{ roomRef }}" style="position:absolute; inset:0; z-index:1;"></div>
+  <div style="position:absolute; left:0; right:0; top:0; height:200px; z-index:2; pointer-events:none; background:linear-gradient(180deg, rgba(14,20,30,0.42), rgba(14,20,30,0));"></div>
+  <div style="position:absolute; left:0; right:0; bottom:0; height:300px; z-index:2; pointer-events:none; background:linear-gradient(0deg, rgba(14,20,30,0.4), rgba(14,20,30,0));"></div>
+
+  <div style="position:absolute; left:0; right:0; top:42px; z-index:5; display:flex; justify-content:center; pointer-events:none; transform:{{ headT }}; opacity:{{ headO }}; transition:transform .9s cubic-bezier(.2,.8,.2,1), opacity .7s;">
+    <div style="font-size:50px; font-weight:500; letter-spacing:-0.035em; line-height:1; text-shadow:0 2px 30px rgba(20,30,40,0.25);">Headquarters</div>
+  </div>
+
+  <button sc-camel-on-click="{{ openSwitcher }}" style="position:absolute; left:28px; top:32px; z-index:6; display:flex; align-items:center; gap:9px; height:38px; padding:0 12px 0 16px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13px; font-weight:500; background:rgba(22,26,30,0.28); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(255,255,255,0.18), inset -1px 0 0 rgba(255,255,255,0.18), 0 8px 20px rgba(0,0,0,0.18);">
+    
+    <span>{{ projName }}</span>
+    <span style="color:rgba(255,255,255,0.7); font-variant-numeric:tabular-nums;">{{ projPct }}%</span>
+    <span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.75);">unfold_more</span>
+  </button>
+
+  <div style="position:absolute; right:28px; top:50px; z-index:6; display:flex; align-items:center; gap:8px; height:38px; padding:0 14px; border-radius:999px; font-size:13px; font-weight:500; background:rgba(22,26,30,0.28); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(255,255,255,0.18), inset -1px 0 0 rgba(255,255,255,0.18), 0 8px 20px rgba(0,0,0,0.18);">
+    <span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1; font-variation-settings:'FILL' 1;">{{ th.icon }}</span>
+    <span>{{ dateLabel }}</span>
+    <span style="color:rgba(255,255,255,0.7); font-variant-numeric:tabular-nums;">{{ clock }}</span>
+    <span style="width:1px; height:14px; background:rgba(255,255,255,0.35); margin:0 2px;"></span>
+    <span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1; font-variation-settings:'FILL' 1;">location_on</span>
+    <span>{{ locName }}</span>
+  </div>
+
+  <sc-if value="{{ mapOn }}" hint-placeholder-val="{{ true }}">
+    <div sc-camel-on-click="{{ mapClick }}" style="position:absolute; right:28px; top:100px; z-index:6; width:230px; height:230px; border-radius:30px; overflow:hidden; cursor:crosshair; background:rgba(22,26,30,0.26); -webkit-backdrop-filter:blur(16px) saturate(1.7); backdrop-filter:blur(4px) url(#lg) saturate(1.7) brightness(1.04); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 18px 44px rgba(0,0,0,0.24);">
+      <div style="position:absolute; inset:0; background:repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0 1px, transparent 1px 10.8px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0 1px, transparent 1px 10.8px);"></div>
+      <div style="position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, transparent 55%, rgba(14,20,30,0.35) 100%);"></div>
+      <div style="position:absolute; left:14px; top:12px; display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; color:rgba(255,255,255,0.85);"><span style="font-family:'Material Symbols Rounded'; font-size:14px; line-height:1;">map</span>Downtown</div>
+      <sc-for list="{{ mapTowers }}" as="tw" hint-placeholder-count="7">
+        <div sc-camel-on-click="{{ tw.go }}" title="{{ tw.name }}" style="position:absolute; left:{{ tw.l }}px; top:{{ tw.t }}px; transform:translate(-50%, -12px); display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; opacity:{{ tw.op }}; transition:opacity .4s;">
+          <div style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:{{ tw.col }}; box-shadow:0 0 12px {{ tw.col }}, inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 {{ tw.ring }}px #ffffff;"><span style="font-family:'Material Symbols Rounded'; font-size:14px; line-height:1; color:#ffffff;">{{ tw.icon }}</span><sc-if value="{{ tw.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute; margin:-22px -22px 0 0; min-width:15px; height:15px; padding:0 4px; box-sizing:border-box; border-radius:8px; background:#ff8a3d; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 0 8px #ff8a3d;">{{ tw.badge }}</span></sc-if></div>
+          <div style="font-size:10px; font-weight:500; white-space:nowrap; text-shadow:0 1px 4px rgba(0,0,0,0.55);">{{ tw.short }}</div>
+        </div>
+      </sc-for>
+      <div ref="{{ mapUfoRef }}" style="position:absolute; left:115px; top:115px; width:0; height:0; pointer-events:none;">
+        <svg width="24" height="24" sc-camel-view-box="0 0 24 24" style="position:absolute; left:-12px; top:-12px; overflow:visible; filter:drop-shadow(0 0 6px rgba(160,230,255,0.95)) drop-shadow(0 1px 2px rgba(0,0,0,0.45));"><path d="M12 1.5 L20.5 21.5 L12 16.8 L3.5 21.5 Z" fill="#ffffff" stroke="#1d2128" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+      </div>
+    </div>
+  </sc-if>
+  <div style="position:absolute; left:28px; top:50%; transform:translateY(-50%); z-index:8; display:flex; flex-direction:column; gap:8px; padding:7px; border-radius:999px; background:rgba(22,26,30,0.22); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(255,255,255,0.18), inset -1px 0 0 rgba(255,255,255,0.18), 0 10px 26px rgba(0,0,0,0.18);">
+    <sc-for list="{{ rail }}" as="r" hint-placeholder-count="5">
+      <button sc-camel-on-click="{{ r.go }}" title="{{ r.title }}" style="width:44px; height:44px; border-radius:50%; border:0; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#ffffff; opacity:{{ r.op }}; background:{{ r.bg }}; box-shadow:{{ r.shadow }}; transition:all .3s;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:21px; line-height:1; font-variation-settings:'FILL' {{ r.fill }};">{{ r.icon }}</span>
+      </button>
+    </sc-for>
+  </div>
+  <sc-if value="{{ tagOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:96px; top:{{ tagTop }}; z-index:8; display:flex; align-items:center; gap:7px; padding:7px 13px; border-radius:999px; font-size:13px; font-weight:500; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 8px 20px rgba(0,0,0,0.18); animation:hq-tag 1.8s ease both;">
+      <span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">{{ tagIcon }}</span>{{ tagText }}
+    </div>
+  </sc-if>
+
+  <div style="position:absolute; right:30px; top:50%; transform:translateY(-50%); z-index:8; display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px 8px; border-radius:999px; opacity:{{ dotsO }}; transition:opacity .5s; background:rgba(22,26,30,0.2); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.12);">
+    <sc-for list="{{ layerDots }}" as="d" hint-placeholder-count="3">
+      <button sc-camel-on-click="{{ d.go }}" title="{{ d.title }}" style="width:8px; height:{{ d.h }}px; padding:0; border:0; border-radius:4px; cursor:pointer; background:{{ d.bg }}; transition:all .4s;"></button>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute; left:50%; bottom:34px; z-index:5; display:flex; gap:14px; transform:{{ dockT }}; opacity:{{ dockO }}; pointer-events:{{ dockPE }}; transition:transform .9s cubic-bezier(.2,.8,.2,1), opacity .6s;">
+    <sc-if value="{{ noWindows }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative; width:300px; height:176px; box-sizing:border-box; border-radius:30px; padding:22px; display:flex; flex-direction:column; justify-content:center; gap:6px; background:rgba(22,26,30,0.26); -webkit-backdrop-filter:blur(18px) saturate(1.7); backdrop-filter:blur(6px) url(#lg) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+        <span style="font-family:'Material Symbols Rounded'; font-size:24px; line-height:1;">terminal</span>
+        <div style="font-size:17px; font-weight:500;">No windows running</div>
+        <div style="font-size:14px; color:rgba(255,255,255,0.78);">Start a chat in VS Code</div>
+      </div>
+    </sc-if>
+    <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2">
+      <div sc-camel-on-click="{{ c.open }}" style="position:relative; width:272px; height:176px; box-sizing:border-box; cursor:pointer; border-radius:30px; padding:18px 20px; display:flex; flex-direction:column; justify-content:space-between; background:rgba(22,26,30,0.26); -webkit-backdrop-filter:blur(18px) saturate(1.7); backdrop-filter:blur(6px) url(#lg) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28); transition:transform .35s cubic-bezier(.2,.8,.2,1);" style-hover="transform:translateY(-5px);" style-before="content:''; position:absolute; inset:0; border-radius:30px; pointer-events:none; background:linear-gradient(140deg, rgba(255,255,255,0.2), rgba(255,255,255,0) 34%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.07));">
+        <div style="position:absolute; inset:0; border-radius:30px; pointer-events:none; box-shadow:inset 0 0 0 1.5px {{ c.ring }};"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="width:18px; height:18px; border-radius:50%; background:{{ c.avatar }}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px rgba(255,255,255,0.3);"></span>{{ c.name }}</div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:rgba(255,255,255,0.88);">
+            <span style="position:relative; width:7px; height:7px; border-radius:50%; background:{{ c.color }};"><span style="position:absolute; inset:0; border-radius:50%; background:{{ c.color }}; animation:{{ c.ping }};"></span></span>{{ c.label }}
+          </div>
+        </div>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+          <div style="font-size:42px; font-weight:400; letter-spacing:-0.04em; line-height:1; font-variant-numeric:tabular-nums;">{{ c.pct }}<span style="font-size:18px; color:rgba(255,255,255,0.7); margin-left:2px;">%</span></div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.8); white-space:nowrap;">{{ c.time }}</div>
+        </div>
+        <sc-if value="{{ c.hasBtns }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:8px;">
+            <button sc-camel-on-click="{{ c.primary }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:36px; border:0; cursor:pointer; border-radius:12px; background:#ffffff; color:#1d2128; font-size:13.5px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ c.pIcon }}</span>{{ c.pLabel }}</button>
+            <button sc-camel-on-click="{{ c.open }}" style="flex:1; height:36px; border:0; cursor:pointer; border-radius:12px; background:rgba(255,255,255,0.16); color:#ffffff; font-size:13.5px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);">View</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ c.noBtns }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; flex-direction:column; gap:9px;">
+            <div style="font-size:13px; color:rgba(255,255,255,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.action }}</div>
+            <div style="display:flex; gap:4px; height:5px;">
+              <sc-for list="{{ c.steps }}" as="x" hint-placeholder-count="6">
+                <div style="flex:1; border-radius:3px; background:{{ x.fc }}; animation:{{ x.anim }};"></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+    <div sc-camel-on-click="{{ openDetails }}" style="position:relative; width:272px; height:176px; box-sizing:border-box; cursor:pointer; border-radius:30px; padding:18px 20px; display:flex; flex-direction:column; justify-content:space-between; background:rgba(22,26,30,0.26); -webkit-backdrop-filter:blur(18px) saturate(1.7); backdrop-filter:blur(6px) url(#lg) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28); transition:transform .35s cubic-bezier(.2,.8,.2,1);" style-hover="transform:translateY(-5px);" style-before="content:''; position:absolute; inset:0; border-radius:30px; pointer-events:none; background:linear-gradient(140deg, rgba(255,255,255,0.2), rgba(255,255,255,0) 34%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.07));">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.85);">rocket_launch</span>Launch</div>
+        <div style="font-size:13px; color:rgba(255,255,255,0.8);">{{ pr.target }}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:18px;">
+        <div style="position:relative; width:84px; height:84px; flex:none;">
+          <svg width="84" height="84" sc-camel-view-box="0 0 120 120" style="transform:rotate(-90deg);">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="10"></circle>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="{{ pr.off }}" style="transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1);"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:400; letter-spacing:-0.03em; font-variant-numeric:tabular-nums;">{{ pr.pct }}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+          <div style="display:flex; align-items:center; gap:7px;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1; color:oklch(0.86 0.12 60);">block</span>{{ pr.blocking }} blocking</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; left:110px; right:110px; bottom:28px; height:540px; z-index:6; box-sizing:border-box; border-radius:36px; padding:26px 28px; display:flex; flex-direction:column; gap:20px; transform:{{ sheetT }}; opacity:{{ sheetO }}; pointer-events:{{ sheetPE }}; transition:transform 1s cubic-bezier(.2,.8,.2,1), opacity .6s; background:rgba(22,26,30,0.34); -webkit-backdrop-filter:blur(24px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.02); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 30px 80px rgba(0,0,0,0.3);" style-before="content:''; position:absolute; inset:0; border-radius:36px; pointer-events:none; background:linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 30%);">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <div style="position:relative; width:56px; height:56px; flex:none;">
+        <svg width="56" height="56" sc-camel-view-box="0 0 120 120" style="transform:rotate(-90deg);">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="11"></circle>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="{{ pr.off }}" style="transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1);"></circle>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:16px; font-variant-numeric:tabular-nums;">{{ pr.pct }}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:3px; flex:1;">
+        <div style="font-size:26px; font-weight:500; letter-spacing:-0.025em;">{{ projName }}</div>
+        <div style="display:flex; gap:16px; font-size:13.5px; color:rgba(255,255,255,0.78);">
+          <span style="display:flex; align-items:center; gap:5px;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">task_alt</span>{{ pr.counts }} done</span>
+          <span style="display:flex; align-items:center; gap:5px;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">event</span>Target {{ pr.target }}</span>
+          <span style="display:flex; align-items:center; gap:5px;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">bolt</span>{{ pr.jobsToday }} jobs today</span>
+        </div>
+      </div>
+      <button sc-camel-on-click="{{ backToRoom }}" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 15px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13.5px; font-weight:500; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">keyboard_arrow_up</span>Room</button>
+    </div>
+    <div style="flex:1; min-height:0; display:grid; grid-template-columns:1.15fr 1fr 0.9fr; gap:16px;">
+
+      <div style="position:relative; min-height:0; border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:14px; background:{{ nx.bg }}; box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.45), inset 0 0 0 1px rgba(255,255,255,0.1);">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:rgba(255,255,255,0.85);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">bolt</span>Do this now</div>
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <div style="font-size:25px; font-weight:500; letter-spacing:-0.025em; line-height:1.15;">{{ nx.title }}</div>
+          <div style="font-size:14px; color:rgba(255,255,255,0.78); line-height:1.4;">{{ nx.sub }}</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button sc-camel-on-click="{{ nx.go }}" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 16px; border:0; border-radius:13px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:14px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">{{ nx.icon }}</span>{{ nx.cta }}</button>
+          <sc-if value="{{ nx.hasWin }}" hint-placeholder-val="{{ true }}">
+            <button sc-camel-on-click="{{ nx.shot }}" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 14px; border:0; border-radius:13px; cursor:pointer; background:rgba(255,255,255,0.14); color:#ffffff; font-size:14px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">screenshot_region</span>Ask for screenshot</button>
+          </sc-if>
+        </div>
+        <div style="flex:1;"></div>
+        <sc-if value="{{ nx.hasWin }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; gap:8px; height:46px; padding:0 6px 0 16px; border-radius:16px; background:rgba(255,255,255,0.1); box-shadow:inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 1px rgba(255,255,255,0.12);">
+            <span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.7);">chat_bubble</span>
+            <input ref="{{ nxInput }}" sc-camel-on-key-down="{{ nx.key }}" placeholder="{{ nx.placeholder }}" style="flex:1; min-width:0; height:100%; border:0; outline:none; background:transparent; color:#ffffff; font-size:14px;">
+            <button sc-camel-on-click="{{ nx.send }}" style="width:34px; height:34px; border:0; border-radius:11px; cursor:pointer; background:#ffffff; color:#1d2128; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">arrow_upward</span></button>
+          </div>
+        </sc-if>
+        <div style="display:flex; gap:8px;">
+          <sc-for list="{{ nx.then }}" as="t" hint-placeholder-count="2">
+            <div style="flex:1; min-width:0; display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,0.07);">
+              <span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1; color:rgba(255,255,255,0.6);">schedule</span>
+              <span style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ t.t }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1; color:#a9d0ff;">phone_iphone</span>Test on your phone</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.7);">{{ testsN }} waiting</div>
+        </div>
+        <sc-if value="{{ noTests }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:rgba(255,255,255,0.7); font-size:14px;"><span style="font-family:'Material Symbols Rounded'; font-size:28px; line-height:1;">check_circle</span>Nothing to test</div>
+        </sc-if>
+        <div style="display:flex; flex-direction:column; gap:10px; overflow:auto; scrollbar-width:none; min-height:0;">
+          <sc-for list="{{ tests }}" as="tc" hint-placeholder-count="2">
+            <div style="display:flex; flex-direction:column; gap:12px; padding:16px; border-radius:20px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                <div style="font-size:16px; font-weight:500;">{{ tc.title }}</div>
+                <div style="font-size:12.5px; color:rgba(255,255,255,0.65); white-space:nowrap;">{{ tc.from }}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:7px;">
+                <sc-for list="{{ tc.checks }}" as="ck" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:9px; font-size:13.5px; color:rgba(255,255,255,0.88);"><span style="width:18px; height:18px; border-radius:50%; background:rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500;">{{ ck.n }}</span>{{ ck.t }}</div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ tc.fbOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:center; gap:8px; height:42px; padding:0 5px 0 14px; border-radius:14px; background:rgba(255,255,255,0.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18);">
+                  <input ref="{{ fbInput }}" sc-camel-on-key-down="{{ tc.fbKey }}" placeholder="What's wrong?" style="flex:1; min-width:0; height:100%; border:0; outline:none; background:transparent; color:#ffffff; font-size:13.5px;">
+                  <button sc-camel-on-click="{{ tc.fbSend }}" style="width:32px; height:32px; border:0; border-radius:10px; cursor:pointer; background:#ffffff; color:#1d2128; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">arrow_upward</span></button>
+                </div>
+              </sc-if>
+              <div style="display:flex; gap:8px;">
+                <button sc-camel-on-click="{{ tc.works }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:38px; border:0; border-radius:12px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:13.5px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">thumb_up</span>Works</button>
+                <button sc-camel-on-click="{{ tc.fb }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:38px; border:0; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.14); color:#ffffff; font-size:13.5px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">rate_review</span>Feedback</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(255,255,255,0.1);">
+            <button sc-camel-on-click="{{ lt.showBlock }}" style="display:flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13px; font-weight:500; background:{{ lt.bBg }}; box-shadow:{{ lt.bSh }};"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1; color:oklch(0.86 0.12 60);">block</span>Blocking</button>
+            <button sc-camel-on-click="{{ lt.showList }}" style="display:flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13px; font-weight:500; background:{{ lt.lBg }}; box-shadow:{{ lt.lSh }};"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">storefront</span>Listing</button>
+          </div>
+          <div style="font-size:26px; font-weight:300; letter-spacing:-0.03em; color:{{ lt.numC }};">{{ lt.num }}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; overflow:auto; scrollbar-width:none; min-height:0;">
+          <sc-if value="{{ lt.isBlock }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ pr.block }}" as="it" hint-placeholder-count="3">
+            <div sc-camel-on-click="{{ it.toggle }}" style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:16px; cursor:pointer; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); transition:background .25s;" style-hover="background:rgba(255,255,255,0.14);">
+              <div style="width:20px; height:20px; flex:none; box-sizing:border-box; border-radius:50%; border:1.5px solid rgba(255,255,255,0.6);"></div>
+              <span style="flex:1; min-width:0; font-size:14px;">{{ it.t }}</span>
+              <sc-if value="{{ it.hasChip }}" hint-placeholder-val="{{ false }}">
+                <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:rgba(255,255,255,0.85);"><span style="width:7px; height:7px; border-radius:50%; background:{{ it.chipC }}; animation:hq-breathe 1.6s ease-in-out infinite;"></span>{{ it.chip }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ lt.isList }}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{ ls.items }}" as="li" hint-placeholder-count="10">
+              <div sc-camel-on-click="{{ li.go }}" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:16px; cursor:pointer; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2); transition:background .25s;" style-hover="background:rgba(255,255,255,0.14);">
+                <span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.85);">{{ li.icon }}</span>
+                <span style="flex:1; min-width:0; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ li.label }}</span>
+                <span style="font-size:12px; color:{{ li.sc }};">{{ li.status }}</span>
+                <span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:{{ li.ic }}; font-variation-settings:'FILL' 1;">{{ li.mark }}</span>
+              </div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div style="position:absolute; left:110px; right:110px; bottom:28px; height:540px; z-index:6; box-sizing:border-box; border-radius:36px; padding:26px 28px; display:flex; flex-direction:column; gap:20px; transform:{{ s3.t }}; opacity:{{ s3.o }}; pointer-events:{{ s3.pe }}; transition:transform 1s cubic-bezier(.2,.8,.2,1), opacity .6s; background:rgba(22,26,30,0.34); -webkit-backdrop-filter:blur(24px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.02); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 30px 80px rgba(0,0,0,0.3);" style-before="content:''; position:absolute; inset:0; border-radius:36px; pointer-events:none; background:linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 30%);">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="width:52px; height:52px; border-radius:17px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);"><span style="font-family:'Material Symbols Rounded'; font-size:26px; line-height:1;">campaign</span></div>
+      <div style="display:flex; flex-direction:column; gap:3px; flex:1;">
+        <div style="font-size:26px; font-weight:500; letter-spacing:-0.025em;">Content</div>
+        <div style="font-size:13.5px; color:rgba(255,255,255,0.78);">Your accounts, what to post next, and what's scheduled</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:7px; height:38px; padding:0 14px; border-radius:999px; background:rgba(255,255,255,0.12); box-shadow:inset 0 1px 0 rgba(255,255,255,0.4); font-size:13.5px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">schedule</span>Best time today {{ so.best }}</div>
+      <button sc-camel-on-click="{{ backToRoom }}" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 15px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13.5px; font-weight:500; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">keyboard_double_arrow_up</span>Room</button>
+    </div>
+    <div style="flex:1; min-height:0; display:grid; grid-template-columns:0.9fr 1.25fr 1fr; gap:16px;">
+      <div style="border-radius:26px; padding:18px; display:flex; flex-direction:column; gap:10px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 2px;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">group</span>Accounts</div><div style="font-size:13px; color:rgba(255,255,255,0.75);">{{ so.total }} total</div></div>
+        <sc-for list="{{ so.accounts }}" as="ac" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:18px; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+            <div style="width:36px; height:36px; flex:none; border-radius:11px; display:flex; align-items:center; justify-content:center; background:{{ ac.bg }}; color:#ffffff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><div style="width:18px; height:18px; background:{{ ac.logoBg }};"></div></div>
+            <div style="display:flex; flex-direction:column; gap:1px; flex:1; min-width:0;"><span style="font-size:14px; font-weight:500;">{{ ac.name }}</span><span style="font-size:12px; color:rgba(255,255,255,0.68);">{{ ac.handle }}</span></div>
+            <div style="display:flex; align-items:flex-end; gap:2px; height:22px;">
+              <sc-for list="{{ ac.spark }}" as="sp" hint-placeholder-count="7"><div style="width:4px; height:{{ sp.h }}%; border-radius:2px; background:rgba(255,255,255,{{ sp.o }});"></div></sc-for>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:1px; min-width:52px;"><span style="font-size:16px; font-variant-numeric:tabular-nums;">{{ ac.count }}</span><span style="font-size:12px; color:#9ee2bd;">{{ ac.delta }}</span></div>
+          </div>
+        </sc-for>
+        <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:18px; background:rgba(255,255,255,0.08);">
+          <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:rgba(255,255,255,0.72);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">trending_up</span>Top post this week</div>
+          <div style="font-size:13.5px; line-height:1.4;">{{ so.top }}</div>
+        </div>
+      </div>
+
+      <div style="border-radius:26px; padding:18px; display:flex; flex-direction:column; gap:10px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 2px;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">lightbulb</span>Ideas from today's work</div></div>
+        <div style="display:flex; flex-direction:column; gap:10px; overflow:auto; scrollbar-width:none; min-height:0;">
+          <sc-for list="{{ so.ideas }}" as="id" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:10px; padding:14px 16px; border-radius:20px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.22);">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="padding:3px 9px; border-radius:999px; background:rgba(255,255,255,0.16); font-size:11.5px; font-weight:500;">{{ id.format }}</span>
+                <span style="font-size:12px; color:rgba(255,255,255,0.7);">{{ id.plats }}</span>
+              </div>
+              <div style="font-size:16px; font-weight:500; letter-spacing:-0.01em; line-height:1.3;">{{ id.title }}</div>
+              <div style="font-size:13.5px; color:rgba(255,255,255,0.8); line-height:1.4;">{{ id.hook }}</div>
+              <div style="display:flex; gap:8px;">
+                <button sc-camel-on-click="{{ id.draft }}" style="display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border:0; border-radius:11px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:13px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">edit_note</span>Draft it</button>
+                <sc-if value="{{ id.hasWin }}" hint-placeholder-val="{{ true }}">
+                  <button sc-camel-on-click="{{ id.ask }}" style="display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border:0; border-radius:11px; cursor:pointer; background:rgba(255,255,255,0.14); color:#ffffff; font-size:13px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">{{ id.askIcon }}</span>{{ id.askLabel }}</button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="border-radius:26px; padding:18px; display:flex; flex-direction:column; gap:10px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 2px;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">event_upcoming</span>Scheduled</div><div style="font-size:13px; color:rgba(255,255,255,0.75);">{{ so.queueN }}</div></div>
+        <div style="display:flex; flex-direction:column; gap:8px; overflow:auto; scrollbar-width:none; min-height:0; flex:1;">
+          <sc-for list="{{ so.queue }}" as="q" hint-placeholder-count="2">
+            <div style="display:flex; gap:11px; padding:11px 12px; border-radius:16px; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+              <div style="width:30px; height:30px; flex:none; border-radius:9px; display:flex; align-items:center; justify-content:center; background:{{ q.bg }}; "><div style="width:15px; height:15px; background:{{ q.logoBg }};"></div></div>
+              <div style="display:flex; flex-direction:column; gap:2px; min-width:0; flex:1;"><span style="font-size:12px; color:rgba(255,255,255,0.7);">{{ q.when }}</span><span style="font-size:13.5px; line-height:1.35; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">{{ q.text }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:18px; background:rgba(255,255,255,0.1); box-shadow:inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 1px rgba(255,255,255,0.12);">
+          <textarea ref="{{ composeRef }}" sc-camel-on-change="{{ so.onInput }}" value="{{ so.compose }}" placeholder="Write a post…" rows="3" style="resize:none; border:0; outline:none; background:transparent; color:#ffffff; font-family:inherit; font-size:13.5px; line-height:1.45;"></textarea>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <sc-for list="{{ so.chips }}" as="ch" hint-placeholder-count="4">
+              <button sc-camel-on-click="{{ ch.toggle }}" style="height:28px; padding:0 10px; border:0; border-radius:999px; cursor:pointer; font-size:12px; font-weight:500; background:{{ ch.bg }}; color:{{ ch.fg }}; display:flex; align-items:center; justify-content:center; width:34px; padding:0;"><div style="width:14px; height:14px; background:{{ ch.logoBg }};"></div></button>
+            </sc-for>
+            <span style="flex:1;"></span>
+            <button sc-camel-on-click="{{ so.schedule }}" style="display:flex; align-items:center; gap:6px; height:32px; padding:0 13px; border:0; border-radius:11px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:13px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">send</span>Schedule</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; left:110px; right:110px; bottom:28px; height:540px; z-index:6; box-sizing:border-box; border-radius:36px; padding:26px 28px; display:flex; flex-direction:column; gap:20px; transform:{{ s4.t }}; opacity:{{ s4.o }}; pointer-events:{{ s4.pe }}; transition:transform 1s cubic-bezier(.2,.8,.2,1), opacity .6s; background:rgba(22,26,30,0.34); -webkit-backdrop-filter:blur(24px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.02); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 30px 80px rgba(0,0,0,0.3);" style-before="content:''; position:absolute; inset:0; border-radius:36px; pointer-events:none; background:linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 30%);">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="width:52px; height:52px; border-radius:17px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);"><span style="font-family:'Material Symbols Rounded'; font-size:26px; line-height:1;">monitoring</span></div>
+      <div style="display:flex; flex-direction:column; gap:3px; flex:1;">
+        <div style="font-size:26px; font-weight:500; letter-spacing:-0.025em;">Pulse</div>
+        <div style="font-size:13.5px; color:rgba(255,255,255,0.78);">Usage, builds and code across your windows</div>
+      </div>
+      <button sc-camel-on-click="{{ backToRoom }}" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 15px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13.5px; font-weight:500; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">keyboard_double_arrow_up</span>Room</button>
+    </div>
+    <div style="flex:1; min-height:0; display:grid; grid-template-columns:0.9fr 1fr 1.1fr; gap:16px;">
+      <div style="border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">data_usage</span>Claude usage</div></div>
+        <div style="display:flex; align-items:center; gap:18px;">
+          <div style="position:relative; width:118px; height:118px; flex:none;">
+            <svg width="118" height="118" sc-camel-view-box="0 0 120 120" style="transform:rotate(-90deg);">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="9"></circle>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="{{ pu.ring }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="{{ pu.off }}" style="transition:stroke-dashoffset 1s ease;"></circle>
+            </svg>
+            <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font-size:32px; font-weight:300; letter-spacing:-0.04em; font-variant-numeric:tabular-nums;">{{ pu.pct }}<span style="font-size:14px; color:rgba(255,255,255,0.7);">%</span></div></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:13.5px;">
+            <div style="color:rgba(255,255,255,0.78);">of your 5 hour limit</div>
+            <div style="display:flex; align-items:center; gap:6px;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">restart_alt</span>Resets {{ pu.reset }}</div>
+            <div style="display:flex; align-items:center; gap:6px; color:{{ pu.paceC }};"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">speed</span>{{ pu.pace }}</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+          <sc-for list="{{ pu.wins }}" as="w" hint-placeholder-count="2">
+            <div style="display:grid; grid-template-columns:18px 70px 1fr 34px; gap:10px; align-items:center; font-size:13px;">
+              <span style="width:16px; height:16px; border-radius:50%; background:{{ w.avatar }};"></span>
+              <span>{{ w.name }}</span>
+              <div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="height:100%; width:{{ w.pct }}%; border-radius:3px; background:#ffffff;"></div></div>
+              <span style="text-align:right; color:rgba(255,255,255,0.75); font-variant-numeric:tabular-nums;">{{ w.pct }}%</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">deployed_code</span>TestFlight</div><button sc-camel-on-click="{{ pu.upload }}" style="display:flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px; border:0; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.14); color:#ffffff; font-size:13px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4); height:32px;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">upload</span>New build</button></div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <sc-for list="{{ pu.builds }}" as="b" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:12px; padding:11px 13px; border-radius:16px; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+              <span style="font-family:'Material Symbols Rounded'; font-size:20px; line-height:1; color:{{ b.ic }}; animation:{{ b.anim }};">{{ b.icon }}</span>
+              <div style="display:flex; flex-direction:column; gap:1px; flex:1;"><span style="font-size:14px;">{{ b.name }}</span><span style="font-size:12px; color:rgba(255,255,255,0.7);">{{ b.sub }}</span></div>
+              <span style="font-size:12.5px; color:rgba(255,255,255,0.8);">{{ b.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:auto; padding:14px; border-radius:18px; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><span style="display:flex; align-items:center; gap:6px; font-size:13.5px;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">health_and_safety</span>Crash free</span><span style="font-size:22px; font-weight:300; letter-spacing:-0.02em;">{{ pu.crashFree }}</span></div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.8); line-height:1.4;">{{ pu.crash }}</div>
+          <sc-if value="{{ pu.hasCrash }}" hint-placeholder-val="{{ true }}">
+            <button sc-camel-on-click="{{ pu.fixCrash }}" style="display:flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px; border:0; border-radius:12px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:13px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">send</span>{{ pu.fixLabel }}</button>
+          </sc-if>
+        </div>
+      </div>
+      <div style="border-radius:26px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:0; background:rgba(255,255,255,0.06); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">commit</span>Code</div></div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <sc-for list="{{ pu.branches }}" as="br" hint-placeholder-count="2">
+            <div style="display:flex; flex-direction:column; gap:10px; padding:13px 14px; border-radius:18px; background:rgba(255,255,255,0.08); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+              <div style="display:flex; align-items:center; gap:9px;">
+                <span style="width:16px; height:16px; border-radius:50%; background:{{ br.avatar }}; flex:none;"></span>
+                <span style="font-size:14px; font-weight:500;">{{ br.name }}</span>
+                <span style="flex:1;"></span>
+                <span style="font-family:'Geist Mono',ui-monospace,monospace; font-size:12px; color:#9ee2bd;">+{{ br.add }}</span>
+                <span style="font-family:'Geist Mono',ui-monospace,monospace; font-size:12px; color:#ffb4a8;">-{{ br.del }}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:7px; font-family:'Geist Mono',ui-monospace,monospace; font-size:12.5px; color:rgba(255,255,255,0.85);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">fork_right</span>{{ br.branch }}</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <span style="font-size:12.5px; color:rgba(255,255,255,0.72);">{{ br.meta }}</span>
+                <button sc-camel-on-click="{{ br.go }}" style="display:flex; align-items:center; justify-content:center; gap:6px; height:32px; padding:0 12px; border:0; border-radius:11px; cursor:pointer; background:{{ br.bg }}; color:{{ br.fg }}; font-size:12.5px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">{{ br.icon }}</span>{{ br.cta }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{ ariOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:110px; top:50%; z-index:7; width:350px; max-height:calc(100% - 140px); overflow:auto; scrollbar-width:none; box-sizing:border-box; border-radius:32px; padding:22px; display:flex; flex-direction:column; gap:14px; transform:translateY(-50%); animation:hq-fade .7s ease .3s both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(20px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #1e6b52 8%, #5ed6a0 36%, #effff7 50%, #c8f07a 66%, #3f8a3a 92%); box-shadow:inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px rgba(159,230,255,0.6);"></span>
+        <div style="display:flex; flex-direction:column; gap:2px;"><div style="font-size:24px; font-weight:500; letter-spacing:-0.02em;">Ari</div><div style="display:flex; align-items:center; gap:5px; font-size:13px; color:rgba(255,255,255,0.75);"><span style="font-family:'Material Symbols Rounded'; font-size:15px; line-height:1;">flight</span>Pilot, that's you</div></div>
+      </div>
+      <div style="font-size:15px; color:rgba(255,255,255,0.9);">{{ ari.greeting }}. Here's what needs you.</div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">bolt</span>Do now</div><span style="font-size:26px; font-weight:300; letter-spacing:-0.03em;">{{ ari.doN }}</span></div>
+      <sc-if value="{{ ari.noDo }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:8px; padding:12px; border-radius:16px; background:rgba(255,255,255,0.08); font-size:14px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">check_circle</span>Nothing needs you right now</div></sc-if>
+      <sc-for list="{{ ari.doNow }}" as="d" hint-placeholder-count="2">
+          <div sc-camel-on-click="{{ d.toggleOpen }}" style="cursor:pointer; display:flex; align-items:flex-start; gap:11px; padding:12px; border-radius:18px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+            <span style="width:30px; height:30px; flex:none; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ d.icon }}</span></span>
+            <div style="display:flex; flex-direction:column; gap:3px; flex:1; min-width:0;">
+              <span style="font-size:14px; font-weight:500; line-height:1.3;">{{ d.t }}</span>
+              <span style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.35;">{{ d.sub }}</span>
+              <sc-if value="{{ d.hasBtn }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ d.go }}" style="align-self:flex-start; margin-top:6px; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:0; border-radius:10px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:12.5px; font-weight:500;">{{ d.btn }}</button></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:500; margin-top:4px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">format_list_numbered</span>Next up</div>
+      <sc-for list="{{ ari.next }}" as="n" hint-placeholder-count="2">
+          <div sc-camel-on-click="{{ n.toggleOpen }}" style="cursor:pointer; display:flex; align-items:flex-start; gap:11px; padding:12px; border-radius:18px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+            <span style="width:30px; height:30px; flex:none; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ n.icon }}</span></span>
+            <div style="display:flex; flex-direction:column; gap:3px; flex:1; min-width:0;">
+              <span style="font-size:14px; font-weight:500; line-height:1.3;">{{ n.t }}</span>
+              <span style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.35;">{{ n.sub }}</span>
+              <sc-if value="{{ n.hasBtn }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ n.go }}" style="align-self:flex-start; margin-top:6px; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:0; border-radius:10px; cursor:pointer; background:rgba(255,255,255,0.16); color:#ffffff; font-size:12.5px; font-weight:500;">{{ n.btn }}</button></sc-if>
+            </div>
+          </div>
+        </sc-for>
+    </div>
+    <div style="position:absolute; right:96px; top:50%; z-index:7; width:350px; max-height:calc(100% - 140px); overflow:auto; scrollbar-width:none; box-sizing:border-box; border-radius:32px; padding:22px; display:flex; flex-direction:column; gap:14px; transform:translateY(-50%); animation:hq-fade .7s ease .45s both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(20px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">info</span>Good to know</div>
+      <sc-for list="{{ ari.important }}" as="im" hint-placeholder-count="2">
+          <div style="display:flex; align-items:flex-start; gap:11px; padding:12px; border-radius:18px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">
+            <span style="width:30px; height:30px; flex:none; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ im.icon }}</span></span>
+            <div style="display:flex; flex-direction:column; gap:3px; flex:1; min-width:0;">
+              <span style="font-size:14px; font-weight:500; line-height:1.3;">{{ im.t }}</span>
+              <span style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.35;">{{ im.sub }}</span>
+              
+            </div>
+          </div>
+        </sc-for>
+      <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:500; margin-top:4px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">flag</span>Today's goals<span style="margin-left:auto; font-size:12.5px; font-weight:400; color:rgba(255,255,255,0.75);">{{ ari.goalsLabel }}</span></div>
+      <div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.14); overflow:hidden;"><div style="height:100%; width:{{ ari.goalsPct }}%; border-radius:3px; background:#ffffff; transition:width .5s;"></div></div>
+      <sc-for list="{{ ari.todos }}" as="td" hint-placeholder-count="3">
+        <div sc-camel-on-click="{{ td.toggle }}" style="display:flex; align-items:center; gap:11px; padding:4px 2px; cursor:pointer; font-size:14px; opacity:{{ td.op }};">
+          <span style="width:19px; height:19px; flex:none; box-sizing:border-box; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#1d2128; background:{{ td.bg }}; border:{{ td.bd }};">{{ td.glyph }}</span>{{ td.t }}
+        </div>
+      </sc-for>
+      <div style="display:flex; align-items:center; gap:8px; height:42px; padding:0 5px 0 14px; border-radius:14px; background:rgba(255,255,255,0.1); box-shadow:inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 1px rgba(255,255,255,0.12);">
+        <input ref="{{ ariInput }}" sc-camel-on-key-down="{{ ari.key }}" placeholder="Add a goal for today" style="flex:1; min-width:0; height:100%; border:0; outline:none; background:transparent; color:#ffffff; font-size:13.5px;">
+        <button sc-camel-on-click="{{ ari.add }}" style="width:32px; height:32px; border:0; border-radius:10px; cursor:pointer; background:#ffffff; color:#1d2128; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">add</span></button>
+      </div>
+    </div>
+    <button sc-camel-on-click="{{ ari.close }}" style="position:absolute; left:50%; bottom:36px; transform:translateX(-50%); z-index:7; display:flex; align-items:center; gap:8px; height:42px; padding:0 18px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13.5px; font-weight:500; animation:hq-fade .6s ease .5s both; background:rgba(22,26,30,0.28); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 8px 20px rgba(0,0,0,0.18);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">zoom_out_map</span>Back to room</button>
+  </sc-if>
+  <sc-if value="{{ focusOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:110px; top:50%; z-index:7; width:310px; box-sizing:border-box; border-radius:32px; padding:24px; display:flex; flex-direction:column; gap:20px; transform:translateY(-50%); animation:hq-fade .7s ease .35s both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(20px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:26px; font-weight:500; letter-spacing:-0.02em;"><span style="width:26px; height:26px; border-radius:50%; background:{{ fs.avatar }}; box-shadow:inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px rgba(255,255,255,0.3);"></span>{{ fs.name }}</div>
+        <div style="font-size:14px; color:rgba(255,255,255,0.75);">{{ fs.sub }}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:18px;">
+        <div style="position:relative; width:88px; height:88px; flex:none;">
+          <svg width="88" height="88" sc-camel-view-box="0 0 120 120" style="transform:rotate(-90deg);">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="9"></circle>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="{{ fs.ring }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="{{ fs.off }}" style="transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1);"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:25px; font-weight:300; letter-spacing:-0.03em; font-variant-numeric:tabular-nums;">{{ fs.pct }}<span style="font-size:13px; color:rgba(255,255,255,0.7);">%</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:5px;">
+          <div style="display:flex; align-items:center; gap:8px; font-size:19px;"><span style="position:relative; width:9px; height:9px; border-radius:50%; background:{{ fs.color }};"><span style="position:absolute; inset:0; border-radius:50%; background:{{ fs.color }}; animation:{{ fs.ping }};"></span></span>{{ fs.label }}</div>
+          <div style="font-size:13.5px; color:rgba(255,255,255,0.75);">{{ fs.meta }}</div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <sc-for list="{{ fs.steps }}" as="x" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:11px; font-size:14px; opacity:{{ x.op }};">
+            <div style="width:17px; height:17px; flex:none; box-sizing:border-box; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; background:{{ x.bg }}; border:{{ x.border }}; color:#1d2128;">{{ x.glyph }}</div>
+            <span>{{ x.t }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:absolute; right:110px; top:50%; z-index:7; width:350px; max-height:calc(100% - 200px); overflow:auto; scrollbar-width:none; box-sizing:border-box; border-radius:32px; padding:22px; display:flex; flex-direction:column; gap:16px; transform:translateY(-50%); animation:hq-fade .7s ease .45s both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(20px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:rgba(255,255,255,0.7);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">info</span>What it's doing</div>
+        <div style="font-size:15px; line-height:1.45;">{{ fs.explain }}</div><button sc-camel-on-click="{{ fs.openOutput }}" style="align-self:flex-start; margin-top:10px; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:0; border-radius:10px; cursor:pointer; background:rgba(255,255,255,0.16); color:#ffffff; font-size:12.5px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">article</span>Full output</button>
+        <div style="display:flex; align-items:center; gap:7px; margin-top:4px; font-size:14px; color:rgba(255,255,255,0.85);"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ fs.actIcon }}</span>{{ fs.action }}</div>
+      </div>
+      <sc-if value="{{ fs.isNeeds }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:18px; background:rgba(255,255,255,0.12); box-shadow:inset 0 1px 0 rgba(255,255,255,0.3);">
+          <div style="font-size:14.5px; line-height:1.4;">{{ fs.question }}</div>
+          <button sc-camel-on-click="{{ fs.approve }}" style="display:flex; align-items:center; justify-content:center; gap:6px; height:40px; border:0; cursor:pointer; border-radius:13px; background:#ffffff; color:#1d2128; font-size:14px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">check</span>Approve</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ fs.isTesting }}" hint-placeholder-val="{{ false }}">
+        <button sc-camel-on-click="{{ fs.goTest }}" style="display:flex; align-items:center; justify-content:center; gap:6px; height:40px; border:0; cursor:pointer; border-radius:13px; background:#ffffff; color:#1d2128; font-size:14px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">phone_iphone</span>Test it on your phone</button>
+      </sc-if>
+      <div style="display:flex; flex-direction:column; gap:10px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.14);">
+        <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:500; padding-top:8px;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">playlist_add</span>Queue next job</div>
+        <sc-for list="{{ fs.queued }}" as="q" hint-placeholder-count="0">
+          <div style="display:flex; align-items:center; gap:9px; padding:8px 6px 8px 12px; border-radius:13px; background:rgba(255,255,255,0.1); font-size:13.5px;">
+            <span style="font-size:12px; color:rgba(255,255,255,0.6); font-variant-numeric:tabular-nums;">{{ q.n }}</span>
+            <span style="flex:1; min-width:0; line-height:1.35;">{{ q.t }}</span>
+            <button sc-camel-on-click="{{ q.remove }}" title="Remove" style="width:28px; height:28px; border:0; border-radius:9px; cursor:pointer; color:#ffffff; background:transparent; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">close</span></button>
+          </div>
+        </sc-for>
+        <div style="display:flex; align-items:center; gap:8px; height:44px; padding:0 5px 0 14px; border-radius:15px; background:rgba(255,255,255,0.1); box-shadow:inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 1px rgba(255,255,255,0.12);">
+          <input ref="{{ chatInput }}" sc-camel-on-key-down="{{ fs.key }}" placeholder="What should it do next?" style="flex:1; min-width:0; height:100%; border:0; outline:none; background:transparent; color:#ffffff; font-size:13.5px;">
+          <button sc-camel-on-click="{{ fs.send }}" style="width:34px; height:34px; border:0; border-radius:11px; cursor:pointer; background:#ffffff; color:#1d2128; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">add</span></button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:rgba(255,255,255,0.72);"><span style="font-family:'Material Symbols Rounded'; font-size:15px; line-height:1;">schedule_send</span>Sends when this window finishes.</div>
+      </div>
+    </div>
+    <button sc-camel-on-click="{{ closeFocus }}" style="position:absolute; left:50%; bottom:36px; transform:translateX(-50%); z-index:7; display:flex; align-items:center; gap:8px; height:42px; padding:0 18px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:13.5px; font-weight:500; animation:hq-fade .6s ease .5s both; background:rgba(22,26,30,0.28); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(255,255,255,0.18), inset -1px 0 0 rgba(255,255,255,0.18), 0 8px 20px rgba(0,0,0,0.18);">
+      <span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">zoom_out_map</span>Back to room
+    </button>
+    <div style="position:absolute; left:50%; bottom:88px; transform:translateX(-50%); z-index:7; display:flex; align-items:center; gap:6px; font-size:12.5px; color:rgba(255,255,255,0.85); text-shadow:0 1px 8px rgba(0,0,0,0.3); animation:hq-fade .6s ease .8s both; pointer-events:none;"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">3d_rotation</span>Drag to look around, scroll to zoom</div>
+  </sc-if>
+
+  <sc-if value="{{ bldOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:110px; top:50%; z-index:9; width:360px; box-sizing:border-box; border-radius:32px; padding:22px; display:flex; flex-direction:column; gap:14px; transform:translateY(-50%); animation:hq-fade .6s ease both; background:rgba(22,26,30,0.32); -webkit-backdrop-filter:blur(22px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; color:rgba(255,255,255,0.9);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1; color:{{ bp.col }};">{{ bp.L.icon }}</span>{{ bp.L.title }}</div>
+      <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:38px; font-weight:300; letter-spacing:-0.035em; line-height:1;">{{ bp.L.hv }}</span><span style="font-size:13.5px; color:rgba(255,255,255,0.75);">{{ bp.L.hl }}</span></div>
+      <sc-if value="{{ bp.L.empty }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:8px; padding:14px; border-radius:18px; background:rgba(255,255,255,0.08); font-size:14px;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">check_circle</span>All done here</div></sc-if>
+      <sc-for list="{{ bp.L.items }}" as="it" hint-placeholder-count="2">
+        <div style="display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:20px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.22);">
+          <div style="display:flex; align-items:flex-start; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;"><span style="font-size:15px; font-weight:500; line-height:1.3;">{{ it.t }}</span><span style="font-size:12.5px; color:rgba(255,255,255,0.72);">{{ it.sub }}</span></div>
+            <sc-if value="{{ it.hasChip }}" hint-placeholder-val="{{ false }}"><span style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.12); font-size:12px; font-weight:500; white-space:nowrap;"><span style="width:7px; height:7px; border-radius:50%; background:{{ it.chipC }}; animation:{{ it.chipA }};"></span>{{ it.chipT }}</span></sc-if>
+          </div>
+          <sc-if value="{{ it.hasChecks }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <sc-for list="{{ it.checks }}" as="ck" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                  <span style="flex:1; min-width:0; line-height:1.35;">{{ ck.t }}</span>
+                  <button sc-camel-on-click="{{ ck.pass }}" title="Works" style="width:32px; height:28px; border:0; border-radius:9px; cursor:pointer; color:{{ ck.pFg }}; background:{{ ck.pBg }}; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">check</span></button>
+                  <button sc-camel-on-click="{{ ck.fail }}" title="Broken" style="width:32px; height:28px; border:0; border-radius:9px; cursor:pointer; color:#ffffff; background:{{ ck.fBg }}; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">close</span></button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ it.hasCmds }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <sc-for list="{{ it.cmds }}" as="cm" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:8px; padding:5px 5px 5px 11px; border-radius:11px; background:rgba(6,8,12,0.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);">
+                  <span style="flex:1; min-width:0; font-family:'Geist Mono',ui-monospace,monospace; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#d9f5e4;">{{ cm.t }}</span>
+                  <button sc-camel-on-click="{{ cm.copy }}" title="Copy" style="width:28px; height:26px; border:0; border-radius:8px; cursor:pointer; color:#ffffff; background:rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:15px; line-height:1;">content_copy</span></button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ it.hasBtn }}" hint-placeholder-val="{{ true }}">
+            <button sc-camel-on-click="{{ it.go }}" style="align-self:flex-start; display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border:0; border-radius:11px; cursor:pointer; background:{{ it.bg }}; color:{{ it.fg }}; font-size:13px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">{{ it.icon }}</span>{{ it.btn }}</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ bp.hasR }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; right:96px; top:330px; max-height:calc(100% - 360px); overflow:auto; scrollbar-width:none; z-index:9; width:360px; box-sizing:border-box; border-radius:32px; padding:22px; display:flex; flex-direction:column; gap:14px;  animation:hq-fade .6s ease both; background:rgba(22,26,30,0.32); -webkit-backdrop-filter:blur(22px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.05); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 24px 60px rgba(0,0,0,0.28);">
+      <div style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; color:rgba(255,255,255,0.9);"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1; color:{{ bp.col }};">{{ bp.R.icon }}</span>{{ bp.R.title }}</div>
+      <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:38px; font-weight:300; letter-spacing:-0.035em; line-height:1;">{{ bp.R.hv }}</span><span style="font-size:13.5px; color:rgba(255,255,255,0.75);">{{ bp.R.hl }}</span></div>
+      <sc-if value="{{ bp.R.empty }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:8px; padding:14px; border-radius:18px; background:rgba(255,255,255,0.08); font-size:14px;"><span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">check_circle</span>All done here</div></sc-if>
+      <sc-for list="{{ bp.R.items }}" as="it" hint-placeholder-count="2">
+        <div style="display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:20px; background:rgba(255,255,255,0.09); box-shadow:inset 0 1px 0 rgba(255,255,255,0.22);">
+          <div style="display:flex; align-items:flex-start; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;"><span style="font-size:15px; font-weight:500; line-height:1.3;">{{ it.t }}</span><span style="font-size:12.5px; color:rgba(255,255,255,0.72);">{{ it.sub }}</span></div>
+            <sc-if value="{{ it.hasChip }}" hint-placeholder-val="{{ false }}"><span style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.12); font-size:12px; font-weight:500; white-space:nowrap;"><span style="width:7px; height:7px; border-radius:50%; background:{{ it.chipC }}; animation:{{ it.chipA }};"></span>{{ it.chipT }}</span></sc-if>
+          </div>
+          <sc-if value="{{ it.hasChecks }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <sc-for list="{{ it.checks }}" as="ck" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                  <span style="flex:1; min-width:0; line-height:1.35;">{{ ck.t }}</span>
+                  <button sc-camel-on-click="{{ ck.pass }}" title="Works" style="width:32px; height:28px; border:0; border-radius:9px; cursor:pointer; color:{{ ck.pFg }}; background:{{ ck.pBg }}; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">check</span></button>
+                  <button sc-camel-on-click="{{ ck.fail }}" title="Broken" style="width:32px; height:28px; border:0; border-radius:9px; cursor:pointer; color:#ffffff; background:{{ ck.fBg }}; display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">close</span></button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ it.hasCmds }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <sc-for list="{{ it.cmds }}" as="cm" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:8px; padding:5px 5px 5px 11px; border-radius:11px; background:rgba(6,8,12,0.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);">
+                  <span style="flex:1; min-width:0; font-family:'Geist Mono',ui-monospace,monospace; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#d9f5e4;">{{ cm.t }}</span>
+                  <button sc-camel-on-click="{{ cm.copy }}" title="Copy" style="width:28px; height:26px; border:0; border-radius:8px; cursor:pointer; color:#ffffff; background:rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center;"><span style="font-family:'Material Symbols Rounded'; font-size:15px; line-height:1;">content_copy</span></button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ it.hasBtn }}" hint-placeholder-val="{{ true }}">
+            <button sc-camel-on-click="{{ it.go }}" style="align-self:flex-start; display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border:0; border-radius:11px; cursor:pointer; background:{{ it.bg }}; color:{{ it.fg }}; font-size:13px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:16px; line-height:1;">{{ it.icon }}</span>{{ it.btn }}</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+    <div style="position:absolute; left:50%; top:36px; z-index:9; transform:translateX(-50%); display:flex; align-items:center; gap:10px; height:46px; padding:0 6px 0 8px; border-radius:999px; animation:hq-fade .5s ease both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 10px 26px rgba(0,0,0,0.2);">
+      <span style="width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:{{ bp.col }}; box-shadow:0 0 18px {{ bp.col }};"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1;">{{ bp.icon }}</span></span>
+      <span style="font-size:16px; font-weight:500; padding-right:6px;">{{ bp.name }}</span>
+      <button sc-camel-on-click="{{ closeBld }}" style="display:flex; align-items:center; gap:6px; height:34px; padding:0 14px; border:0; border-radius:999px; cursor:pointer; background:#ffffff; color:#1d2128; font-size:13px; font-weight:500;"><span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">flight_takeoff</span>Take off</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ nearOn }}" hint-placeholder-val="{{ false }}">
+    <button sc-camel-on-click="{{ landNear }}" style="position:absolute; left:50%; top:106px; z-index:8; transform:translateX(-50%); display:flex; align-items:center; gap:9px; height:42px; padding:0 8px 0 16px; border:0; border-radius:999px; cursor:pointer; color:#ffffff; font-size:14px; font-weight:500; animation:hq-up .35s ease both; background:rgba(22,26,30,0.3); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 10px 26px rgba(0,0,0,0.2);">
+      <span style="font-family:'Material Symbols Rounded'; font-size:19px; line-height:1;">flight_land</span>Land on {{ nearName }}
+      <span style="display:flex; align-items:center; height:26px; padding:0 9px; border-radius:8px; background:rgba(255,255,255,0.2); font-size:12px;">Return</span>
+    </button>
+  </sc-if>
+  <sc-if value="{{ false }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; right:30px; bottom:34px; z-index:4; display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; border-radius:999px; font-size:12.5px; color:rgba(255,255,255,0.9); background:rgba(22,26,30,0.24); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">
+      <span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">keyboard</span>Arrow keys to fly
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ switcherOn }}" hint-placeholder-val="{{ false }}">
+    <div sc-camel-on-click="{{ closeSwitcher }}" style="position:absolute; inset:0; z-index:20; background:rgba(12,18,22,0.25); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); animation:hq-fade .3s ease both;"></div>
+    <div style="position:absolute; left:50%; top:50%; z-index:21; width:1040px; box-sizing:border-box; border-radius:40px; padding:30px; display:flex; flex-direction:column; gap:22px; animation:hq-pop .45s cubic-bezier(.2,.8,.2,1) both; background:rgba(22,26,30,0.34); -webkit-backdrop-filter:blur(24px) saturate(1.7); backdrop-filter:blur(20px) saturate(1.7) brightness(1.04); box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.16), inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(255,255,255,0.2), 0 40px 100px rgba(0,0,0,0.35);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:26px; font-weight:500; letter-spacing:-0.025em;"><span style="font-family:'Material Symbols Rounded'; font-size:26px; line-height:1;">apps</span>Your projects</div>
+        <button sc-camel-on-click="{{ closeSwitcher }}" style="width:38px; height:38px; border:0; border-radius:50%; cursor:pointer; color:#ffffff; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:'Material Symbols Rounded'; font-size:20px; line-height:1;">close</span></button>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+        <sc-for list="{{ tiles }}" as="p" hint-placeholder-count="3">
+          <div sc-camel-on-click="{{ p.pick }}" style="position:relative; cursor:pointer; border-radius:30px; padding:24px; display:flex; flex-direction:column; align-items:center; gap:18px; background:{{ p.bg }}; box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.4), inset 0 0 0 1.5px {{ p.ring }}; transition:transform .3s, background .3s;" style-hover="transform:translateY(-4px); background:rgba(255,255,255,0.16);">
+            <div style="align-self:stretch; display:flex; justify-content:center; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:21px; font-weight:500; letter-spacing:-0.02em;">{{ p.name }}</span></div>
+              <sc-if value="{{ p.isCur }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Material Symbols Rounded'; font-size:22px; line-height:1; font-variation-settings:'FILL' 1;">check_circle</span></sc-if>
+            </div>
+            <div style="position:relative; width:140px; height:140px;">
+              <svg width="140" height="140" sc-camel-view-box="0 0 120 120" style="transform:rotate(-90deg);">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="7"></circle>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="{{ p.off }}" style="transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1);"></circle>
+              </svg>
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:300; letter-spacing:-0.04em; font-variant-numeric:tabular-nums;">{{ p.pct }}<span style="font-size:16px; color:rgba(255,255,255,0.7);">%</span></div>
+            </div>
+            <div style="align-self:stretch; display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; gap:4px;">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.75);">terminal</span><div style="font-size:17px;">{{ p.windows }}</div></div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:oklch(0.86 0.12 60);">block</span><div style="font-size:17px;">{{ p.blocking }}</div></div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><span style="font-family:'Material Symbols Rounded'; font-size:18px; line-height:1; color:rgba(255,255,255,0.75);">event</span><div style="font-size:17px;">{{ p.target }}</div></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:50%; top:96px; z-index:30; display:flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; font-size:13.5px; font-weight:500; background:rgba(22,26,30,0.34); -webkit-backdrop-filter:blur(14px) saturate(1.7); backdrop-filter:blur(2px) url(#lgs) saturate(1.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 8px 20px rgba(0,0,0,0.2); animation:hq-up .35s ease both;">
+      <span style="font-family:'Material Symbols Rounded'; font-size:17px; line-height:1;">{{ toastIcon }}</span>{{ toastText }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;timeOfDay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Auto&quot;,&quot;Morning&quot;,&quot;Afternoon&quot;,&quot;Evening&quot;,&quot;Night&quot;],&quot;default&quot;:&quot;Auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Scene&quot;},&quot;sessionCount&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1&quot;,&quot;2&quot;,&quot;3&quot;],&quot;default&quot;:&quot;2&quot;,&quot;tsType&quot;:&quot;'1'|'2'|'3'&quot;,&quot;section&quot;:&quot;States&quot;},&quot;emptyState&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+const AVATAR = [
+  'linear-gradient(135deg, #6a3a16 8%, #f0a24a 36%, #fbe9cc 50%, #7fb6cc 66%, #2f6a80 92%)',
+  'linear-gradient(135deg, #2b4f9e 8%, #7aa6ff 36%, #f0f5ff 50%, #a6e0ff 66%, #4a6fd0 92%)',
+  'linear-gradient(135deg, #7a3a4a 8%, #ef9a80 36%, #fdeade 50%, #d2abef 66%, #8a4a86 92%)',
+];
+const palOf = (id) => Math.max(0, id.charCodeAt(0) - 65) % 3;
+const ST = {
+  working: { c: 'oklch(0.76 0.16 152)', label: 'Working' },
+  needs: { c: 'oklch(0.78 0.16 52)', label: 'Needs you' },
+  testing: { c: '#a9d0ff', label: 'Ready to test' },
+  done: { c: '#ffffff', label: 'Done' },
+  idle: { c: 'rgba(255,255,255,0.5)', label: 'Away' },
+};
+const THEMES = {
+  morning: { icon: 'wb_twilight', sky: 'linear-gradient(180deg, #8fa9c4 0%, #b9c6d0 28%, #e7d9c8 46%, #f5d7b8 58%)', glow: 'rgba(255,226,190,0.9)', glowY: '30%', sun: 'radial-gradient(circle, #fffaf0, #ffe6c4)', sunX: '62%', sunY: '40%', sunSize: '70px', reflX: '64%',
+    far1: '#93a7aa', far2: '#889d9f', near1: '#62796c', near2: '#5a7163', fog: 'rgba(255,255,255,0.55)', ground: 'linear-gradient(180deg, #6f875a, #4f6842 18%, #35492f 45%)', stars: 0,
+    cityFar: '#a8b4c2', cityNear: '#6d7b8c', haze: 'rgba(240,226,210,0.55)', lights: 0.12, sea: 'linear-gradient(180deg, #d9d8d2, #8fa5b3 30%, #56707f)', island: '#7f9196' },
+  afternoon: { icon: 'light_mode', sky: 'linear-gradient(180deg, #4f86c0 0%, #7fb0dc 30%, #bcd8ec 50%, #e3eef3 60%)', glow: 'rgba(255,255,235,0.6)', glowY: '6%', sun: 'radial-gradient(circle, #ffffff, #fff6d8)', sunX: '74%', sunY: '12%', sunSize: '60px', reflX: '76%',
+    far1: '#8fb0b4', far2: '#86a6a8', near1: '#6f9474', near2: '#648a69', fog: 'rgba(255,255,255,0.35)', ground: 'linear-gradient(180deg, #86a861, #628a45 18%, #3f6233 45%)', stars: 0,
+    cityFar: '#9db3c8', cityNear: '#5c7086', haze: 'rgba(225,238,246,0.6)', lights: 0, sea: 'linear-gradient(180deg, #bfe0f0, #5ea3c7 30%, #2f6f95)', island: '#6f9488' },
+  evening: { icon: 'wb_twilight', sky: 'linear-gradient(180deg, #2f3d6b 0%, #6b5a86 26%, #d0807a 44%, #f4a866 58%)', glow: 'rgba(255,165,105,0.85)', glowY: '33%', sun: 'radial-gradient(circle, #fff1dc, #ffb070)', sunX: '30%', sunY: '45%', sunSize: '84px', reflX: '33%',
+    far1: '#6e6688', far2: '#635c7c', near1: '#4b4f62', near2: '#424658', fog: 'rgba(255,200,190,0.28)', ground: 'linear-gradient(180deg, #4e5a48, #3a4636 18%, #262f25 45%)', stars: 0.3,
+    cityFar: '#6c6584', cityNear: '#373850', haze: 'rgba(240,160,130,0.35)', lights: 0.75, sea: 'linear-gradient(180deg, #f2b08a, #8a6c88 30%, #3a3d5c)', island: '#4f4c66' },
+  night: { icon: 'dark_mode', sky: 'linear-gradient(180deg, #070c18 0%, #0f1830 30%, #1c2848 50%, #2a3658 60%)', glow: 'rgba(140,170,255,0.3)', glowY: '4%', sun: 'radial-gradient(circle at 35% 35%, #f4f6ff, #c9d3f0)', sunX: '76%', sunY: '12%', sunSize: '52px', reflX: '78%',
+    far1: '#1d2840', far2: '#1a2439', near1: '#141d2c', near2: '#121a27', fog: 'rgba(140,160,210,0.14)', ground: 'linear-gradient(180deg, #18222c, #121a22 18%, #0b1116 45%)', stars: 1,
+    cityFar: '#1d2640', cityNear: '#0f1526', haze: 'rgba(90,110,170,0.25)', lights: 1, sea: 'linear-gradient(180deg, #24305a, #141c36 30%, #0b1020)', island: '#151d33' },
+};
+const LISTING = [
+  { k: 'icon', label: 'App icon', icon: 'apps', st: 'ready' },
+  { k: 'name', label: 'Name and subtitle', icon: 'title', st: 'ready' },
+  { k: 'shots67', label: 'Screenshots 6.9"', icon: 'photo_library', st: '3 of 6', draft: 'Make 6.9" App Store screenshots' },
+  { k: 'shots61', label: 'Screenshots 6.3"', icon: 'photo_library', st: 'missing', draft: 'Make 6.3" App Store screenshots' },
+  { k: 'video', label: 'Preview video', icon: 'movie', st: 'missing', draft: 'Record a 30 second preview video' },
+  { k: 'desc', label: 'Description', icon: 'notes', st: 'ready' },
+  { k: 'keywords', label: 'Keywords', icon: 'sell', st: 'draft', draft: 'Write App Store keywords' },
+  { k: 'privacy', label: 'Privacy labels', icon: 'shield_lock', st: 'ready' },
+  { k: 'review', label: 'Review notes', icon: 'rate_review', st: 'missing', draft: 'Write App Review notes and demo account' },
+  { k: 'age', label: 'Age rating', icon: 'family_restroom', st: 'ready' },
+];
+const NEWS = { 'Weekly progress chart': 'See how much you lifted each week on the Stats tab', 'HealthKit prompt': 'Workouts now save to Apple Health', 'Onboarding copy': 'A clearer, friendlier welcome', 'Rep counter tweak': 'Rep counting is more accurate', 'Settings migration': 'Your settings now stay put after updates', 'Paywall fix': 'The paywall fits small iPhones' };
+const POSTS = {
+  FormPal: ['New in FormPal: your weekly lifting volume, right on the Stats tab. Watch the bars climb.', 'FormPal now saves every workout to Apple Health. One less thing to log.', 'Building FormPal in public. {pct}% of the way to the App Store, launching {target}.'],
+  Unlock: ['Unlock now restores purchases instantly on iOS 18.', 'Building Unlock in public. {pct}% of the way to launch.'],
+  ATHLT: ['ATHLT is coming to TestFlight soon. Coaches, want in?', 'Building ATHLT in public. {pct}% of the way there.'],
+};
+const SOCIAL = [
+  { k: 'x', slug: 'x', name: 'X', short: 'X', bg: 'linear-gradient(135deg, #2b2f36, #0d0f12)', base: 4812, wk: 126, spark: [3, 5, 4, 6, 5, 8, 9] },
+  { k: 'tt', slug: 'tiktok', name: 'TikTok', short: 'TT', bg: 'linear-gradient(135deg, #2a2f3a, #111318)', base: 12400, wk: 1100, spark: [2, 3, 7, 4, 5, 9, 6] },
+  { k: 'ig', slug: 'instagram', name: 'Instagram', short: 'IG', bg: 'linear-gradient(135deg, #f58e5a, #d1477f 55%, #7b4bd6)', base: 3207, wk: 88, spark: [4, 4, 5, 5, 6, 5, 7] },
+  { k: 'yt', slug: 'youtube', name: 'YouTube', short: 'YT', bg: 'linear-gradient(135deg, #ff5a4f, #c5221f)', base: 1940, wk: 42, spark: [2, 2, 3, 2, 4, 3, 5] },
+];
+const IDEAS = {
+  FormPal: [
+    { format: '15s screen recording', plats: ['tt', 'ig'], title: 'Show the new weekly chart', hook: 'POV: your gym app finally tells you if you\u2019re getting stronger.', win: 'A', ask: 'rec' },
+    { format: 'Thread', plats: ['x'], title: 'How I moved 1,284 users\u2019 settings with zero downtime', hook: 'One migration, one approval, no angry emails. Here\u2019s the plan.', win: 'B', ask: 'explain' },
+    { format: 'Build in public', plats: ['x', 'yt'], title: '{pct}% of the way to the App Store', hook: '{blocking} things left before {target}. Here\u2019s what\u2019s blocking.', win: null },
+    { format: 'Carousel', plats: ['ig'], title: 'Paywall before and after on iPhone SE', hook: 'Small screens deserve a buy button too.', win: 'A', ask: 'shot' },
+  ],
+  Unlock: [
+    { format: 'Short', plats: ['tt', 'yt'], title: 'Restore purchases in one tap', hook: 'iOS 18 broke it. We fixed it in an afternoon.', win: null },
+    { format: 'Build in public', plats: ['x'], title: '{pct}% of the way to launch', hook: '{blocking} blockers left before {target}.', win: null },
+  ],
+  ATHLT: [
+    { format: 'Thread', plats: ['x'], title: 'Why I\u2019m building a coach-first team app', hook: 'Spreadsheets aren\u2019t a training plan.', win: null },
+  ],
+};
+const BRANCH = { A: 'feat/weekly-progress-chart', B: 'chore/settings-migration', C: 'main' };
+const MODES = ['auto', 'morning', 'afternoon', 'evening', 'night'];
+const LOCS = { city: { name: 'Downtown', icon: 'location_city' } };
+const LOC_KEYS = Object.keys(LOCS);
+const CIRC = 326.73;
+const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const CITY = (() => {
+  const mk = (seed, wMin, wMax, hMin, hMax, gap) => { const out = []; let x = -2, i = 0; while (x < 102) { const w = wMin + rnd(seed + i) * (wMax - wMin); out.push({ l: x.toFixed(2), w: w.toFixed(2), h: Math.round(hMin + Math.pow(rnd(seed + i + 50), 1.6) * (hMax - hMin)), bp: `${Math.round(rnd(seed + i + 9) * 8)}px ${Math.round(rnd(seed + i + 3) * 10)}px`, mast: rnd(seed + i + 77) > 0.86 ? 'block' : 'none' }); x += w + gap; i++; } return out; };
+  return { far: mk(10, 1.6, 3.6, 60, 240, 0.12), near: mk(400, 3, 6.5, 90, 330, 0.25) };
+})();
+const a = (k, label, pose) => ({ k, label, pose: pose || { Read: 'read', Search: 'read', Edit: 'edit', Run: 'run', Think: 'think' }[k] });
+const ACT_ICON = { Read: 'menu_book', Search: 'search', Edit: 'edit', Run: 'play_circle', Think: 'lightbulb', Ask: 'front_hand', You: 'person' };
+const JOBS = {
+  A1: { title: 'Weekly progress chart', item: 'Weekly progress chart', next: 'A2', secs: 30, file: 'progress.tsx', doneLabel: 'Finished the chart',
+    explain: 'Adding a chart to the Stats screen that shows how much you lifted each week, with a switch between volume and sets.',
+    checks: ['Check if last week still shows as zero on the chart', 'Flip between volume and sets and see if the bars jump'],
+    steps: ['Read Stats screen', 'Find history query', 'Add weeklyVolume()', 'Write tests', 'Build ProgressChart', 'Wire into progress.tsx', 'Run Playwright test', 'Write summary'],
+    pool: [
+      [a('Read', 'Reading StatsScreen.tsx'), a('Search', 'Searching history hook', 'read')],
+      [a('Think', 'Planning the query'), a('Read', 'Reading useWorkoutHistory.ts', 'think')],
+      [a('Edit', 'Editing stats.ts')], [a('Edit', 'Writing stats.test.ts'), a('Run', 'Running unit tests', 'edit')],
+      [a('Edit', 'Creating ProgressChart.tsx')],
+      [a('Edit', 'Editing progress.tsx'), a('Read', 'Checking colors.ts', 'edit'), a('Edit', 'Editing progress.tsx')],
+      [a('Run', 'Running Playwright test'), a('Edit', 'Fixing a selector', 'run'), a('Run', 'Running Playwright test')],
+      [a('Think', 'Writing summary', 'write')],
+    ] },
+  A2: { title: 'Paywall fix', item: 'Fix paywall layout on iPhone SE', secs: 28, file: 'PaywallScreen.tsx', doneLabel: 'Finished the paywall fix',
+    explain: 'Making the paywall fit on small iPhones so the buy button is never cut off.',
+    checks: ['Check if the Buy button is still cut off on iPhone SE', 'Rotate the phone and see if the paywall breaks'],
+    steps: ['Reproduce on SE', 'Read PaywallScreen', 'Flexible hero height', 'Run snapshots', 'Write summary'],
+    pool: [[a('Run', 'Booting iPhone SE')], [a('Read', 'Reading PaywallScreen.tsx')], [a('Edit', 'Editing PaywallScreen.tsx')], [a('Run', 'Running snapshots')], [a('Think', 'Writing summary', 'write')]] },
+  B1: { title: 'Settings migration', item: 'Migrate user settings', secs: 26, file: '0042_settings.sql', doneLabel: 'Moved 1,284 rows',
+    explain: 'Moving everyone\u2019s settings to the new database table so they survive app updates.',
+    waitLabel: 'Wants to run the migration', question: 'Run supabase db push on production? It changes the live database.',
+    checks: ['Check if units still reset to lbs after you relaunch', 'Change your rest timer and see if it sticks'],
+    ask: a('Ask', 'Asked to run db push', 'ask'),
+    steps: ['Read settings schema', 'Draft migration', 'Write backfill', 'Run migration', 'Check row counts', 'Update useSettings'],
+    pool: [[a('Read', 'Reading schema.sql')], [a('Edit', 'Drafting the migration', 'write')], [a('Edit', 'Writing backfill script'), a('Run', 'Dry run', 'edit')], [a('Run', 'Running db push')], [a('Run', 'Counting rows')], [a('Edit', 'Editing useSettings.ts')]] },
+  C0: { title: 'Onboarding copy', file: 'onboarding.json', doneLabel: 'Waiting for a job', explain: 'Nothing right now. It\u2019s free for a new job.', steps: ['Read onboarding', 'Rewrite copy', 'Update strings'],
+    pool: [[a('Read', 'Reading Onboarding.tsx')], [a('Edit', 'Rewriting copy', 'write')], [a('Edit', 'Editing onboarding.json')]] },
+};
+const FIX = (title) => ({ title: `Fix: ${title}`, secs: 18, file: 'App.tsx', doneLabel: 'Fixed your feedback', explain: `Fixing what you reported on ${title}.`,
+  checks: ['Check if the bug you reported is gone', 'Check the screen next to it still works'],
+  steps: ['Read your feedback', 'Find the cause', 'Make the fix', 'Write summary'],
+  pool: [[a('Think', 'Reading your feedback')], [a('Read', 'Finding the cause')], [a('Edit', 'Making the fix')], [a('Think', 'Writing summary', 'write')]] });
+
+function startSession(id, name, project, job, status, cur, partial, startMin, endMin, now) {
+  const steps = job.steps.map((t, i) => ({ t, s: status === 'done' || i < cur ? 'done' : i === cur ? (status === 'needs' ? 'blocked' : 'doing') : 'todo' }));
+  const acts = [];
+  const upto = status === 'done' ? job.pool.length : cur;
+  for (let j = 0; j < upto; j++) job.pool[j].forEach((x) => acts.push(x));
+  if (status === 'working') acts.push(job.pool[cur][0]);
+  if (status === 'needs') acts.push(job.ask);
+  const start = now - startMin * 60000, end = now - endMin * 60000 - 12000;
+  const timeline = acts.map((x, i) => ({ ...x, id: id + i, at: acts.length === 1 ? now : start + ((end - start) * (i + 1)) / acts.length })).reverse();
+  return { id, name, project, job, status, steps, cur, partial, actIdx: 1, since: 0, seq: acts.length, started: start, doneAt: status === 'done' ? end : null,
+    action: status === 'done' ? job.doneLabel : status === 'needs' ? job.waitLabel : timeline[0].label, timeline };
+}
+
+const PROJ = {
+  FormPal: { target: 'Dec 12', sections: [
+    ['Blocking', [['Sign in with Apple', 1], ['Onboarding flow', 1], ['Camera permission copy', 1], ['Rep counter accuracy', 1], ['History sync', 1], ['Crash-free rate', 1], ['App icon', 1], ['Privacy policy', 1], ['Subscriptions', 1], ['Restore purchases', 1], ['HealthKit access', 1], ['Weekly progress chart', 0, 'A'], ['Migrate user settings', 0, 'B'], ['Fix paywall layout on iPhone SE', 0]]],
+    ['Should ship', [['Dark mode', 1], ['Rep haptics', 1], ['Exercise library', 1], ['Reminders', 1], ['Share card', 1], ['Spanish', 1], ['Accessibility labels', 1], ['Empty states', 1], ['Rate app prompt', 1], ['App Store screenshots', 0], ['Preview video', 0], ['Offline workouts', 0], ['Streak widget', 0], ['Sentry tags', 0]]],
+    ['Later', [['Watch spike', 1], ['Coach voice', 1], ['iPad audit', 1], ['Leaderboard', 0], ['Android', 0], ['Program builder', 0], ['Score export', 0], ['Referrals', 0]]],
+  ] },
+  Unlock: { target: 'Jan 20', sections: [
+    ['Blocking', [['Paywall', 1], ['Restore purchases', 1], ['Lock screen flow', 1], ['Screen Time API', 1], ['Onboarding', 1], ['Privacy policy', 1], ['Paywall copy test', 0], ['App Review notes', 0], ['Demo account', 0], ['Crash on iOS 17', 0]]],
+    ['Should ship', [['Widgets', 1], ['Streaks', 1], ['Dark mode', 1], ['Haptics', 1], ['Share sheet', 1], ['Reminders', 1], ['Onboarding screenshots', 0], ['Preview video', 0], ['Localization', 0], ['Analytics events', 0], ['Empty states', 0], ['Rate app prompt', 0], ['Accessibility pass', 0], ['iPad layout', 0]]],
+    ['Later', [['Mac app', 1], ['Family sharing', 1], ['Focus filters', 0], ['Shortcuts', 0], ['Themes', 0], ['Watch app', 0], ['Referrals', 0], ['Web dashboard', 0], ['Android', 0], ['Stats export', 0]]],
+  ] },
+  ATHLT: { target: 'Mar 3', sections: [
+    ['Blocking', [['Auth', 1], ['Team model', 1], ['Rename Workouts tab', 1], ['Schedule view', 1], ['Team roster import', 0], ['Coach dashboard', 0], ['Push setup', 0], ['First TestFlight build', 0], ['Payments', 0], ['Privacy policy', 0], ['App icon', 0], ['Crash reporting', 0]]],
+    ['Should ship', [['Chat', 1], ['Calendar sync', 1], ['Dark mode', 0], ['Stats cards', 0], ['Share card', 0], ['Empty states', 0], ['Onboarding', 0], ['Screenshots', 0], ['Preview video', 0]]],
+    ['Later', [['Video review', 0], ['Wearables', 0], ['Parent view', 0], ['Android', 0], ['Web app', 0], ['Referrals', 0]]],
+  ] },
+};
+
+function makeGlassFilters() {
+  if (document.getElementById('hq-glass-defs')) return;
+  const n = 192, cv = document.createElement('canvas'); cv.width = cv.height = n;
+  const x = cv.getContext('2d'); const img = x.createImageData(n, n); const b = 0.24;
+  const curve = (e) => (e >= b ? 0 : Math.pow(1 - e / b, 2.2));
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const nx = ((i + 0.5) / n) * 2 - 1, ny = ((j + 0.5) / n) * 2 - 1;
+    const dx = -Math.sign(nx) * curve(1 - Math.abs(nx)), dy = -Math.sign(ny) * curve(1 - Math.abs(ny));
+    const k = (j * n + i) * 4; img.data[k] = 128 + dx * 127; img.data[k + 1] = 128 + dy * 127; img.data[k + 2] = 128; img.data[k + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  const url = cv.toDataURL();
+  const f = (id, s) => `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage href="${url}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="${s}" xChannelSelector="R" yChannelSelector="G" result="d1"/>
+    <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="r"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="${s + 5}" xChannelSelector="R" yChannelSelector="G" result="d2"/>
+    <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0" result="g"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="${s + 10}" xChannelSelector="R" yChannelSelector="G" result="d3"/>
+    <feColorMatrix in="d3" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0" result="bl"/>
+    <feBlend in="r" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bl" mode="screen"/>
+  </filter>`;
+  const wrap = document.createElement('div');
+  wrap.id = 'hq-glass-defs'; wrap.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+  wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"><defs>${f('lg', 46)}${f('lgs', 14)}</defs></svg>`;
+  document.body.appendChild(wrap);
+}
+
+class Component extends DCLogic {
+  state = this.initState();
+  roomRef = React.createRef();
+  composeRef = React.createRef();
+  nxInput = React.createRef();
+  chatInput = React.createRef();
+  fbInput = React.createRef();
+
+  initState() {
+    const now = Date.now();
+    const A = startSession('A', 'Window A', 'FormPal', JOBS.A1, 'working', 5, 0.35, 14, 0, now);
+    const B = startSession('B', 'Window B', 'FormPal', JOBS.B1, 'needs', 3, 0, 22, 1, now);
+    const C = startSession('C', 'Window C', 'FormPal', JOBS.C0, 'done', 0, 0, 40, 16, now);
+    C.status = 'idle'; C.steps = [];
+    const m = (n) => now - n * 60000;
+    const events = [
+      { who: 'Window B', kind: 'needs', job: 'Settings migration', project: 'FormPal', at: m(1) },
+      { who: 'Window A', kind: 'working', job: 'Weekly progress chart', project: 'FormPal', at: m(14) },
+      { who: 'Window C', kind: 'done', job: 'Onboarding copy', project: 'FormPal', at: m(16) },
+      { who: 'Window B', kind: 'working', job: 'Settings migration', project: 'FormPal', at: m(22) },
+      { who: 'Window A', kind: 'done', job: 'HealthKit prompt', project: 'FormPal', at: m(48) },
+      { who: 'Window A', kind: 'done', job: 'Rep counter tweak', project: 'FormPal', at: m(110) },
+    ].map((e, i) => ({ ...e, id: 'e' + i }));
+    const tests = [
+      { id: 't1', win: 'C', from: 'Window C', title: 'Train tab fix', project: 'FormPal', checks: ['Check if the Train tab still doesn\u2019t show up after you log in', 'Switch weeks on Train and see if the list flickers'] },
+      { id: 't2', win: 'A', from: 'Window A', title: 'Workout summary card', project: 'FormPal', checks: ['Check if the white card after workouts still comes in late or glitches', 'Finish a 1 minute workout and see if the card shows right away'] },
+    ];
+    const projects = {};
+    Object.entries(PROJ).forEach(([k, p]) => { projects[k] = p.sections.map(([title, items]) => ({ title, items: items.map(([t, d, by]) => ({ t, done: !!d, by: by || null })) })); });
+    const tm = (this.props.timeOfDay ?? 'Auto').toLowerCase();
+    return { now, ready: false, sound: true, proj: 'FormPal', layer: 1, focus: null, switcher: false, timeMode: MODES.includes(tm) ? tm : 'auto', loc: 'city',
+      tag: null, toast: null, fbOpen: null, chat: {}, ariTodos: [{ t: 'Finish the Train tab', d: false }, { t: 'Ship the paywall fix to TestFlight', d: false }, { t: 'Post the weekly chart clip', d: true }], bld: null, bldOpen: false, bldDone: {}, near: null, jobQ: {}, labMarks: {}, merged: {},
+      runs: [{ id: 'r1', wf: 'iOS build', br: 'feat/weekly-progress-chart', st: 'running', at: now - 10000 }, { id: 'r2', wf: 'Unit tests', br: 'main', st: 'failed', note: 'StatsScreen.test.tsx \u00b7 2 failing', at: now - 12 * 60000 }, { id: 'r3', wf: 'Lint', br: 'chore/settings-migration', st: 'done', at: now - 20 * 60000 }, { id: 'r4', wf: 'iOS build', br: 'main', st: 'done', at: now - 40 * 60000 }],
+      vault: [{ t: 'Before and after: the weekly chart reveal', d: 'TikTok \u00b7 15s screen recording' }, { t: 'Why I rebuilt the Train tab', d: 'X thread \u00b7 build in public' }, { t: 'Rep counter vs. my friend counting', d: 'Instagram Reel \u00b7 funny' }, { t: '30 days to launch, day 1', d: 'YouTube Short \u00b7 series' }], launchTab: 'block', compose: '', plats: { x: true, tt: false, ig: false, yt: false },
+      queue: [{ id: 'q1', p: 'x', at: now + 50 * 60000, text: 'Building FormPal in public. The weekly progress chart lands this week.' }, { id: 'q2', p: 'tt', at: now + 15 * 3600000, text: 'Rep counter demo: 10 squats, counted live.' }], usage: 58, resetAt: now + (2 * 60 + 14) * 60000, postIdx: 0, prs: {},
+      listing: Object.fromEntries(LISTING.map((l) => [l.k, l.st])),
+      builds: [{ n: 42, status: 'ready', at: now - 2 * 3600000, testers: 3 }, { n: 41, status: 'old', at: now - 26 * 3600000, testers: 3 }], crashSent: false, sessions: [A, B, C], events, tests, projects, evSeq: 100, msgSeq: 0 };
+  }
+
+  mapUfoRef = React.createRef();
+  ariInput = React.createRef();
+  w2m(x, z) { const mx = (x - z) / Math.SQRT2, my = (x + z) / Math.SQRT2; return [Math.max(12, Math.min(218, 115 + mx * 0.9)), Math.max(12, Math.min(218, 115 + my * 0.9))]; }
+  componentDidMount() {
+    // HQ-LIVE: connects this design to real data (see hq-live.js).
+    window.__hq = this;
+    try { window.__hqConsts = { PROJ, LISTING, SOCIAL, IDEAS, POSTS }; } catch (e) {}
+    if (window.HQLive && !/demo/.test(location.search)) window.HQLive.connect(this);
+    const mloop = () => { if (this.room && this.mapUfoRef.current) { const p = this.room.getPos(); const [l, t] = this.w2m(p.x, p.z); this.mapUfoRef.current.style.left = l + 'px'; this.mapUfoRef.current.style.top = t + 'px'; this.mapUfoRef.current.style.transform = 'rotate(' + p.a + 'rad)'; } this._mraf = requestAnimationFrame(mloop); };
+    this._mraf = requestAnimationFrame(mloop);
+    makeGlassFilters();
+    this._r = setTimeout(() => this.setState({ ready: true }), 150);
+    this._t = setInterval(() => this.tick(), 1000);
+    this._w = (e) => {
+      if (this.state.focus || this.state.switcher) return;
+      if (this.state.bld) { e.preventDefault(); if (this.state.bldOpen && Math.abs(e.deltaY) > 30 && !this._lock) { this._lock = true; this.setState({ bld: null, bldOpen: false, layer: 1 }); this.room && this.room.goHome(); setTimeout(() => { this._lock = false; this._acc = 0; }, 1200); } return; }
+      const sc = e.target && e.target.closest && e.target.closest('[style*="overflow: auto"]');
+      if (sc && this.state.layer >= 2 && sc.scrollHeight > sc.clientHeight + 2) { if (!(sc.scrollTop <= 0 && e.deltaY < 0)) return; }
+      e.preventDefault();
+      if (this._lock) return;
+      this._acc = (this._acc || 0) + e.deltaY;
+      if (Math.abs(this._acc) < 28) return;
+      const dir = this._acc > 0 ? 1 : -1; this._acc = 0;
+      const L = Math.max(0, Math.min(4, this.state.layer + dir));
+      if (L !== this.state.layer) this.setState({ layer: L });
+      this._lock = true; setTimeout(() => { this._lock = false; this._acc = 0; }, 850);
+    };
+    this._k = (e) => {
+      if (e.target && e.target.tagName === 'INPUT') return;
+      if (e.key === 'Escape') { this.setState({ focus: null, switcher: false }); if (this.state.bld) this.closeBuilding(); }
+      if (e.key === 'Enter' && this.state.near && !this.state.bld) this.openBuilding(this.state.near);
+    };
+    window.addEventListener('wheel', this._w, { passive: false });
+    window.addEventListener('keydown', this._k);
+    import(window.__resources.room3d).then((mod) => {
+      if (!this.roomRef.current) return;
+      this.room = window.__room = mod.mountRoom(this.roomRef.current, { onSelect: (id) => this.openFocus(id), onBuilding: (k) => this.openBuilding(k), onNear: (k) => this.setState({ near: k }), onDock: () => this.setState({ bldOpen: true }), onZoomOut: () => this.setState({ focus: null }), onLeave: () => this.setState({ bld: null, bldOpen: false }) });
+      this.syncRoom(); this.setState({ towers: this.room.landmarks });
+    }).catch((err) => console.error('room3d failed', err));
+  }
+  componentDidUpdate() { this.syncRoom(); }
+  componentWillUnmount() {
+    clearTimeout(this._r); clearInterval(this._t); clearTimeout(this._tagT); clearTimeout(this._toastT);
+    window.removeEventListener('wheel', this._w); window.removeEventListener('keydown', this._k);
+    cancelAnimationFrame(this._mraf); if (this.room) this.room.dispose();
+  }
+  syncRoom() {
+    if (!this.room || !this._roomData) return;
+    const d = this._roomData;
+    this.room.update({ sessions: d.sessions, ring: d.ring, tv: d.tv });
+    if (d.loc !== this._loc) { this._loc = d.loc; this.room.setLocation(d.loc); this._theme = null; }
+    if (d.theme !== this._theme) { this._theme = d.theme; this.room.setTheme(d.theme); }
+    const ak = JSON.stringify(d.attn || {}); if (ak !== this._attnK) { this._attnK = ak; this.room.setAttention(d.attn); }
+    this.room.setView(d.view); this.room.focus(d.focus);
+  }
+  openBuilding(k) {
+    this.toast('Landing on ' + (((this.room && this.room.landmarks.find((b) => b.key === k)) || {}).name || 'the tower'), 'flight_land');
+    this.setState({ bld: k, bldOpen: false, focus: null, layer: 1, bldDone: {} });
+    this.room && this.room.flyTo(k);
+    clearTimeout(this._bT); this._bT = setTimeout(() => this.state.bld === k && this.setState({ bldOpen: true }), 9000);
+  }
+  closeBuilding() { this.setState({ bld: null, bldOpen: false }); this.room && this.room.flyTo(null); }
+  openFocus(id) { if (this.state.bld) { this.room && this.room.flyTo(null); } this.setState({ focus: id, switcher: false, layer: 1, bld: null, bldOpen: false }); }
+  toast(text, icon = 'check_circle') { clearTimeout(this._toastT); this.setState({ toast: { text, icon } }); this._toastT = setTimeout(() => this.setState({ toast: null }), 2200); }
+  flashTag(tag) { clearTimeout(this._tagT); this.setState({ tag }); this._tagT = setTimeout(() => this.setState({ tag: null }), 1800); }
+
+  chime() {
+    if (!this.state.sound) return;
+    try {
+      const ctx = this._ac || (this._ac = new (window.AudioContext || window.webkitAudioContext)());
+      [880, 1318].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.13;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.75);
+      });
+    } catch (e) {}
+  }
+
+  pushEvent(st, e) { const seq = st.evSeq + 1; return { events: [{ ...e, id: 'e' + seq, at: Date.now() }, ...st.events].slice(0, 20), evSeq: seq }; }
+
+  tick() {
+    // HQ-LIVE: real data drives everything, so skip the built-in demo simulation.
+    if (this.state.live) { this.setState({ now: Date.now() }); return; }
+    const now = Date.now();
+    const evs = []; const newTests = []; let chime = false; const by = [];
+    const sessions = this.state.sessions.map((s0) => {
+      let s = s0;
+      if (s.status === 'working') {
+        s = { ...s, steps: s.steps.map((x) => ({ ...x })), partial: s.partial + 1 / (s.job.secs || 30), since: s.since + 1 };
+        const pool = s.job.pool[s.cur] || [];
+        if (s.since >= 9 && pool.length) {
+          const x = pool[s.actIdx % pool.length];
+          s.actIdx++; s.since = 0; s.seq++;
+          s.timeline = [{ ...x, id: s.id + '-' + s.seq, at: now }, ...s.timeline]; s.action = x.label;
+        }
+        if (s.partial >= 1) {
+          s.steps[s.cur].s = 'done';
+          if (s.cur + 1 < s.steps.length) { s.cur++; s.steps[s.cur].s = 'doing'; s.partial = 0; s.actIdx = 0; s.since = 9; }
+          else {
+            s.status = 'testing'; s.doneAt = now; s.partial = 0; s.action = 'Waiting for you to test';
+            evs.push({ who: s.name, kind: 'testing', job: s.job.title, project: s.project }); chime = true;
+            newTests.push({ id: 't' + now + s.id, win: s.id, from: s.name, title: s.job.title, project: s.project, item: s.job.item, checks: s.job.checks || ['Open the app', 'Try the change', 'Nothing else broke'] });
+          }
+        }
+      } else if (s.status === 'done' && s.job.next && now - s.doneAt > 15000) {
+        const job = JOBS[s.job.next];
+        s = startSession(s.id, s.name, s.project, job, 'working', 0, 0, 0, 0, now);
+        evs.push({ who: s.name, kind: 'working', job: job.title, project: s.project });
+        if (job.item) by.push([s.project, job.item, s.id]);
+      }
+      return s;
+    });
+    const patch = { now, sessions };
+    const busy = sessions.filter((s) => s.status === 'working').length;
+    patch.usage = Math.min(100, this.state.usage + busy * 0.004);
+    if (this.state.builds.some((b) => b.status === 'processing' && now - b.at > 9000)) {
+      patch.builds = this.state.builds.map((b) => (b.status === 'processing' && now - b.at > 9000 ? { ...b, status: 'ready', at: now } : b));
+      setTimeout(() => this.toast('New build is ready to test', 'deployed_code'), 0);
+    }
+    if (evs.length) {
+      let seq = this.state.evSeq;
+      patch.events = [...evs.map((e) => ({ ...e, at: now, id: 'e' + ++seq })), ...this.state.events].slice(0, 20);
+      patch.evSeq = seq;
+    }
+    if (newTests.length) patch.tests = [...newTests, ...this.state.tests];
+    if (by.length) {
+      const P = { ...this.state.projects };
+      by.forEach(([proj, item, id]) => { P[proj] = P[proj].map((sec) => ({ ...sec, items: sec.items.map((it) => (it.t === item ? { ...it, by: id } : it)) })); });
+      patch.projects = P;
+    }
+    if (this.state.runs.some((r) => r.st === 'running' && now - r.at > 45000)) patch.runs = this.state.runs.map((r) => (r.st === 'running' && now - r.at > 45000 ? { ...r, st: r.fix ? 'done' : 'done', at: now } : r));
+    this.setState(patch);
+    if (chime) this.chime();
+    this._qBusy = this._qBusy || {};
+    sessions.forEach((s) => { if (['testing', 'done', 'idle'].includes(s.status) && (this.state.jobQ[s.id] || []).length && !this._qBusy[s.id]) { this._qBusy[s.id] = true; setTimeout(() => this.sendQueued(s.id), 1500); } });
+  }
+
+  queueJob(id, text) {
+    const t = (text || '').trim(); if (!t) return;
+    const s = this.state.sessions.find((x) => x.id === id); if (!s) return;
+    if (['idle', 'done'].includes(s.status)) { this.assign(id, t); return; }
+    this.setState((s0) => ({ jobQ: { ...s0.jobQ, [id]: [...(s0.jobQ[id] || []), t] } }));
+    this.toast(`Queued for ${s.name}`, 'playlist_add');
+  }
+  sendQueued(id) {
+    const q = this.state.jobQ[id] || []; if (!q.length) { this._qBusy[id] = false; return; }
+    const [first, ...rest] = q;
+    this.setState((s0) => ({ jobQ: { ...s0.jobQ, [id]: rest } }));
+    this.assign(id, first); this._qBusy[id] = false;
+  }
+
+  _ari(on, c) {
+    if (!on) return { doNow: [], next: [], important: [], todos: [] };
+    const { wins, freeWin, freeItems, ci, pu, proj } = c;
+    const now = this.state.now;
+    const needs = wins.filter((s) => s.status === 'needs');
+    const tests = this.state.tests.filter((t0) => t0.project === proj);
+    const ready = wins.filter((s) => (s.status === 'done' || s.status === 'testing') && !this.state.merged[s.id]);
+    const failed = this.state.runs.filter((r) => r.st === 'failed');
+    const W = (o) => ({ hasBtn: !!o.btn, btn: '', go: () => {}, ...o });
+    const doNow = [
+      ...needs.map((s) => W({ icon: 'front_hand', t: 'Approve ' + s.name, sub: s.job.question || s.action, btn: 'Approve', go: () => this.approve(s.id) })),
+      ...(tests.length ? [W({ icon: 'science', t: 'Test ' + tests.length + (tests.length === 1 ? ' build' : ' builds') + ' on your phone', sub: tests.map((t0) => t0.title).join(', '), btn: 'Fly to Test Lab', go: () => this.openBuilding('lab') })] : []),
+      ...(ready.length ? [W({ icon: 'merge', t: 'Merge ' + ready.map((s) => s.name).join(', '), sub: 'Finished work waiting on main', btn: 'Fly to Dock', go: () => this.openBuilding('dock') })] : []),
+      ...(failed.length ? [W({ icon: 'error', t: failed.length + ' GitHub build failed', sub: failed[0].note || failed[0].wf, btn: 'Fly to Factory', go: () => this.openBuilding('factory') })] : []),
+    ];
+    const next = freeItems.slice(0, 3).map((it) => W({ icon: 'schedule', t: it.t, sub: 'Blocking launch', ...(freeWin ? { btn: 'Send to ' + freeWin.name, go: () => this.assign(freeWin.id, it.t) } : {}) }));
+    const target = PROJ[proj].target; const td = new Date(target + ' ' + new Date(now).getFullYear()); const days = Math.max(0, Math.ceil((td - now) / 86400000));
+    const finished = this.state.events.filter((e) => e.project === proj && (e.kind === 'done' || e.kind === 'testing')).length;
+    const important = [
+      { icon: 'event', t: days + ' days to launch', sub: 'Target ' + target + '. Submit 2 days early for App Review.' },
+      { icon: 'data_usage', t: 'Claude usage ' + pu.pct + '%', sub: 'Resets ' + pu.reset + '. ' + pu.pace + '.' },
+      { icon: 'flag', t: ci.blocking + ' blocking items left', sub: proj + ' is ' + ci.pct + '% ready' },
+      { icon: 'bolt', t: finished + ' jobs finished today', sub: wins.filter((s) => s.status === 'working').length + ' windows working right now' },
+    ];
+    const todos = this.state.ariTodos.map((t0, i) => ({ t: t0.t, op: t0.d ? 0.45 : 1, bg: t0.d ? '#ffffff' : 'transparent', bd: t0.d ? '0' : '1.5px solid rgba(255,255,255,0.6)', glyph: t0.d ? '\u2713' : '',
+      toggle: () => this.setState((s0) => ({ ariTodos: s0.ariTodos.map((x, k) => (k === i ? { ...x, d: !x.d } : x)) })) }));
+    const add = () => { const el = this.ariInput.current; const v = el && el.value.trim(); if (!v) return; this.setState((s0) => ({ ariTodos: [...s0.ariTodos, { t: v, d: false }] })); el.value = ''; };
+    const gd = this.state.ariTodos.filter((x) => x.d).length, gt = this.state.ariTodos.length;
+    return { goalsLabel: gd + ' of ' + gt + ' done', goalsPct: gt ? Math.round((gd / gt) * 100) : 0, doNow, next, important, todos, doN: String(doNow.length), noDo: !doNow.length, add, key: (e) => { if (e.key === 'Enter') add(); }, close: () => this.setState({ focus: null }), greeting: new Date(now).getHours() < 12 ? 'Good morning' : new Date(now).getHours() < 18 ? 'Good afternoon' : 'Good evening' };
+  }
+
+  approve(id) {
+    const now = Date.now();
+    this.setState((st) => ({
+      sessions: st.sessions.map((s) => {
+        if (s.id !== id || s.status !== 'needs') return s;
+        const steps = s.steps.map((x) => ({ ...x })); steps[s.cur].s = 'doing';
+        return { ...s, steps, status: 'working', partial: 0, since: 0, actIdx: 1, action: 'Running db push', seq: s.seq + 1,
+          timeline: [{ ...a('Run', 'Running db push'), id: s.id + '-' + (s.seq + 1), at: now }, ...s.timeline] };
+      }),
+      ...this.pushEvent(st, { who: 'You', kind: 'approved', job: 'Settings migration', project: st.proj }),
+    }));
+    this.toast('Approved. Window is back to work.');
+  }
+
+  assign(id, item) {
+    const now = Date.now();
+    const job = { title: item, item, secs: 24, file: 'App.tsx', doneLabel: 'Finished', explain: `Working on \u201c${item}\u201d from your launch list.`,
+      checks: ['Open the app', `Try \u201c${item}\u201d`, 'Nothing else broke'],
+      steps: ['Read the code', 'Plan the change', 'Make the edit', 'Run tests', 'Write summary'],
+      pool: [[a('Read', 'Reading the code')], [a('Think', 'Planning the change')], [a('Edit', 'Making the edit')], [a('Run', 'Running tests')], [a('Think', 'Writing summary', 'write')]] };
+    this.setState((st) => {
+      const s0 = st.sessions.find((s) => s.id === id);
+      const s = startSession(id, s0.name, s0.project, job, 'working', 0, 0, 0, 0, now);
+      const P = { ...st.projects, [s0.project]: st.projects[s0.project].map((sec) => ({ ...sec, items: sec.items.map((it) => (it.t === item ? { ...it, by: id } : it)) })) };
+      return { sessions: st.sessions.map((x) => (x.id === id ? s : x)), projects: P, ...this.pushEvent(st, { who: s0.name, kind: 'working', job: item, project: s0.project }) };
+    });
+    this.toast(`Sent to ${this.state.sessions.find((s) => s.id === id).name}`, 'send');
+  }
+
+  passTest(tid) {
+    const t = this.state.tests.find((x) => x.id === tid); if (!t) return;
+    this.setState((st) => {
+      const P = t.item ? { ...st.projects, [t.project]: st.projects[t.project].map((sec) => ({ ...sec, items: sec.items.map((it) => (it.t === t.item ? { ...it, done: true, by: null } : it)) })) } : st.projects;
+      return {
+        tests: st.tests.filter((x) => x.id !== tid), projects: P, fbOpen: null,
+        sessions: st.sessions.map((s) => (s.id === t.win && s.status === 'testing' ? { ...s, status: 'done', doneAt: Date.now(), action: s.job.doneLabel } : s)),
+        ...this.pushEvent(st, { who: 'You', kind: 'done', job: t.title, project: t.project }),
+      };
+    });
+    this.toast(`${t.title} marked as working`, 'thumb_up');
+  }
+  sendFeedback(tid, text) {
+    const t = this.state.tests.find((x) => x.id === tid); if (!t) return;
+    const now = Date.now();
+    this.setState((st) => {
+      const s0 = st.sessions.find((s) => s.id === t.win);
+      const sessions = s0 ? st.sessions.map((s) => (s.id === t.win ? { ...startSession(s.id, s.name, s.project, FIX(t.title), 'working', 0, 0, 0, 0, now), job: { ...FIX(t.title), next: s.job.next } } : s)) : st.sessions;
+      const chat = { ...st.chat, [t.win]: [...(st.chat[t.win] || []), { id: 'm' + now, from: 'you', text: text || 'This didn\u2019t work on my phone.' }] };
+      return { tests: st.tests.filter((x) => x.id !== tid), sessions, chat, fbOpen: null };
+    });
+    this.toast(`Feedback sent to ${t.from}`, 'rate_review');
+  }
+
+  send(id, text, kind) {
+    if (!id) return;
+    const s = this.state.sessions.find((x) => x.id === id); if (!s) return;
+    const t = (text || '').trim(); if (!t && !kind) return;
+    const now = Date.now();
+    const youText = kind === 'shot' ? 'Send me a screenshot' : kind === 'explain' ? 'What are you doing right now, in plain words?' : t;
+    this.setState((st) => ({ chat: { ...st.chat, [id]: [...(st.chat[id] || []), { id: 'y' + now, from: 'you', text: youText }].slice(-6) } }));
+    setTimeout(() => {
+      const cur = this.state.sessions.find((x) => x.id === id) || s;
+      let reply;
+      if (kind === 'shot' || /screenshot|screen shot|picture/i.test(t)) reply = { text: 'Here\u2019s the simulator right now.', shot: true, shotLabel: cur.job.file || 'App' };
+      else if (kind === 'explain') reply = { text: `${cur.job.explain || ''} Right now: ${cur.action.toLowerCase()}.` };
+      else reply = { text: cur.status === 'needs' ? 'Got it. I\u2019ll wait for your approval before running anything.' : 'Got it. I\u2019ll work that into the current step.' };
+      this.setState((st) => ({ chat: { ...st.chat, [id]: [...(st.chat[id] || []), { id: 'b' + Date.now(), from: 'bot', ...reply }].slice(-6) } }));
+    }, 1100);
+    if (kind !== 'explain' && this.state.focus !== id) this.toast(kind === 'shot' ? `Asked ${s.name} for a screenshot` : `Sent to ${s.name}`, kind === 'shot' ? 'screenshot_region' : 'send');
+  }
+
+  renderVals() {
+    const { now, ready, focus, layer, switcher, proj } = this.state;
+    const empty = !!this.props.emptyState;
+    const count = parseInt(this.props.sessionCount ?? '2', 10);
+    const all = empty ? [] : this.state.sessions.slice(0, count);
+    const wins = all.filter((s) => s.project === proj);
+    const fmt = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const off = (p) => (ready ? +(CIRC * (1 - p / 100)).toFixed(2) : CIRC);
+    const stop = (e) => e && e.stopPropagation && e.stopPropagation();
+    const pctOf = (s) => { const t = s.steps.length; const d = s.steps.filter((x) => x.s === 'done').length; return t ? Math.min(100, Math.round(((d + (s.status === 'working' ? s.partial : 0)) / t) * 100)) : 0; };
+    const timeOf = (s) => {
+      const t = s.steps.length, d = s.steps.filter((x) => x.s === 'done').length;
+      return { working: `${Math.max(1, Math.ceil((t - d - s.partial) * 0.5))} min left`, needs: 'Waiting on you', testing: 'Test on phone', done: 'Finished', idle: 'Free' }[s.status];
+    };
+    const pingOf = (s) => (s.status === 'working' ? 'hq-ping 1.8s ease-out infinite' : s.status === 'needs' ? 'hq-ping 1.1s ease-out infinite' : s.status === 'testing' ? 'hq-ping 1.6s ease-out infinite' : 'none');
+    const go2 = () => this.setState({ layer: 2, focus: null });
+
+    const hour = new Date(now).getHours();
+    const autoT = hour >= 5 && hour < 11 ? 'morning' : hour >= 11 && hour < 17 ? 'afternoon' : hour >= 17 && hour < 20 ? 'evening' : 'night';
+    const themeName = this.state.timeMode === 'auto' ? autoT : this.state.timeMode;
+    const th = THEMES[themeName];
+    const loc = this.state.loc;
+
+    const cards = wins.map((s) => {
+      const m = ST[s.status];
+      const btn = s.status === 'needs' ? { pLabel: 'Approve', pIcon: 'check', primary: (e) => { stop(e); this.approve(s.id); } }
+        : s.status === 'testing' ? { pLabel: 'Test', pIcon: 'phone_iphone', primary: (e) => { stop(e); this.openBuilding('lab'); } } : null;
+      return {
+        avatar: AVATAR[palOf(s.id)], name: s.name, label: m.label, color: m.c, pct: s.status === 'idle' ? '\u2013' : pctOf(s), time: timeOf(s), action: s.action, ping: pingOf(s),
+        ring: s.status === 'needs' ? 'oklch(0.82 0.14 58 / 0.9)' : s.status === 'testing' ? 'rgba(169,208,255,0.75)' : 'transparent',
+        hasBtns: !!btn, noBtns: !btn, ...(btn || { pLabel: '', pIcon: '', primary: () => {} }),
+        steps: (s.steps.length ? s.steps : [{ s: 'todo' }, { s: 'todo' }, { s: 'todo' }]).map((x) => ({
+          fc: x.s === 'done' ? '#ffffff' : x.s === 'doing' ? m.c : x.s === 'blocked' ? ST.needs.c : 'rgba(255,255,255,0.22)',
+          anim: x.s === 'doing' || x.s === 'blocked' ? 'hq-breathe 1.4s ease-in-out infinite' : 'none',
+        })),
+        open: (e) => { stop(e); this.openFocus(s.id); },
+      };
+    });
+
+    const P = this.state.projects;
+    const info = (k) => { const items = P[k].flatMap((x) => x.items); const d = items.filter((x) => x.done).length; return { done: d, total: items.length, pct: Math.round((d / items.length) * 100), blocking: P[k][0].items.filter((x) => !x.done).length }; };
+    const ci = info(proj);
+    const byId = Object.fromEntries(this.state.sessions.map((s) => [s.id, s]));
+    const openItems = (si) => P[proj][si].items.map((it, ii) => [it, ii]).filter(([it]) => !it.done);
+    const itemView = (it, si, ii) => {
+      const ss = it.by && byId[it.by] && all.includes(byId[it.by]) ? byId[it.by] : null;
+      return { t: it.t, hasChip: !!ss, chip: ss ? ss.name : '', chipC: ss ? ST[ss.status].c : '',
+        toggle: () => this.setState((st) => ({ projects: { ...st.projects, [proj]: st.projects[proj].map((x, xi) => xi !== si ? x : { ...x, items: x.items.map((y, yi) => yi !== ii ? y : { ...y, done: !y.done }) }) } })) };
+    };
+    const projEvents = this.state.events.filter((e) => e.project === proj);
+    const pr = { pct: ci.pct, off: off(ci.pct), counts: `${ci.done} of ${ci.total}`, blocking: ci.blocking, target: PROJ[proj].target,
+      jobsToday: projEvents.filter((e) => e.kind === 'done' || e.kind === 'testing').length,
+      block: openItems(0).map(([it, ii]) => itemView(it, 0, ii)) };
+
+    const tests = this.state.tests.filter((t) => t.project === proj).map((t) => ({
+      title: t.title, from: t.from, checks: t.checks.map((c, i) => ({ n: String(i + 1), t: c })), fbOpen: this.state.fbOpen === t.id,
+      works: () => this.passTest(t.id),
+      fb: () => { this.setState((st) => ({ fbOpen: st.fbOpen === t.id ? null : t.id })); setTimeout(() => this.fbInput.current && this.fbInput.current.focus(), 50); },
+      fbSend: () => { const v = this.fbInput.current ? this.fbInput.current.value : ''; this.sendFeedback(t.id, v); },
+      fbKey: (e) => { if (e.key === 'Enter') this.sendFeedback(t.id, e.target.value); },
+    }));
+
+    const needWin = wins.find((s) => s.status === 'needs');
+    const testWin = wins.find((s) => s.status === 'testing');
+    const freeWin = wins.find((s) => s.status === 'idle' || s.status === 'done');
+    const freeItems = [...openItems(0), ...openItems(1)].map(([it]) => it).filter((it) => !(it.by && byId[it.by] && all.includes(byId[it.by])));
+    const chatWin = needWin || testWin || wins.find((s) => s.status === 'working') || freeWin;
+    let nx;
+    if (needWin) nx = { title: `Approve ${needWin.name}`, sub: needWin.job.question, cta: 'Approve', icon: 'check', go: () => this.approve(needWin.id), bg: 'linear-gradient(150deg, oklch(0.72 0.15 55 / 0.38), rgba(255,255,255,0.06))' };
+    else if (testWin) nx = { title: `Test ${testWin.job.title}`, sub: `${testWin.name} finished. Try it on your phone, then approve or send feedback.`, cta: 'Start testing', icon: 'phone_iphone', go: () => {}, bg: 'linear-gradient(150deg, rgba(169,208,255,0.32), rgba(255,255,255,0.06))' };
+    else if (freeItems[0] && freeWin) nx = { title: freeItems[0].t, sub: `${freeWin.name} is free. Give it this next.`, cta: `Send to ${freeWin.name}`, icon: 'send', go: () => this.assign(freeWin.id, freeItems[0].t), bg: 'linear-gradient(150deg, oklch(0.72 0.14 152 / 0.3), rgba(255,255,255,0.06))' };
+    else if (freeItems[0]) nx = { title: freeItems[0].t, sub: 'Next item with no window on it', cta: 'Copy prompt', icon: 'content_copy', go: () => this.toast('Prompt copied', 'content_copy'), bg: 'rgba(255,255,255,0.1)' };
+    else nx = { title: 'Ready to submit', sub: 'Nothing blocking launch', cta: 'Open App Store Connect', icon: 'rocket_launch', go: () => {}, bg: 'rgba(255,255,255,0.1)' };
+    const thenFrom = needWin || testWin || !freeWin ? freeItems : freeItems.slice(1);
+    nx.then = thenFrom.slice(0, 2).map((it) => ({ t: it.t }));
+    nx.hasWin = !!chatWin;
+    nx.placeholder = chatWin ? `Message ${chatWin.name}\u2026` : '';
+    const nxSend = () => { const el = this.nxInput.current; if (!el || !chatWin) return; this.send(chatWin.id, el.value); el.value = ''; };
+    nx.send = nxSend; nx.key = (e) => { if (e.key === 'Enter') nxSend(); };
+    nx.shot = () => chatWin && this.send(chatWin.id, '', 'shot');
+
+    const tiles = Object.keys(P).map((k) => {
+      const i = info(k); const n = all.filter((s) => s.project === k).length;
+      return { name: k, initial: k[0], pct: i.pct, off: off(i.pct), windows: n, blocking: i.blocking, target: PROJ[k].target, isCur: k === proj,
+        bg: k === proj ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)', ring: k === proj ? 'rgba(255,255,255,0.7)' : 'transparent',
+        pick: () => this.setState({ proj: k, switcher: false, focus: null, layer: 1 }) };
+    });
+
+    let fs = {};
+    const fsess = focus ? byId[focus] : null;
+    if (fsess) {
+      const s = fsess, m = ST[s.status];
+      const t = s.steps.length, d = s.steps.filter((x) => x.s === 'done').length;
+      const last = s.timeline[0];
+      const fsSend = () => { const el = this.chatInput.current; if (!el) return; this.queueJob(s.id, el.value); el.value = ''; };
+      fs = {
+        avatar: AVATAR[palOf(s.id)], name: s.name, sub: `${s.project} \u00b7 ${s.job.title}`, label: m.label, color: m.c, ring: s.status === 'working' || s.status === 'needs' ? m.c : '#ffffff',
+        pct: s.status === 'idle' ? 0 : pctOf(s), off: off(s.status === 'idle' ? 0 : pctOf(s)), meta: t ? `${s.status === 'working' ? d : t} of ${t} steps \u00b7 ${timeOf(s)}` : 'Free for a new job', ping: pingOf(s),
+        explain: s.status === 'idle' ? 'Nothing right now. It\u2019s free for a new job.' : s.status === 'testing' ? `Finished \u201c${s.job.title}\u201d. It\u2019s waiting for you to try it on your phone.` : s.job.explain,
+        action: s.action, actIcon: s.status === 'testing' ? 'phone_iphone' : s.status === 'needs' ? 'front_hand' : ACT_ICON[(last && last.k) || 'Think'] || 'bolt',
+        isNeeds: s.status === 'needs', isTesting: s.status === 'testing', question: s.job.question || '', approve: () => this.approve(s.id), goTest: go2,
+        steps: s.steps.map((x) => ({ t: x.t, op: x.s === 'done' ? 0.5 : 1, glyph: x.s === 'done' ? '\u2713' : x.s === 'blocked' ? '!' : '',
+          bg: x.s === 'done' ? '#ffffff' : x.s === 'blocked' ? ST.needs.c : 'transparent',
+          border: x.s === 'doing' ? `2px solid ${m.c}` : x.s === 'todo' ? '1.5px solid rgba(255,255,255,0.45)' : '0' })),
+        chat: (this.state.chat[s.id] || []).map((c) => ({ text: c.text, align: c.from === 'you' ? 'flex-end' : 'flex-start', bg: c.from === 'you' ? '#ffffff' : 'rgba(255,255,255,0.14)', color: c.from === 'you' ? '#1d2128' : '#ffffff', shot: !!c.shot, shotLabel: c.shotLabel || '' })),
+        placeholder: '', queued: (this.state.jobQ[s.id] || []).map((q, qi) => ({ n: String(qi + 1), t: q, remove: () => this.setState((s0) => ({ jobQ: { ...s0.jobQ, [s.id]: (s0.jobQ[s.id] || []).filter((_, k) => k !== qi) } })) })), send: fsSend, key: (e) => { if (e.key === 'Enter') fsSend(); },
+        shot: () => this.send(s.id, '', 'shot'), explainBtn: () => this.send(s.id, '', 'explain'),
+      };
+    }
+
+    const poseOf = (s) => {
+      if (s.status === 'testing') return 'test';
+      if (s.status !== 'working') return { needs: 'ask', done: 'done', idle: 'idle' }[s.status];
+      const first = (s.job.pool[s.cur] || [])[0];
+      return (first && first.pose) || 'edit';
+    };
+    const ariOn = focus === 'pilot';
+    const focusOn = !!fsess || ariOn;
+    const views = [{ k: 0.8, ty: -0.1 }, { k: 1, ty: 0.9 }, { k: 1.3, ty: -4.0 }, { k: 1.3, ty: -4.0 }, { k: 1.3, ty: -4.0 }];
+    this._roomData = {
+      loc: this.state.loc, sessions: wins.map((s, i) => ({ id: s.id, palette: palOf(s.id), name: s.name, status: s.status, pose: poseOf(s), pct: pctOf(s), action: s.action, desk: i % 2 })),
+      ring: { name: proj, pct: ci.pct }, tv: { name: proj, pct: ci.pct },
+      attn: this._attn, theme: themeName, focus: focusOn ? focus : null, view: { ...views[layer], hideLabels: layer >= 2 },
+    };
+
+    const sheetPos = (n) => (this.state.bld ? { t: 'translateY(115%)', o: 0, pe: 'none' } : layer === n && !focusOn ? { t: 'translateY(0)', o: 1, pe: 'auto' } : layer > n && !focusOn ? { t: 'translateY(-40px) scale(0.97)', o: 0, pe: 'none' } : { t: 'translateY(115%)', o: 0, pe: 'none' });
+    const copy = (txt, msg) => { try { navigator.clipboard.writeText(txt); } catch (e) {} this.toast(msg, 'content_copy'); };
+    const LS = this.state.listing;
+    const readyN = LISTING.filter((l) => LS[l.k] === 'ready').length;
+    const ls = {
+      readyLabel: `${readyN} of ${LISTING.length} ready`, pct: Math.round((readyN / LISTING.length) * 100),
+      items: LISTING.map((l) => {
+        const st = LS[l.k]; const ready = st === 'ready'; const working = st === 'working';
+        return { label: l.label, icon: l.icon, status: ready ? 'Ready' : working ? 'A window is on it' : st === 'missing' ? 'Missing' : st === 'draft' ? 'Draft' : st,
+          sc: ready ? 'rgba(255,255,255,0.65)' : working ? '#9ee2bd' : 'oklch(0.86 0.12 60)',
+          mark: ready ? 'check_circle' : working ? 'pending' : l.draft && freeWin ? 'send' : 'radio_button_unchecked', ic: ready ? '#ffffff' : 'rgba(255,255,255,0.75)',
+          go: () => {
+            if (!ready && !working && l.draft && freeWin) { this.assign(freeWin.id, l.draft); this.setState((s0) => ({ listing: { ...s0.listing, [l.k]: 'working' } })); }
+            else this.setState((s0) => ({ listing: { ...s0.listing, [l.k]: ready ? (l.st === 'ready' ? 'missing' : l.st) : 'ready' } }));
+          } };
+      }),
+    };
+    const shipped = [...new Set(projEvents.filter((e) => e.kind === 'done' || e.kind === 'testing').map((e) => e.job))];
+    const notes = shipped.map((t) => ({ t: NEWS[t] || t }));
+    const posts = POSTS[proj] || [];
+    const pIdx = this.state.postIdx % Math.max(1, posts.length);
+    const post = (posts[pIdx] || '').replace('{pct}', ci.pct).replace('{target}', PROJ[proj].target);
+    const ct = {
+      notes: notes.length ? notes : [{ t: 'Nothing shipped yet today' }],
+      copyNotes: () => copy(notes.map((n) => '\u2022 ' + n.t).join('\n'), 'Release notes copied'),
+      post, postIdx: `${pIdx + 1} of ${posts.length}`,
+      copyPost: () => copy(post, 'Post copied'), nextPost: () => this.setState((s0) => ({ postIdx: s0.postIdx + 1 })),
+    };
+    const busyN = wins.filter((s) => s.status === 'working').length;
+    const usage = this.state.usage;
+    const ratePerMin = busyN * 0.24;
+    const minsLeft = ratePerMin ? (100 - usage) / ratePerMin : Infinity;
+    const resetMins = (this.state.resetAt - now) / 60000;
+    const pace = !ratePerMin ? 'Idle right now' : minsLeft > resetMins ? 'You\u2019ll make it to the reset' : `At this pace, limit at ${fmt(now + minsLeft * 60000)}`;
+    const shares = { A: 0.46, B: 0.31, C: 0.23 };
+    const winsUse = wins.map((s) => ({ avatar: AVATAR[palOf(s.id)], name: s.name, pct: Math.round(usage * (shares[s.id] || 0.2)) }));
+    const ago = (t) => { const m = Math.round((now - t) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+    const pu = {
+      pct: Math.round(usage), off: off(Math.round(usage)), ring: usage > 85 ? 'oklch(0.78 0.16 52)' : '#ffffff',
+      reset: fmt(this.state.resetAt), pace, paceC: !ratePerMin || minsLeft > resetMins ? 'rgba(255,255,255,0.85)' : 'oklch(0.86 0.12 60)', wins: winsUse,
+      builds: this.state.builds.slice(0, 3).map((b) => ({
+        name: `1.0 (${b.n})`, sub: b.status === 'processing' ? 'Uploading to App Store Connect' : `${ago(b.at)} \u00b7 ${b.testers} testers`,
+        status: { processing: 'Processing', ready: 'Ready to test', old: 'Replaced' }[b.status],
+        icon: b.status === 'processing' ? 'progress_activity' : b.status === 'ready' ? 'check_circle' : 'history',
+        ic: b.status === 'ready' ? '#9ee2bd' : 'rgba(255,255,255,0.7)', anim: b.status === 'processing' ? 'hq-breathe 1.2s ease-in-out infinite' : 'none',
+      })),
+      upload: () => { if (this.state.builds.some((b) => b.status === 'processing')) return; this.setState((s0) => ({ builds: [{ n: s0.builds[0].n + 1, status: 'processing', at: Date.now(), testers: 3 }, ...s0.builds.map((b) => (b.status === 'ready' ? { ...b, status: 'old' } : b))] })); this.toast('Uploading new build', 'upload'); },
+      crashFree: this.state.crashSent ? '99.4%' : '99.4%',
+      crash: this.state.crashSent ? 'Top crash is being fixed.' : 'Top crash: Stats screen, index out of range. 3 people hit it today.',
+      hasCrash: !this.state.crashSent, fixLabel: freeWin ? `Send to ${freeWin.name}` : 'Copy crash log',
+      fixCrash: () => { if (freeWin) { this.assign(freeWin.id, 'Fix Stats screen crash'); this.setState({ crashSent: true }); } else copy('Fatal error: Index out of range (StatsScreen.swift:118)', 'Crash log copied'); },
+      branches: wins.map((s) => {
+        const d = s.steps.filter((x) => x.s === 'done').length; const files = s.status === 'idle' ? 0 : d + 1;
+        const pr = this.state.prs[s.id];
+        const canPR = (s.status === 'testing' || s.status === 'done') && !pr;
+        return { avatar: AVATAR[palOf(s.id)], name: s.name, branch: s.status === 'idle' ? 'main' : (BRANCH[s.id] || 'feat/' + s.job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')),
+          add: files * 37 + (files ? 12 : 0), del: files * 6, meta: files ? `${files} files \u00b7 ${Math.max(1, d)} commits` : 'Nothing changed',
+          cta: pr ? `PR #${pr}` : canPR ? 'Open PR' : 'View diff', icon: pr ? 'open_in_new' : canPR ? 'merge' : 'difference',
+          bg: canPR ? '#ffffff' : 'rgba(255,255,255,0.14)', fg: canPR ? '#1d2128' : '#ffffff',
+          go: () => { if (canPR) { const n = 18 + Object.keys(this.state.prs).length; this.setState((s0) => ({ prs: { ...s0.prs, [s.id]: n } })); this.toast(`Opened PR #${n}`, 'merge'); } else this.toast('Opening diff in VS Code', 'difference'); } };
+      }),
+    };
+
+    const isB = this.state.launchTab === 'block';
+    const on = (x) => (x ? 'rgba(255,255,255,0.24)' : 'transparent'), onS = (x) => (x ? 'inset 0 1px 0 rgba(255,255,255,0.5)' : 'none');
+    const lt = { isBlock: isB, isList: !isB, bBg: on(isB), bSh: onS(isB), lBg: on(!isB), lSh: onS(!isB),
+      num: isB ? pr.blocking : `${readyN}/${LISTING.length}`, numC: isB ? 'oklch(0.86 0.12 60)' : '#ffffff',
+      showBlock: () => this.setState({ launchTab: 'block' }), showList: () => this.setState({ launchTab: 'list' }) };
+    const fmtK = (n) => (n >= 10000 ? (n / 1000).toFixed(1).replace('.0', '') + 'K' : n.toLocaleString());
+    const handle = '@' + proj.toLowerCase() + (proj === 'FormPal' ? '.app' : '');
+    const total = SOCIAL.reduce((a2, x) => a2 + x.base, 0);
+    const plat = Object.fromEntries(SOCIAL.map((x) => [x.k, x]));
+    const fill = (t) => t.replace('{pct}', ci.pct).replace('{blocking}', ci.blocking).replace('{target}', PROJ[proj].target);
+    const ideas = (IDEAS[proj] || []).map((idea) => {
+      const w = idea.win && wins.find((x) => x.id === idea.win);
+      const askLabel = { rec: `Ask ${w ? w.name : ''} to record`, shot: 'Get screenshots', explain: 'Get the details' }[idea.ask] || '';
+      return { format: idea.format, plats: idea.plats.map((p) => plat[p].name).join(' \u00b7 '), title: fill(idea.title), hook: fill(idea.hook),
+        hasWin: !!w, askLabel, askIcon: idea.ask === 'rec' ? 'videocam' : idea.ask === 'shot' ? 'screenshot_region' : 'help',
+        ask: () => w && this.send(w.id, idea.ask === 'rec' ? 'Record a 15 second screen recording of the new feature for social.' : '', idea.ask === 'shot' ? 'shot' : idea.ask === 'explain' ? 'explain' : undefined),
+        draft: () => { this.setState({ compose: fill(idea.hook) + ' ' + fill(idea.title) + '.', plats: Object.fromEntries(SOCIAL.map((x) => [x.k, idea.plats.includes(x.k)])) }); setTimeout(() => this.composeRef.current && this.composeRef.current.focus(), 50); } };
+    });
+    const whenTxt = (t) => { const d = new Date(t), today = new Date(now); const sameDay = d.toDateString() === today.toDateString(); return `${sameDay ? 'Today' : 'Tomorrow'} ${fmt(t)}`; };
+    const so = {
+      best: '6:00 PM', total: fmtK(total),
+      accounts: SOCIAL.map((x) => ({ logoBg: `url(${window.__resources["logo_" + x.slug + "_ffffff"]}) center / contain no-repeat`, name: x.name, short: x.short, bg: x.bg, handle: x.k === 'yt' ? proj : handle, count: fmtK(x.base), delta: '+' + (x.wk >= 1000 ? (x.wk / 1000).toFixed(1) + 'K' : x.wk) + ' this week',
+        spark: x.spark.map((v, i) => ({ h: Math.round((v / 9) * 100), o: i === 6 ? 1 : 0.45 })) })),
+      top: 'Rep counter demo on TikTok. 48K views, 2.1K likes.',
+      ideas,
+      queue: this.state.queue.slice().sort((p1, p2) => p1.at - p2.at).map((q) => ({ logoBg: `url(${window.__resources["logo_" + plat[q.p].slug + "_ffffff"]}) center / contain no-repeat`, short: plat[q.p].short, bg: plat[q.p].bg, when: whenTxt(q.at), text: q.text })),
+      queueN: `${this.state.queue.length} posts`,
+      compose: this.state.compose, onInput: (e) => this.setState({ compose: e.target.value }),
+      chips: SOCIAL.map((x) => ({ logoBg: `url(${window.__resources["logo_" + x.slug + "_" + (this.state.plats[x.k] ? '1d2128' : 'ffffff')]}) center / contain no-repeat`, short: x.short, bg: this.state.plats[x.k] ? '#ffffff' : 'rgba(255,255,255,0.12)', fg: this.state.plats[x.k] ? '#1d2128' : '#ffffff', toggle: () => this.setState((s0) => ({ plats: { ...s0.plats, [x.k]: !s0.plats[x.k] } })) })),
+      schedule: () => {
+        const txt = (this.state.compose || '').trim(); if (!txt) { this.toast('Write something first', 'edit_note'); return; }
+        const ps = SOCIAL.filter((x) => this.state.plats[x.k]).map((x) => x.k); if (!ps.length) { this.toast('Pick a platform', 'group'); return; }
+        const base = new Date(now); base.setHours(18, 0, 0, 0); let at = base.getTime(); if (at < now) at += 86400000;
+        this.setState((s0) => ({ queue: [...s0.queue, ...ps.map((p, i) => ({ id: 'q' + Date.now() + i, p, at: at + i * 600000, text: txt }))], compose: '' }));
+        this.toast(`Scheduled for ${whenTxt(at)}`, 'event_upcoming');
+      },
+    };
+
+    const needsN = wins.filter((s) => s.status === 'needs').length;
+    const mode = this.state.timeMode;
+    const railBtn = (icon, title, on, fn) => ({ icon, title, go: fn, op: on ? 1 : 0.82, fill: on ? 1 : 0,
+      bg: on ? 'rgba(255,255,255,0.24)' : 'transparent',
+      shadow: on ? 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.15), 0 6px 16px rgba(0,0,0,0.18)' : 'none' });
+    const nextMode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+    const nextLoc = LOC_KEYS[(LOC_KEYS.indexOf(loc) + 1) % LOC_KEYS.length];
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const hide = focusOn || layer === 0 || !!this.state.bld;
+    const tag = this.state.tag;
+    const bk = this.state.bld;
+    const copyTxt = (txt, msg) => { try { navigator.clipboard.writeText(txt); } catch (e) {} this.toast(msg, 'content_copy'); };
+    const W = (o) => ({ hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], hasBtn: false, btn: '', icon: '', go: () => {}, bg: '#ffffff', fg: '#1d2128', ...o, ...(o.btn ? { hasBtn: true } : {}) });
+    const projTests = this.state.tests.filter((t0) => t0.project === proj);
+    const marks = this.state.labMarks;
+    const branchOf = (s) => BRANCH[s.id] || 'feat/' + s.job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const unmerged = wins.filter((s) => s.status !== 'idle' && !this.state.merged[s.id]);
+    const readyMerge = unmerged.filter((s) => s.status === 'done' || s.status === 'testing');
+    const runs = this.state.runs, failed = runs.filter((r) => r.st === 'failed');
+    const runChip = (r) => ({ hasChip: true, chipT: { running: 'Running', done: 'Done', failed: 'Failed' }[r.st], chipC: { running: '#ffd25a', done: '#7be0a5', failed: '#ff7a6a' }[r.st], chipA: r.st === 'running' ? 'hq-breathe 1.2s ease-in-out infinite' : 'none' });
+    const ago2 = (t0) => { const m = Math.round((now - t0) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+    const needs = wins.filter((s) => s.status === 'needs');
+    const attn = { formpal: needs.length, lab: projTests.length, dock: readyMerge.length, factory: failed.length, vault: 0 };
+    let bp = { L: { items: [] }, R: { items: [] }, hasR: false };
+    const card = (title, icon, hv, hl, items) => ({ title, icon, hv, hl, items, empty: !items.length });
+    if (bk === 'formpal') bp = { name: proj, icon: 'hub', col: '#8b7bff', hasR: true,
+      L: card('Needs you', 'front_hand', String(needs.length), needs.length === 1 ? 'approval waiting' : 'approvals waiting', [
+        ...needs.map((s) => W({ t: s.name + ' wants approval', sub: s.job.question || s.action, btn: 'Approve', icon: 'check', go: () => this.approve(s.id) })),
+      ]),
+      R: card('Launch', 'rocket_launch', ci.pct + '%', 'to App Store \u00b7 ' + PROJ[proj].target, pr.block.slice(0, 3).map((it) => W({ t: it.t, sub: it.hasChip ? it.chip + ' is on it' : 'Blocking, no window yet' }))) };
+    if (bk === 'lab') bp = { name: 'Test Lab', icon: 'science', col: '#5fc8ff', hasR: false,
+      L: card('Test checklist', 'checklist', String(projTests.length), projTests.length === 1 ? 'build to test' : 'builds to test', projTests.map((t0) => {
+        const m = marks[t0.id] || {}; const passN = t0.checks.filter((_, i) => m[i] === 'pass').length, failN = t0.checks.filter((_, i) => m[i] === 'fail').length;
+        const setM = (i, v) => this.setState((s0) => ({ labMarks: { ...s0.labMarks, [t0.id]: { ...(s0.labMarks[t0.id] || {}), [i]: (s0.labMarks[t0.id] || {})[i] === v ? undefined : v } } }));
+        const prompt = () => { const fails = t0.checks.filter((_, i) => m[i] === 'fail'); const oks = t0.checks.filter((_, i) => m[i] === 'pass');
+          return `I tested "${t0.title}" on my phone.\n${oks.length ? 'Works:\n' + oks.map((c) => '- ' + c).join('\n') + '\n' : ''}Broken:\n${(fails.length ? fails : ['(describe what went wrong)']).map((c) => '- ' + c).join('\n')}\nPlease fix what is broken and keep what works.`; };
+        const allPass = passN === t0.checks.length;
+        return W({ t: t0.title, sub: `From ${t0.from}\u2019s report \u00b7 ${passN} of ${t0.checks.length} work${failN ? ' \u00b7 ' + failN + ' broken' : ''}`, hasChecks: true,
+          checks: t0.checks.map((c, i) => ({ t: c, pBg: m[i] === 'pass' ? '#7be0a5' : 'rgba(255,255,255,0.12)', pFg: m[i] === 'pass' ? '#0f2a1b' : '#ffffff', fBg: m[i] === 'fail' ? '#ff7a6a' : 'rgba(255,255,255,0.12)', pass: () => setM(i, 'pass'), fail: () => setM(i, 'fail') })),
+          btn: allPass ? 'Mark as working' : 'Write feedback prompt', icon: allPass ? 'thumb_up' : 'edit_note', go: () => (allPass ? this.passTest(t0.id) : copyTxt(prompt(), 'Feedback prompt copied. Paste it into ' + t0.from)) });
+      })), R: card('', '', '', '', []) };
+    if (bk === 'dock') bp = { name: 'Shipping Dock', icon: 'local_shipping', col: '#4cd98a', hasR: false,
+      L: card('Unmerged work', 'merge', String(unmerged.length), unmerged.length === 1 ? 'window' : 'windows', unmerged.map((s) => {
+        const br = branchOf(s), ready = s.status === 'done' || s.status === 'testing';
+        const cmds = ['git checkout main && git pull', 'git merge --no-ff ' + br, 'git push origin main'];
+        return W({ t: s.name, sub: br, hasChip: true, chipT: ready ? 'Ready to merge' : s.status === 'needs' ? 'Waiting on you' : 'Still working', chipC: ready ? '#7be0a5' : s.status === 'needs' ? '#ffb070' : '#ffd25a', chipA: 'none',
+          hasCmds: ready, cmds: cmds.map((c) => ({ t: c, copy: () => copyTxt(c, 'Copied') })),
+          ...(ready ? { btn: 'Mark merged', icon: 'done_all', go: () => { this.setState((s0) => ({ merged: { ...s0.merged, [s.id]: true } })); this.toast(s.name + ' merged into main', 'done_all'); } } : {}) });
+      })), R: card('', '', '', '', []) };
+    if (bk === 'factory') bp = { name: 'Factory', icon: 'precision_manufacturing', col: '#ffa64a', hasR: true,
+      L: card('GitHub builds', 'deployed_code', String(runs.filter((r) => r.st === 'running').length), 'running now', runs.filter((r) => r.st !== 'failed').map((r) => W({ t: r.wf, sub: r.br + ' \u00b7 ' + ago2(r.at), ...runChip(r) }))),
+      R: card('Failed', 'error', String(failed.length), failed.length === 1 ? 'build failed' : 'builds failed', failed.map((r) => W({ t: r.wf, sub: (r.note || r.br) + ' \u00b7 ' + ago2(r.at), ...runChip(r),
+        btn: freeWin ? 'Send to ' + freeWin.name : 'Copy error', icon: freeWin ? 'send' : 'content_copy',
+        go: () => { if (freeWin) { this.assign(freeWin.id, 'Fix failing ' + r.wf + ' on ' + r.br); this.setState((s0) => ({ runs: s0.runs.map((x) => (x.id === r.id ? { ...x, st: 'running', at: Date.now(), fix: true } : x)) })); } else copyTxt((r.note || r.wf) + ' failed on ' + r.br, 'Error copied'); } }))) };
+    if (bk === 'vault') bp = { name: 'Idea Vault', icon: 'lightbulb', col: '#ff7ab8', hasR: false,
+      L: card('Content ideas', 'bookmark', String(this.state.vault.length), 'saved for later', this.state.vault.map((v) => W({ t: v.t, sub: v.d, btn: 'Draft post', icon: 'edit_note', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => { this.closeBuilding(); this.setState({ compose: v.t, layer: 3 }); } }))), R: card('', '', '', '', []) };
+    this._attn = attn;
+    const B = bp.name ? bp : null;
+    return {
+      mapUfoRef: this.mapUfoRef, mapOn: this.state.loc === 'city' && !focusOn && layer <= 1 && !!(this.state.towers || []).length,
+      mapTowers: (this.state.towers || []).map((b) => { const [l, t2] = this.w2m(b.x, b.z); return { name: b.name, short: { formpal: proj, lab: 'Test Lab', dock: 'Dock', factory: 'Factory', vault: 'Ideas' }[b.key] || b.name, op: (this._attn || {})[b.key] ? 1 : 0.45, badge: (this._attn || {})[b.key] || '', hasBadge: !!(this._attn || {})[b.key], icon: b.icon, col: b.col, l: Math.round(l), t: Math.round(t2), ring: bk === b.key ? 2 : 0, go: (e) => { e.stopPropagation(); this.openBuilding(b.key); } }; }),
+      mapClick: (e) => { const r0 = e.currentTarget.getBoundingClientRect(); const lx = ((e.clientX - r0.left) * 230) / r0.width, ly = ((e.clientY - r0.top) * 230) / r0.height; const mx = (lx - 115) / 0.9, my = (ly - 115) / 0.9; const x = (mx + my) / Math.SQRT2, z = (my - mx) / Math.SQRT2; if (this.state.bld) this.setState({ bld: null, bldOpen: false }); this.room && this.room.goTo(x, z); },
+      bp, bldOn: !!(B && this.state.bldOpen && !focus), closeBld: () => this.closeBuilding(),
+      nearOn: !!(this.state.near && !bk && !focusOn), nearName: ((this.state.towers || []).find((b) => b.key === this.state.near) || {}).name || '', landNear: () => this.state.near && this.openBuilding(this.state.near),
+      flyHint: !bk && !focusOn && layer <= 1,
+      th, isCity: loc === 'city', isCoast: loc === 'coast', isMountains: loc === 'mountains', city: CITY, locName: LOCS[loc].name,
+      dateLabel: new Date(now).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }), clock: fmt(now),
+      roomRef: this.roomRef, nxInput: this.nxInput, chatInput: this.chatInput, fbInput: this.fbInput,
+      projName: proj, projInitial: proj[0], projPct: ci.pct,
+      openSwitcher: () => this.setState({ switcher: true }), closeSwitcher: () => this.setState({ switcher: false }), switcherOn: switcher, tiles,
+      headT: hide ? 'translateY(-40px)' : layer >= 2 ? 'translateY(-30px)' : 'none', headO: hide || layer >= 2 || !!this.state.bld ? 0 : 1,
+      rail: [
+        railBtn('home', 'Room view', !switcher && !focusOn && layer === 1, () => this.setState({ focus: null, switcher: false, layer: 1 })),
+        railBtn('grid_view', 'Projects', switcher, () => this.setState((s) => ({ switcher: !s.switcher }))),
+        railBtn(mode === 'auto' ? 'schedule' : THEMES[mode].icon, `Time: ${mode}`, mode !== 'auto', () => { this.setState({ timeMode: nextMode }); this.flashTag({ top: 'calc(50% - 22px)', icon: nextMode === 'auto' ? 'schedule' : THEMES[nextMode].icon, text: nextMode === 'auto' ? 'Time follows your clock' : cap(nextMode) }); }),
+        railBtn(this.state.sound ? 'volume_up' : 'volume_off', 'Sound', this.state.sound, () => this.setState((s) => ({ sound: !s.sound }))),
+      ],
+      tagOn: !!tag, tagTop: tag ? tag.top : '50%', tagIcon: tag ? tag.icon : '', tagText: tag ? tag.text : '',
+      toastOn: !!this.state.toast, toastText: this.state.toast ? this.state.toast.text : '', toastIcon: this.state.toast ? this.state.toast.icon : '',
+      layerDots: [0, 1, 2, 3, 4].map((i) => ({ title: ['Room', 'Overview', 'Launch', 'Content', 'Pulse'][i], h: i === layer ? 22 : 8, bg: i === layer ? '#ffffff' : 'rgba(255,255,255,0.45)', go: () => { if (this.state.bld) this.closeBuilding(); this.setState({ layer: i, focus: null }); } })),
+      dotsO: focusOn ? 0 : 1,
+      dockT: hide ? 'translate(-50%, 260px)' : layer >= 2 ? 'translate(-50%, 80px)' : 'translateX(-50%)', dockO: hide || layer >= 2 ? 0 : 1, dockPE: hide || layer >= 2 ? 'none' : 'auto',
+      noWindows: wins.length === 0, cards, pr, nx, tests, testsN: tests.length, noTests: tests.length === 0,
+      openDetails: go2, backToRoom: () => this.setState({ layer: 1 }),
+      lt, so, composeRef: this.composeRef, sheetT: sheetPos(2).t, sheetO: sheetPos(2).o, sheetPE: sheetPos(2).pe, s3: sheetPos(3), s4: sheetPos(4), ls, ct, pu,
+      focusOn: !!fsess, fs, closeFocus: () => this.setState({ focus: null }), ariOn, ari: this._ari(ariOn, { wins, freeWin, freeItems, ci, pu, proj }), ariInput: this.ariInput,
+    };
+  }
+}
+</script>
+
+
+</body></html>
