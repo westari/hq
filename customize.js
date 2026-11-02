@@ -24,8 +24,8 @@ module.exports = function customize(tpl) {
   swap('fly hint', '<sc-if value="{{ flyHint }}" hint-placeholder-val="{{ true }}">', '<sc-if value="{{ false }}" hint-placeholder-val="{{ false }}">');
 
   // Ari's lists: show just the title. Click a row to open the details and button.
-  for (const v of ['d', 'n']) {
-    const list = v === 'd' ? 'ari.doNow' : 'ari.next';
+  for (const v of ['d', 'n', 'im']) {
+    const list = v === 'd' ? 'ari.doNow' : v === 'n' ? 'ari.next' : 'ari.important';
     swap('ari ' + list + ' click to open',
       '<sc-for list="{{ ' + list + ' }}" as="' + v + '" hint-placeholder-count="2">\n          <div style="display:flex; align-items:flex-start; gap:11px; padding:12px;',
       '<sc-for list="{{ ' + list + ' }}" as="' + v + '" hint-placeholder-count="2">\n          <div sc-camel-on-click="{{ ' + v + '.toggleOpen }}" style="cursor:pointer; display:flex; align-items:flex-start; gap:11px; padding:12px;');

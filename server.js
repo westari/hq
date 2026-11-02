@@ -561,6 +561,21 @@ function startJob(win, text, s, title) {
   } catch {}
 })();
 
+// ─── Yesterday on your app: commits (all branches) + plan tasks you finished ──
+let yesterday = null;
+async function pollYesterday() {
+  if (!config.git || !config.git.mainRepo) return;
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() - 1);
+  const iso = (d) => d.toISOString();
+  const out = await git(['log', '--all', '--no-merges', '--since=' + iso(d1), '--until=' + iso(d0), '--format=%s']);
+  const commits = [...new Set(String(out || '').split('\n').map((x) => x.trim()).filter(Boolean))];
+  const st = planState(); const yk = dayKey(d1);
+  const plan = readJSON(PLAN_PATH, { tasks: [] });
+  const tasks = (plan.tasks || []).filter((t) => st.done[t.id] === yk).map((t) => t.t);
+  const next = { date: yk, commits, tasks };
+  if (JSON.stringify(next) !== JSON.stringify(yesterday)) { yesterday = next; broadcast(); }
+}
+
 // ─── Snapshot sent to the page ──────────────────────────────────────────────
 function snapshot() {
   const now = Date.now();
@@ -584,7 +599,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, usage, plan: buildPlan(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, usage, plan: buildPlan(), yesterday,
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -740,5 +755,6 @@ scanTranscripts(); setInterval(scanTranscripts, 3000);
 pollLogs(); setInterval(pollLogs, 3000);
 pollRuns(); setInterval(pollRuns, 90000);
 pollMerges(); setInterval(pollMerges, 20000);
+pollYesterday(); setInterval(pollYesterday, 10 * 60 * 1000);
 scanUsage(); setInterval(scanUsage, 20000);
 setInterval(broadcast, 15000);

@@ -217,7 +217,12 @@
         if (firstOpen) A.doNow = [...A.doNow, taskRow(firstOpen, '')];
         A.doN = String(A.doNow.length); A.noDo = !A.doNow.length;
         A.next = (plan.next || []).slice(0, 4).map((t) => { const d = dayName(t.day); return taskRow(t, d === 'Tomorrow' || d === 'Today' ? '' : d); });
-        A.important = [
+        const Y = last.yesterday;
+        const yRow = Y && (Y.commits.length || Y.tasks.length) ? [{ icon: 'history', t: 'Yesterday: ' + Y.commits.length + ' changes, ' + Y.tasks.length + ' tasks done', sub: 'Click to see everything', toggleOpen: () => card.info('Yesterday on ' + plan.project, [
+            ...(Y.tasks.length ? [{ h: 'Tasks you finished', items: Y.tasks }] : []),
+            ...(Y.commits.length ? [{ h: 'What changed in the app (' + Y.commits.length + ')', items: Y.commits }] : []),
+          ]) }] : [{ icon: 'history', t: 'Yesterday: nothing logged', sub: 'No app changes or finished tasks yesterday' }];
+        A.important = [...yRow,
           { icon: 'rocket_launch', t: plan.daysToLaunch + ' days to launch', sub: plan.project + ' on the App Store ' + shortDate(plan.launch) + '. Dad submits ' + shortDate(plan.submitBy) + '.' },
           plan.behind ? { icon: 'warning', t: 'You’re behind', sub: 'Every day until ' + shortDate(plan.submitBy) + ' got ' + Math.round((plan.squeeze - 1) * 100) + '% heavier so you still make it.' }
                       : { icon: 'check_circle', t: 'On track', sub: 'Skip a day and HQ moves the work to the next days.' },
@@ -237,6 +242,7 @@
         const wrap = (it) => { const go = it.go; return { ...it, go: (e) => { if (e && e.stopPropagation) e.stopPropagation(); go && go(e); }, toggleOpen: it.toggleOpen || (() => go && go()) }; };
         v.ari.doNow = (v.ari.doNow || []).map(wrap);
         v.ari.next = (v.ari.next || []).map(wrap);
+        v.ari.important = (v.ari.important || []).map((it) => ({ ...it, toggleOpen: it.toggleOpen || (() => {}) }));
       }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
       if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
@@ -468,7 +474,13 @@
         askB.onclick = ask; inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') ask(); };
         bg.classList.add('open'); if (chat.length) setTimeout(() => el.querySelector('.ask input').focus(), 0);
       }
-      return { open, close };
+      function info(title, groups) {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(title)}</h2></div><button class="x" aria-label="Close">\u2715</button></div>
+          <div class="col" style="margin-top:18px">${groups.map((g) => `<h3 style="margin-top:14px">${esc(g.h)}</h3><div class="steps">${g.items.map((x) => `<div class="step" style="cursor:default"><span>${esc(x)}</span></div>`).join('')}</div>`).join('')}</div>`;
+        el.querySelector('.x').onclick = close;
+        bg.classList.add('open');
+      }
+      return { open, close, info };
     })();
     open();
   }
