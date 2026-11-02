@@ -312,8 +312,9 @@
       for (const s of sessions) {
         const was = prevStatus[s.id]; prevStatus[s.id] = s.status;
         if (firstSnap || was === s.status) continue;
-        if (s.status === 'testing') say(s.name + ' is done. Time to test it on your phone.');
-        else if (s.status === 'done') say(s.name + ' is finished.');
+        const what = String((s.job && s.job.explain) || '').replace(/^Finished: /, '').replace(/[.]+$/, '');
+        if (s.status === 'testing') say(s.name + ' is done' + (what ? ': ' + what : '') + '. Test it on your phone.');
+        else if (s.status === 'done') say(s.name + ' is done' + (what ? ': ' + what : '') + '.');
         else if (s.status === 'needs') say(s.name + ' needs you.');
       }
       firstSnap = false;
