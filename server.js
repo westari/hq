@@ -595,7 +595,7 @@ function snapshot() {
     if ((status === 'working' || status === 'needs-you') && !isBusy(s)) status = 'idle';
     return { id: s.id, window: w, project: projectFor(s.cwd), status, doing: s.doing, prompt: s.prompt.slice(0, 2000),
       todos: s.todos, actions: s.actions.slice(0, 40), lastEvent: s.lastEvent, jobStart: s.jobStart,
-      title: s.title || '', lastReply: s.lastReply.slice(0, 6000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
+      title: s.title || '', lastReply: s.lastReply.slice(0, 20000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
