@@ -124,7 +124,7 @@ function readTranscript(fp, limit = 400) {
     let o; try { o = JSON.parse(line); } catch { continue; }
     const at = o.timestamp ? Date.parse(o.timestamp) : null;
     const c = o.message && o.message.content;
-    if (o.type === 'user') {
+    if (o.type === 'user' && !o.isMeta && !o.isCompactSummary) {
       if (typeof c === 'string' && c.trim() && !c.startsWith('<')) out.push({ role: 'you', text: c, at });
       else if (Array.isArray(c)) for (const b of c) if (b.type === 'text' && b.text && !b.text.startsWith('<')) out.push({ role: 'you', text: b.text, at });
     } else if (o.type === 'assistant' && Array.isArray(c)) {

@@ -353,7 +353,6 @@
       es.onerror = () => { drawer.setOffline(true); };
       es.onopen = () => { drawer.setOffline(false); };
     }
-    const drawer = makeDrawer(() => last);
 
     // ── Task card: click a task in Ari's panel. Steps on the left, actions + questions on the right. ──
     const card = (() => {
@@ -481,8 +480,54 @@
         el.querySelector('.x').onclick = close;
         bg.classList.add('open');
       }
-      return { open, close, info };
+      // ── A window's full output, in the same glass card. Summary first, then the chat. ──
+      async function output(win) {
+        const snap = last || { sessions: [] };
+        const raw = snap.sessions.find((x) => x.window === win) || {};
+        const ses = (c.state.sessions || []).find((x) => x.name === win) || {};
+        const label = { working: 'Working', needs: 'Needs you', testing: 'Ready to test', done: 'Done', idle: 'Free' }[ses.status] || 'Free';
+        const m = (snap.merges || []).find((x) => x.window === win);
+        const L = snap.logs || {};
+        const render = (msgs) => {
+          // Group tool steps between messages into one quiet line.
+          const rows = []; let steps = 0;
+          for (const x of msgs) { if (x.role === 'tool') { steps++; continue; } if (steps) { rows.push({ steps }); steps = 0; } rows.push(x); }
+          if (steps) rows.push({ steps });
+          el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(win)}</h2>
+              <div class="tags"><span class="tag">${label}</span>${ses.job && ses.job.title ? `<span class="tag">${esc(ses.job.title)}</span>` : ''}</div></div>
+              <button class="x" aria-label="Close">✕</button></div>
+            <div class="grid">
+              <div class="col">
+                <h3>Summary</h3>
+                <div class="panel" style="font-size:15px">${esc((ses.job && ses.job.explain) || 'Nothing yet.')}</div>
+                ${(raw.tests || []).length ? `<h3 style="margin-top:18px">Test on your phone</h3><div class="steps">${raw.tests.map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
+                <h3 style="margin-top:18px">Conversation</h3>
+                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.steps ? `<div style="align-self:center;font-size:12px;color:rgba(255,255,255,.55)">• ${x.steps} step${x.steps === 1 ? '' : 's'} •</div>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, ''))}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
+              </div>
+              <div class="col side">
+                <div class="panel">
+                  <h3>Message ${esc(win)}</h3>
+                  <div class="ask" style="flex-direction:column"><textarea rows="4" style="resize:none;border-radius:14px;border:0;padding:12px 14px;background:rgba(255,255,255,.14);color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;outline:none" placeholder="${ses.status === 'working' ? 'It starts this when it finishes' : 'What should it do next?'}"></textarea>
+                  <button class="b w" data-a="msg" style="align-self:flex-end">Send</button></div>
+                  <div class="note">Your latest test logs are added for you.</div>
+                </div>
+                ${m && m.ahead ? `<div class="panel"><h3>Merge</h3><div>${m.ahead} new change${m.ahead === 1 ? '' : 's'} not on your phone yet.</div><div class="btns" style="margin-top:10px"><button class="b g" data-a="merge">Copy merge commands</button></div></div>` : ''}
+                <div class="panel"><h3>Test logs</h3><div>${L.file ? (L.errorCount ? L.errorCount + ' errors in your last test.' : 'Your last test had no errors.') : 'No logs yet. Start the app with npm run dev.'}</div></div>
+              </div>
+            </div>`;
+          el.querySelector('.x').onclick = close;
+          const ta = el.querySelector('textarea'), sb = el.querySelector('[data-a=msg]');
+          ta.onkeydown = (e) => e.stopPropagation();
+          sb.onclick = async () => { const t = ta.value.trim(); if (!t) return; const id = ses.id || (/window\s+([a-z])/i.exec(win) || [])[1]; await queue(id, t); ta.value = ''; close(); };
+          const mb = el.querySelector('[data-a=merge]'); if (mb) mb.onclick = async () => { mb.textContent = (await copy(m.cmd)) ? 'Copied. Paste in PowerShell.' : 'Copy failed'; };
+          const chatEl = el.querySelector('.chat'); const col = chatEl && chatEl.parentElement; if (col) col.scrollTop = col.scrollHeight;
+        };
+        render([]); bg.classList.add('open');
+        try { const r = await (await fetch('/api/transcript?window=' + encodeURIComponent(win))).json(); if (bg.classList.contains('open')) render(r.messages || []); } catch (e) {}
+      }
+      return { open, close, info, output };
     })();
+    const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     open();
   }
 
