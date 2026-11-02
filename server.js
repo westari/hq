@@ -720,6 +720,8 @@ const server = http.createServer(async (req, res) => {
   if (!fp.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end(); }
   fs.readFile(fp, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
+    // Files under /v/ get a version tag (their change time) so an updated city is never stuck in the cache.
+    if (rel === '/HQ.html') data = Buffer.from(String(data).replace(/\/v\/([\w.-]+)/g, (m0, f) => { try { return m0 + '?t=' + Math.round(fs.statSync(path.join(PUBLIC_DIR, 'v', f)).mtimeMs); } catch { return m0; } }));
     res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream', 'Cache-Control': rel.startsWith('/v/') ? 'max-age=31536000' : 'no-store' }); res.end(data);
   });
 });

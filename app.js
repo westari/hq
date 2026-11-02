@@ -32,6 +32,7 @@ function open() {
     if (i.key === 'F11') { e.preventDefault(); win.setFullScreen(!win.isFullScreen()); }
     if ((i.control || i.meta) && i.key.toLowerCase() === 'r') win.webContents.reloadIgnoringCache();
   });
+  win.webContents.session.clearCache().catch(() => {});
   const load = (n) => win.loadURL(`http://localhost:${PORT}/`).catch(() => n > 0 && setTimeout(() => load(n - 1), 500));
   load(20);
 }

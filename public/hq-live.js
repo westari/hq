@@ -238,6 +238,25 @@
         v.ari.doNow = (v.ari.doNow || []).map(wrap);
         v.ari.next = (v.ari.next || []).map(wrap);
       }
+      // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
+      if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
+        const tests = c.state.tests || [];
+        v.bp.L.title = 'Test on your phone';
+        v.bp.L.hl = tests.length === 1 ? 'window to check' : 'windows to check';
+        v.bp.L.items = (v.bp.L.items || []).map((it, k) => {
+          const t0 = tests[k]; if (!t0) return it;
+          const m = (c.state.labMarks || {})[t0.id] || {};
+          const n = t0.checks.length, pass = t0.checks.filter((_, i) => m[i] === 'pass').length, fail = t0.checks.filter((_, i) => m[i] === 'fail').length;
+          const out = { ...it, t: t0.from + '’s new work', sub: 'Tap ✓ if it works, ✕ if it’s broken · ' + (pass + fail) + ' of ' + n + ' checked' + (fail ? ' · ' + fail + ' broken' : '') };
+          if (fail) {
+            const msg = 'I tested your last job on my phone.\n' + (pass ? 'Works:\n' + t0.checks.filter((_, i) => m[i] === 'pass').map((x) => '- ' + x).join('\n') + '\n' : '') +
+              'Broken:\n' + t0.checks.filter((_, i) => m[i] === 'fail').map((x) => '- ' + x).join('\n') + '\n\nCheck my latest test logs (attached), reproduce it, fix what is broken, keep what works. Prove it, commit and push. Give me ONE short list to test.';
+            return { ...out, hasBtn: true, btn: 'Send what’s broken to ' + t0.from, icon: 'send', go: () => { queue(t0.win, msg, null, 'Fix what I found testing'); c.setState({ labMarks: { ...c.state.labMarks, [t0.id]: {} } }); } };
+          }
+          if (pass === n) return { ...out, hasBtn: true, btn: 'Everything works', icon: 'thumb_up', go: () => c.passTest(t0.id) };
+          return { ...out, hasBtn: false, btn: '' };
+        });
+      }
       if (v.fs && v.focusOn) {
         const ss = (c.state.sessions || []).find((x) => x.name === v.fs.name);
         if (ss && (ss.status === 'done' || ss.status === 'idle' || ss.status === 'testing')) {
