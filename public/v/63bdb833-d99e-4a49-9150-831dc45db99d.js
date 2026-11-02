@@ -782,7 +782,7 @@ export function mountRoom(container, opts = {}) {
     const lt = rbox(0.3, 0.012, 0.2, 0.02, metal); lt.rotation.x = Math.PI / 2; lt.position.set(0, 0.1, 0); lid.add(lt);
     const ls = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.17), new THREE.MeshBasicMaterial({ color: 0xbfe9ff, toneMapped: false })); ls.position.set(0, 0.1, -0.008); ls.rotation.y = Math.PI; lid.add(ls); holo.push(ls);
     const yoke = new THREE.Group();
-    const r = makeRobot('pilot', 0); r.label.children[1].textContent = 'Ari'; r.label.lastChild.style.background = '#9fe6ff'; r.label.lastChild.style.boxShadow = '0 0 8px #9fe6ff';
+    const r = makeRobot('pilot', 0); r.label.children[1].textContent = 'Ari'; r.label.lastChild.style.background = '#7ff0b0'; r.label.lastChild.style.boxShadow = '0 0 8px #7ff0b0';
     cab.add(r.root); r.root.position.set(0, 0.29, PZ); r.root.rotation.y = 0; r.root.scale.setScalar(0.72);
     r.lL.rotation.x = r.lR.rotation.x = -1.45; r.aL.rotation.set(-1.35, 0, -0.2); r.aR.rotation.set(-1.35, 0, 0.2);
     [r.book, r.phone, r.pen, r.excl, r.dots, r.vp].forEach((m) => { m.visible = false; }); r.vpc.forEach((c) => { c.visible = false; });

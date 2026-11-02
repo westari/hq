@@ -20,7 +20,10 @@
   // Best: Claude ends with a line "HQ: <one sentence>" (see CLAUDE.md). Otherwise: its first sentences.
   const plain = (t) => String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/`([^`]*)`/g, '$1').replace(/\*\*|__|^#+\s*/gm, '').replace(/^\s*[-*\d.]+\s+/gm, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
   function shortTitle(prompt) {
-    let t = plain(firstLine(prompt)).replace(/^(please|ok|okay|hey|so|now)[, ]+/i, '');
+    const clean = String(prompt || '').replace(/\[(Pasted text|Image)[^\]]*\]/gi, ' ').replace(/[#*_>`~|{}\[\]<>]+/g, ' ');
+    const line = clean.split('\n').map((x) => x.trim()).find((x) => /[a-z]{3}/i.test(x)) || '';
+    let t = plain(line).replace(/^(please|ok|okay|hey|so|now)[, ]+/i, '');
+    if (!t) return 'Your prompt';
     t = t.split(/[.!?:]/)[0];
     const words = t.split(' ').slice(0, 6).join(' ');
     return words.length < t.length ? words + '…' : words;
@@ -47,7 +50,12 @@
     const title = s.title || shortTitle(s.prompt) || 'No job yet';
     const fileMatch = /(Editing|Writing|Reading)\s+(\S+)/.exec(s.doing || '');
     const timeline = (s.actions || []).map((a, i) => { const [k, pose] = actKind(a.text); return { k, label: a.text, pose, id: id + '-' + (s.actions.length - i), at: a.t }; });
-    const summary = s.lastReply ? summarize(s.lastReply) : s.prompt ? 'Working on: ' + short(plain(s.prompt), 140) : 'Nothing right now. It’s free for a new job.';
+    const nowStep = steps.find((x) => x.s === 'doing' || x.s === 'blocked');
+    const doneN = steps.filter((x) => x.s === 'done').length;
+    const working = status === 'working' || status === 'needs';
+    const summary = working
+      ? title + '.' + (nowStep ? ' Step ' + (doneN + 1) + ' of ' + steps.length + ': ' + nowStep.t + '.' : '')
+      : s.lastReply ? summarize(s.lastReply) : 'Nothing right now. It’s free for a new job.';
     return {
       id, name: s.window, project: s.project, status, steps, cur, partial: status === 'working' ? 0.5 : 0,
       action: s.doing || (status === 'idle' ? 'Waiting for a job' : 'Thinking'),

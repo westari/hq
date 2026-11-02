@@ -51,6 +51,7 @@ module.exports.js = function customizeJs(js) {
     // the new green palette is index 0, so every other index moves up by one
     js = js.replace(/makeRobot\(s\.id, s\.palette \|\| 0\)/, 'makeRobot(s.id, (s.palette || 0) + 1)');
     js = js.replace("makeRobot('pilot', 1)", "makeRobot('pilot', 0)");
+    js = js.replace("r.label.lastChild.style.background = '#9fe6ff'; r.label.lastChild.style.boxShadow = '0 0 8px #9fe6ff';", "r.label.lastChild.style.background = '#7ff0b0'; r.label.lastChild.style.boxShadow = '0 0 8px #7ff0b0';");
   }
   return js;
 };
