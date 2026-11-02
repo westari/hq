@@ -18,6 +18,16 @@ window.addEventListener('DOMContentLoaded', () => {
   const bar = document.createElement('div'); bar.id = 'hqbar';
   const box = document.createElement('div'); box.id = 'hqwin';
   const btn = (title, svg, cls, fn) => { const b = document.createElement('button'); b.title = title; b.className = cls || ''; b.innerHTML = svg; b.onclick = fn; box.appendChild(b); return b; };
+  const reload = btn('Get updates and restart', '<svg viewBox="0 0 12 12"><path d="M10 6a4 4 0 1 1-1.2-2.85M10 1.8v2.6H7.4"/></svg>', '', () => { reload.style.opacity = '.4'; ipcRenderer.send('hq-win', 'update'); });
+  const mute = btn('Sound on/off', '', '', () => window.dispatchEvent(new Event('hq-toggle-sound')));
+  const setMute = () => {
+    const on = document.documentElement.dataset.hqSound !== '0';
+    mute.title = on ? 'Mute' : 'Unmute';
+    mute.innerHTML = on ? '<svg viewBox="0 0 12 12"><path d="M2 4.5h2l3-2.5v8l-3-2.5H2z"/><path d="M8.8 4.2a2.5 2.5 0 0 1 0 3.6"/></svg>'
+                        : '<svg viewBox="0 0 12 12"><path d="M2 4.5h2l3-2.5v8l-3-2.5H2z"/><path d="M8.5 4.5l3 3M11.5 4.5l-3 3"/></svg>';
+  };
+  setMute(); new MutationObserver(setMute).observe(document.documentElement, { attributes: true, attributeFilter: ['data-hq-sound'] });
+  const gap = document.createElement('span'); gap.style.cssText = 'width:1px;margin:3px 3px;background:rgba(255,255,255,.25)'; box.appendChild(gap);
   btn('Minimize', '<svg viewBox="0 0 12 12"><path d="M2 6.5h8"/></svg>', '', () => ipcRenderer.send('hq-win', 'min'));
   const mid = btn('Smaller window', '', '', () => ipcRenderer.send('hq-win', 'max'));
   btn('Close', '<svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>', 'x', () => ipcRenderer.send('hq-win', 'close'));

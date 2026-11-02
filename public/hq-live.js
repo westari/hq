@@ -21,11 +21,11 @@
   const plain = (t) => String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/`([^`]*)`/g, '$1').replace(/\*\*|__|^#+\s*/gm, '').replace(/^\s*[-*\d.]+\s+/gm, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
   function shortTitle(prompt) {
     const clean = String(prompt || '').replace(/\[(Pasted text|Image)[^\]]*\]/gi, ' ').replace(/[#*_>`~|{}\[\]<>]+/g, ' ');
-    const line = clean.split('\n').map((x) => x.trim()).find((x) => /[a-z]{3}/i.test(x)) || '';
-    let t = plain(line).replace(/^(please|ok|okay|hey|so|now)[, ]+/i, '');
+    // First real sentence (3+ words). Skips things like "FormPal." or "Window A:".
+    const sentences = plain(clean).split(/(?<=[.!?:])\s+|\n/).map((x) => x.replace(/[.!?:]+$/, '').replace(/^(please|ok|okay|hey|so|now|also)[, ]+/i, '').trim());
+    let t = sentences.find((x) => x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 3) || '';
     if (!t) return 'Your prompt';
-    t = t.split(/[.!?:]/)[0];
-    const words = t.split(' ').slice(0, 6).join(' ');
+    const words = t.split(' ').slice(0, 7).join(' ');
     return words.length < t.length ? words + '…' : words;
   }
   function summarize(reply) {
@@ -109,6 +109,10 @@
   function connect(c) {
     let last = null;
     const knownProjects = Object.keys(c.state.projects || {});
+    // Mute button in the top bar (preload.js) talks to us through a data attribute.
+    const syncSound = () => { document.documentElement.dataset.hqSound = c.state.sound === false ? '0' : '1'; };
+    window.addEventListener('hq-toggle-sound', () => { c.setState({ sound: c.state.sound === false }, syncSound); });
+    setInterval(syncSound, 1000);
     c.setState({ live: true, runs: [], events: [], tests: [], chat: {}, jobQ: {}, usage: 0, resetAt: Date.now() });
 
     // ── Real actions replace the demo ones ──

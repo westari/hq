@@ -39,6 +39,7 @@ function open() {
 ipcMain.on('hq-win', (_e, what) => {
   if (!win) return;
   if (what === 'min') win.minimize();
+  if (what === 'update') { update().then(() => { app.relaunch(); app.exit(0); }); }
   if (what === 'close') win.close();
   if (what === 'max') {
     if (win.isFullScreen()) win.setFullScreen(false);
