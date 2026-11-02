@@ -262,9 +262,17 @@ function readChunk(fp, start, end, fallbackId) {
       if (c.name === 'TaskCreate' || c.name === 'TaskUpdate') applyTaskTool(s, c.name, c.input || {});
       if (s.status !== 'done') s.doing = describeTool(c.name, c.input);
     }
-    if (o.type === 'user' && typeof (o.message && o.message.content) === 'string' && !o.message.content.startsWith('<')) s.prompt = o.message.content.trim();
+    if (o.type === 'last-prompt' && o.lastPrompt) s.prompt = String(o.lastPrompt).trim();
+    else if (o.type === 'user' && !o.isMeta && !o.isCompactSummary && typeof (o.message && o.message.content) === 'string' && !o.message.content.startsWith('<')) s.prompt = o.message.content.trim();
     changed = true;
-    lastSession = s; lastObj = o;
+    // Only real messages count for "where is it now" (skip bookkeeping lines).
+    if (o.type === 'user' || o.type === 'assistant') { lastSession = s; lastObj = o; }
+  }
+  // If the file says Claude finished its turn, it's finished, even if HQ missed the "Stop" (e.g. HQ was restarting).
+  if (lastSession && lastObj && hookSeen.has(lastSession.id) && lastSession.status === 'working' && !lastSession.inTool
+      && lastObj.type === 'assistant' && lastObj.message && lastObj.message.stop_reason === 'end_turn' && !lastSession.queue.length) {
+    const s = lastSession; s.lastReply = lastReplyFrom(fp); s.tests = extractTests(s.lastReply); s.status = 'done';
+    s.doing = s.tests.length ? 'Waiting for you to test' : 'Finished';
   }
   // Chats found in files (HQ wasn't running when they started): guess where they are.
   if (lastSession && lastObj && !hookSeen.has(lastSession.id)) {

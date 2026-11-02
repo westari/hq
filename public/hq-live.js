@@ -319,79 +319,125 @@
     }
     const drawer = makeDrawer(() => last);
 
-    // ── Task card: click a task in Ari's panel. Exact steps, links, and ask questions. ──
+    // ── Task card: click a task in Ari's panel. Steps on the left, actions + questions on the right. ──
     const card = (() => {
       const css = document.createElement('style');
       css.textContent = `
-        #hqc-bg{position:fixed;inset:0;z-index:99992;background:rgba(10,14,20,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+        #hqc-bg{position:fixed;inset:0;z-index:99992;background:rgba(10,14,20,.28);display:none;align-items:center;justify-content:center;padding:32px}
         #hqc-bg.open{display:flex}
-        #hqc{width:min(620px,100%);max-height:calc(100vh - 80px);overflow:auto;border-radius:30px;padding:26px 28px 24px;color:#fff;font:14px/1.5 Geist,-apple-system,sans-serif;
-          background:rgba(22,26,30,.62);backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
-          box-shadow:inset 0 1.5px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(255,255,255,.14),0 30px 80px rgba(0,0,0,.35)}
-        #hqc .top{display:flex;align-items:flex-start;gap:12px}
-        #hqc h2{font-size:22px;font-weight:500;letter-spacing:-.02em;margin:0;flex:1;line-height:1.25}
-        #hqc .x{width:36px;height:36px;border-radius:12px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;font-size:16px}
-        #hqc .tags{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
-        #hqc .tag{height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.14);display:inline-flex;align-items:center;font-size:12.5px}
-        #hqc .why{color:rgba(255,255,255,.8);margin:10px 0 0}
-        #hqc h3{font-size:12.5px;font-weight:500;color:rgba(255,255,255,.65);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em}
-        #hqc ol{margin:0;padding:0;list-style:none;counter-reset:s}
-        #hqc ol li{counter-increment:s;display:flex;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.08)}
-        #hqc ol li:first-child{border-top:0}
-        #hqc ol li::before{content:counter(s);flex:none;width:24px;height:24px;border-radius:8px;background:#fff;color:#1d2128;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
-        #hqc a{color:#a9d0ff}
-        #hqc .btns{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
-        #hqc button.b{height:40px;padding:0 16px;border:0;border-radius:13px;cursor:pointer;font:500 14px Geist,-apple-system,sans-serif}
+        #hqc{position:relative;width:min(1020px,100%);max-height:calc(100vh - 96px);display:flex;flex-direction:column;border-radius:34px;padding:28px 30px;color:#fff;
+          font:14px/1.5 Geist,-apple-system,sans-serif;background:rgba(22,26,30,.44);
+          -webkit-backdrop-filter:blur(18px) saturate(1.7);backdrop-filter:blur(6px) url(#lg) saturate(1.7) brightness(1.05);
+          box-shadow:inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.16),inset 1.5px 0 0 rgba(255,255,255,.2),inset -1.5px 0 0 rgba(255,255,255,.2),0 30px 80px rgba(0,0,0,.3)}
+        #hqc *{scrollbar-width:none}#hqc *::-webkit-scrollbar{display:none}
+        #hqc .top{display:flex;align-items:flex-start;gap:14px}
+        #hqc h2{font-size:26px;font-weight:500;letter-spacing:-.025em;margin:0;flex:1;line-height:1.2}
+        #hqc .x{width:38px;height:38px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+        #hqc .tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+        #hqc .tag{height:26px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.14);display:inline-flex;align-items:center;font-size:12.5px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+        #hqc .why{color:rgba(255,255,255,.82);margin:12px 0 0;font-size:15px}
+        #hqc .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;margin-top:20px;min-height:0;flex:1}
+        @media (max-width:820px){#hqc .grid{grid-template-columns:1fr}}
+        #hqc .col{min-height:0;overflow:auto}
+        #hqc h3{font-size:12px;font-weight:500;color:rgba(255,255,255,.62);margin:0 0 10px;text-transform:uppercase;letter-spacing:.07em}
+        #hqc .steps{display:flex;flex-direction:column;gap:8px}
+        #hqc .step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;transition:opacity .2s}
+        #hqc .step .n{flex:none;width:26px;height:26px;border-radius:9px;background:#fff;color:#1d2128;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+        #hqc .step.ok{opacity:.45}#hqc .step.ok .n{background:#9ee2bd}
+        #hqc a{color:#bfe0ff}
+        #hqc .side{display:flex;flex-direction:column;gap:14px}
+        #hqc .panel{border-radius:22px;padding:16px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+        #hqc .btns{display:flex;gap:8px;flex-wrap:wrap}
+        #hqc button.b{height:42px;padding:0 18px;border:0;border-radius:14px;cursor:pointer;font:500 14px Geist,-apple-system,sans-serif}
         #hqc button.w{background:#fff;color:#1d2128}
         #hqc button.g{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
-        #hqc .ask{display:flex;gap:8px;margin-top:8px}
-        #hqc .ask input{flex:1;height:42px;border-radius:13px;border:0;padding:0 14px;background:rgba(255,255,255,.12);color:#fff;font:14px Geist,-apple-system,sans-serif;outline:none}
-        #hqc .ans{white-space:pre-wrap;margin-top:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.08);display:none}
-        #hqc pre{white-space:pre-wrap;font:12.5px/1.45 'Geist Mono',monospace;background:rgba(0,0,0,.25);border-radius:14px;padding:12px;max-height:180px;overflow:auto;margin:0}`;
+        #hqc .links a{display:block;padding:4px 0}
+        #hqc details summary{cursor:pointer;color:rgba(255,255,255,.75);font-size:13px;list-style:none}
+        #hqc pre{white-space:pre-wrap;font:12.5px/1.45 'Geist Mono',monospace;background:rgba(0,0,0,.22);border-radius:14px;padding:12px;max-height:160px;overflow:auto;margin:10px 0 0}
+        #hqc .chat{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:10px}
+        #hqc .q{align-self:flex-end;max-width:85%;padding:9px 13px;border-radius:16px 16px 4px 16px;background:#fff;color:#1d2128}
+        #hqc .a{align-self:flex-start;max-width:95%;padding:10px 13px;border-radius:16px 16px 16px 4px;background:rgba(255,255,255,.12);white-space:normal}
+        #hqc .a ol,#hqc .a ul{margin:4px 0;padding-left:20px}
+        #hqc .ask{display:flex;gap:8px}
+        #hqc .ask input{flex:1;min-width:0;height:42px;border-radius:14px;border:0;padding:0 14px;background:rgba(255,255,255,.14);color:#fff;font:14px Geist,-apple-system,sans-serif;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+        #hqc .ask input::placeholder{color:rgba(255,255,255,.55)}
+        #hqc .note{font-size:12px;color:rgba(255,255,255,.55);margin-top:8px}`;
       document.head.appendChild(css);
       const bg = document.createElement('div'); bg.id = 'hqc-bg';
       const el = document.createElement('div'); el.id = 'hqc'; bg.appendChild(el); document.body.appendChild(bg);
       const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
       const linkify = (t) => esc(t).replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank">$1</a>');
+      // Tiny markdown: numbered/bullet lists, **bold**, `code`, links.
+      const md = (t) => {
+        const lines = String(t || '').replace(/^#+\s*/gm, '').split('\n'); let html = '', list = null;
+        const inline = (x) => linkify(x).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<b>$1</b>');
+        for (const raw of lines) {
+          const line = raw.trim(); const ol = /^\d+[.)]\s+(.*)/.exec(line), ul = /^[-*•]\s+(.*)/.exec(line);
+          const want = ol ? 'ol' : ul ? 'ul' : null;
+          if (list && want !== list) { html += '</' + list + '>'; list = null; }
+          if (want) { if (!list) { html += '<' + want + '>'; list = want; } html += '<li>' + inline((ol || ul)[1]) + '</li>'; }
+          else if (line) html += '<div>' + inline(line) + '</div>';
+        }
+        if (list) html += '</' + list + '>';
+        return html;
+      };
       const dayLabel = (k) => { const [y, m, d] = String(k).split('-').map(Number); const dt = new Date(y, m - 1, d); const t0 = new Date(); t0.setHours(0, 0, 0, 0); const n = Math.round((dt - t0) / 86400000); return n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : dt.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }); };
+      const ticks = {}; const chats = {};
       const close = () => bg.classList.remove('open');
       bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
-      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, true);
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bg.classList.contains('open')) { close(); e.stopPropagation(); } }, true);
+      // Wheel inside the card scrolls the card, not the city.
+      el.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
       function open(t) {
         const fw = freeWindow();
         const who = { you: 'You', ai: 'AI job', dad: 'Needs Dad' }[t.who] || 'You';
         const steps = (t.steps && t.steps.length) ? t.steps
-          : t.who === 'ai' ? ['Click "Send to ' + (fw ? fw.name : 'a window') + '" below.', 'HQ says when it’s done (and out loud).', 'Test what it lists on your phone, then mark this done.']
+          : t.who === 'ai' ? ['Click "Send to ' + (fw ? fw.name : 'a window') + '".', 'HQ tells you out loud when it’s done.', 'Test what it lists on your phone, then click Mark done.']
           : [];
+        const tk = ticks[t.id] = ticks[t.id] || {};
+        const chat = chats[t.id] = chats[t.id] || [];
         const links = t.links || [];
-        el.innerHTML = `<div class="top"><h2>${esc(t.t)}</h2><button class="x" aria-label="Close">✕</button></div>
-          <div class="tags"><span class="tag">${who}</span>${t.day ? `<span class="tag">${esc(dayLabel(t.day))}</span>` : ''}${t.done ? '<span class="tag">Done ✓</span>' : ''}</div>
-          ${t.sub ? `<p class="why">${linkify(t.sub)}</p>` : ''}
-          <h3>Exactly what to do</h3>
-          ${steps.length ? `<ol>${steps.map((x) => `<li><span>${linkify(x)}</span></li>`).join('')}</ol>` : '<p class="why">No steps written for this one yet. Ask below and you’ll get them.</p>'}
-          ${links.length ? `<h3>Links</h3>${links.map((l) => `<div><a href="${esc(l.url || l)}" target="_blank">${esc(l.t || l.url || l)}</a></div>`).join('')}` : ''}
-          ${t.who === 'ai' && t.prompt ? `<h3>The prompt it sends</h3><pre>${esc(t.prompt)}</pre>` : ''}
-          <div class="btns">
-            ${t.who === 'ai' ? `<button class="b w" data-a="send">${fw ? 'Send to ' + esc(fw.name) : 'Copy prompt'}</button>` : ''}
-            <button class="b ${t.who === 'ai' ? 'g' : 'w'}" data-a="done">${t.done ? 'Mark not done' : 'Mark done'}</button>
-          </div>
-          <h3>Stuck? Ask anything</h3>
-          <div class="ask"><input placeholder="How do I do step 2?" /><button class="b w" data-a="ask">Ask</button></div>
-          <div class="ans"></div>`;
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(t.t)}</h2>
+            <div class="tags"><span class="tag">${who}</span>${t.day ? `<span class="tag">${esc(dayLabel(t.day))}</span>` : ''}${t.done ? '<span class="tag">Done ✓</span>' : ''}</div>
+            ${t.sub ? `<p class="why">${linkify(t.sub)}</p>` : ''}</div>
+            <button class="x" aria-label="Close">✕</button></div>
+          <div class="grid">
+            <div class="col">
+              <h3>Exactly what to do</h3>
+              ${steps.length ? `<div class="steps">${steps.map((x, i) => `<div class="step ${tk[i] ? 'ok' : ''}" data-i="${i}"><span class="n">${tk[i] ? '✓' : i + 1}</span><span>${linkify(x)}</span></div>`).join('')}</div>`
+                : '<div class="panel">No steps written for this one yet. Ask on the right and you’ll get them.</div>'}
+            </div>
+            <div class="col side">
+              <div class="btns">
+                ${t.who === 'ai' ? `<button class="b w" data-a="send">${fw ? 'Send to ' + esc(fw.name) : 'Copy prompt'}</button>` : ''}
+                <button class="b ${t.who === 'ai' ? 'g' : 'w'}" data-a="done">${t.done ? 'Mark not done' : 'Mark done'}</button>
+              </div>
+              ${links.length ? `<div class="panel links"><h3>Links</h3>${links.map((l) => `<a href="${esc(l.url || l)}" target="_blank">${esc(l.t || l.url || l)}</a>`).join('')}</div>` : ''}
+              ${t.who === 'ai' && t.prompt ? `<div class="panel"><details><summary>Show the prompt it sends ›</summary><pre>${esc(t.prompt)}</pre></details></div>` : ''}
+              <div class="panel">
+                <h3>Stuck? Ask</h3>
+                <div class="chat">${chat.map((m) => `<div class="${m.q ? 'q' : 'a'}">${m.q ? esc(m.q) : md(m.a)}</div>`).join('')}</div>
+                <div class="ask"><input placeholder="What do I do after step 1?" /><button class="b w" data-a="ask">Ask</button></div>
+                <div class="note">Answered by Claude Code on your PC. It can read your app’s code but can’t change anything. Uses a little of your Claude usage.</div>
+              </div>
+            </div>
+          </div>`;
         el.querySelector('.x').onclick = close;
+        el.querySelectorAll('.step').forEach((row) => (row.onclick = () => { const i = row.dataset.i; tk[i] = !tk[i]; open(t); }));
         const sendB = el.querySelector('[data-a=send]');
         if (sendB) sendB.onclick = async () => { if (fw) { await queue(fw.id, t.prompt || t.t, null, t.t); close(); } else { const ok = await copy(t.prompt || t.t); sendB.textContent = ok ? 'Copied' : 'Copy failed'; } };
         el.querySelector('[data-a=done]').onclick = async () => { await post('/api/plan/done', { id: t.id, done: !t.done }); close(); };
-        const inp = el.querySelector('.ask input'), ans = el.querySelector('.ans'), askB = el.querySelector('[data-a=ask]');
+        const inp = el.querySelector('.ask input'), askB = el.querySelector('[data-a=ask]'), box = el.querySelector('.chat');
+        box.scrollTop = box.scrollHeight;
         const ask = async () => {
           const q = inp.value.trim(); if (!q) return;
-          askB.disabled = true; ans.style.display = 'block'; ans.textContent = 'Thinking… (this uses a little of your Claude usage)';
-          try { const r = await post('/api/ask', { id: t.id, title: t.t, question: q }); ans.innerHTML = r.answer ? linkify(r.answer) : esc(r.error || 'No answer.'); }
-          catch (e) { ans.textContent = 'Could not reach HQ.'; }
-          askB.disabled = false;
+          chat.push({ q }); chat.push({ a: 'Thinking…' }); const slot = chat[chat.length - 1]; open(t);
+          try { const r = await post('/api/ask', { id: t.id, title: t.t, question: q + (steps.length ? '\n\n(Steps on my card: ' + steps.map((x, i) => (i + 1) + '. ' + x).join(' ') + ')' : '') }); slot.a = r.answer || r.error || 'No answer.'; }
+          catch (e) { slot.a = 'Could not reach HQ.'; }
+          if (bg.classList.contains('open')) open(t);
         };
-        askB.onclick = ask; inp.onkeydown = (e) => { if (e.key === 'Enter') ask(); e.stopPropagation(); };
-        bg.classList.add('open');
+        askB.onclick = ask; inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') ask(); };
+        bg.classList.add('open'); if (chat.length) setTimeout(() => el.querySelector('.ask input').focus(), 0);
       }
       return { open, close };
     })();
