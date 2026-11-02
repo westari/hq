@@ -56,6 +56,18 @@ Double-click **HQ**. It fills your screen. It talks out loud when a window is do
 - AI tasks have a "Send to Window" button that sends the full prompt.
 - The plan lives in plan.json. Change it any time; HQ updates by itself. Your checkmarks are in plan-state.json.
 
+## Starting iOS builds from HQ
+
+Install the GitHub CLI once and log in:
+
+```
+cd "$HOME"
+winget install --id GitHub.cli
+gh auth login
+```
+
+Then Factory > Start build (or Pulse > New build) starts your iOS build.
+
 ## Not connected yet
 
 Social follower counts (TikTok, Instagram, X, YouTube).

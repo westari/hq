@@ -147,6 +147,14 @@
       queue(t.win, msg, 'Feedback queued for ');
     };
 
+    // Start the iOS build on GitHub from HQ.
+    async function startBuild() {
+      c.toast('Starting your iOS build\u2026', 'rocket_launch');
+      const r = await post('/api/build', {});
+      if (r.started) c.toast('iOS build started on ' + r.ref + '. HQ tells you when it\u2019s done.', 'rocket_launch');
+      else if (r.error === 'nogh') c.toast('Install GitHub CLI first (see HQ README)', 'error');
+      else c.toast('Build didn\u2019t start: ' + r.error, 'error');
+    }
     // ── Pulse: swap the design's sample numbers for real ones ──
     const origVals = c.renderVals.bind(c);
     const fmtT = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -170,7 +178,7 @@
         ic: r.st === 'done' ? '#9ee2bd' : r.st === 'failed' ? 'oklch(0.78 0.16 30)' : 'rgba(255,255,255,0.7)',
         anim: r.st === 'running' ? 'hq-breathe 1.2s ease-in-out infinite' : 'none' }))
         : [{ name: 'No builds yet', sub: 'Builds from GitHub show here', status: '', icon: 'history', ic: 'rgba(255,255,255,0.7)', anim: 'none' }];
-      pu.upload = () => { window.open('https://github.com/' + ((last.config && last.config.githubRepo) || 'westari/FormPal') + '/actions', '_blank'); c.toast('Opening your builds on GitHub', 'open_in_new'); };
+      pu.upload = startBuild;
       const lg = last.logs || {}; const n = lg.errorCount || 0; const fw = freeWindow();
       pu.crashFree = n ? n + (n === 1 ? ' error' : ' errors') : 'No errors';
       pu.crash = n ? 'In your last test log: ' + String((lg.errors || [])[0] || '').slice(0, 120) : lg.file ? 'Your last test log is clean.' : 'Start the app with npm run dev to log tests.';
@@ -243,6 +251,13 @@
         v.ari.doNow = (v.ari.doNow || []).map(wrap);
         v.ari.next = (v.ari.next || []).map(wrap);
         v.ari.important = (v.ari.important || []).map((it) => ({ ...it, toggleOpen: it.toggleOpen || (() => {}) }));
+      }
+      // Factory: a real "Start build" button on top.
+      if (v.bp && v.bp.name === 'Factory' && v.bp.L) {
+        const running = (last.runs || []).some((r) => r.st === 'running');
+        v.bp.L.items = [{ t: running ? 'A build is running' : 'New iOS build', sub: running ? 'HQ tells you when it\u2019s done' : 'Builds your app on GitHub (about 20\u201330 min)', hasBtn: !running, btn: 'Start build', icon: 'rocket_launch', go: startBuild,
+          hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128' }, ...(v.bp.L.items || [])];
+        v.bp.L.empty = false;
       }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
       if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
@@ -326,6 +341,13 @@
         setTimeout(() => window.speechSynthesis.speak(u), 900);
       } catch (e) {}
     }
+    const runSeen = {}; let firstRuns = true;
+    function announceRuns(runs) {
+      for (const r of runs || []) { const was = runSeen[r.id]; runSeen[r.id] = r.st;
+        if (!firstRuns && was === 'running' && r.st === 'done') say('Your ' + r.wf + ' is done. Install it on your phone.');
+        if (!firstRuns && was === 'running' && r.st === 'failed') say('Your ' + r.wf + ' failed.'); }
+      firstRuns = false;
+    }
     function announce(sessions) {
       for (const s of sessions) {
         const was = prevStatus[s.id]; prevStatus[s.id] = s.status;
@@ -359,7 +381,7 @@
       }
       const merged = {};
       for (const m of snap.merges || []) { const id = letter(m.window); merged[id] = m.ahead === 0; }
-      announce(sessions);
+      announce(sessions); announceRuns(snap.runs);
       fixSamples(snap.plan);
       const u = snap.usage || {};
       c.setState({ sessions, tests, chat, jobQ, merged, events: mapEvents(snap.activity), projects: withPlan(mapProjects(snap.projects, knownProjects), snap.plan), runs: snap.runs || [], usage: u.pct || 0, resetAt: u.resetAt || Date.now() + 5 * 3600000 });

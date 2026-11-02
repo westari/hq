@@ -729,6 +729,22 @@ const server = http.createServer(async (req, res) => {
     child.stdin.end(prompt);
     return;
   }
+  // Start the iOS build on GitHub. Uses the GitHub CLI ("gh"), logged in as you.
+  if (req.method === 'POST' && url === '/api/build') {
+    const repo = config.githubRepo; const wf = config.buildWorkflow || 'ios-dev-build.yml';
+    const ref = (config.git && config.git.mainBranch) || 'main';
+    const cands = ['gh', 'C:\\Program Files\\GitHub CLI\\gh.exe', path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'GitHub CLI', 'gh.exe')];
+    const tryRun = (i) => {
+      if (i >= cands.length) return json(res, 200, { error: 'nogh' });
+      execFile(cands[i], ['workflow', 'run', wf, '-R', repo, '--ref', ref], { timeout: 30000, windowsHide: true }, (err, out, errOut) => {
+        if (err && err.code === 'ENOENT') return tryRun(i + 1);
+        if (err) return json(res, 200, { error: String(errOut || err.message).split('\n')[0] });
+        setTimeout(pollRuns, 4000);
+        json(res, 200, { started: true, ref });
+      });
+    };
+    return tryRun(0);
+  }
   // Static files from /public. "/" opens the city.
   const rel = url === '/' ? '/HQ.html' : decodeURIComponent(url);
   const fp = path.join(PUBLIC_DIR, path.normalize(rel).replace(/^(\.\.[/\\])+/, ''));
