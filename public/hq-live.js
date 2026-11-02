@@ -31,8 +31,10 @@
   function summarize(reply) {
     const hq = /^\s*HQ:\s*(.+)$/im.exec(reply || '');
     if (hq) return short(hq[1], 220);
-    const p = plain(reply);
-    const sentences = p.match(/[^.!?]+[.!?]+/g) || [p];
+    // Paths like C:\Users\arize\hq\plan.json become just plan.json.
+    const p = plain(reply).replace(/(?:[A-Za-z]:)?(?:[\\/][\w .-]+)+[\\/]([\w.-]+)/g, '$1').replace(/\s+/g, ' ');
+    const sentences = (p.match(/[^.!?]+[.!?]+/g) || [p]).map((x) => x.trim())
+      .filter((x) => x.split(' ').length >= 4 && !/^(here|summary|done|ok|okay)\b[^a-z]*$/i.test(x));
     let out = '';
     for (const x of sentences) { if ((out + x).length > 200) break; out += x; }
     return short(out || p, 200);

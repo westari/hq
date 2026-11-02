@@ -542,6 +542,17 @@ function startJob(win, text, s, title) {
   return { started: true };
 }
 
+// Make sure Claude Code ends every job with a one-line summary for HQ ("HQ: ...").
+// Adds 3 lines to the end of your CLAUDE.md once. Never changes anything else in it.
+(function ensureSummaryRule() {
+  const fp = path.join(CLAUDE_DIR, 'CLAUDE.md');
+  try {
+    const cur = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : '';
+    if (/^HQ:|starts with HQ:/m.test(cur)) return;
+    fs.appendFileSync(fp, '\n\n## HQ\nEnd every final message with one line that starts with HQ: and says in one plain sentence (under 15 words, no file paths) what you did.\n');
+  } catch {}
+})();
+
 // ─── Snapshot sent to the page ──────────────────────────────────────────────
 function snapshot() {
   const now = Date.now();
