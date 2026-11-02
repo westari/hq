@@ -19,6 +19,12 @@
   // Turn Claude Code's long final message into 1-2 plain sentences.
   // Best: Claude ends with a line "HQ: <one sentence>" (see CLAUDE.md). Otherwise: its first sentences.
   const plain = (t) => String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/`([^`]*)`/g, '$1').replace(/\*\*|__|^#+\s*/gm, '').replace(/^\s*[-*\d.]+\s+/gm, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
+  function shortTitle(prompt) {
+    let t = plain(firstLine(prompt)).replace(/^(please|ok|okay|hey|so|now)[, ]+/i, '');
+    t = t.split(/[.!?:]/)[0];
+    const words = t.split(' ').slice(0, 6).join(' ');
+    return words.length < t.length ? words + '…' : words;
+  }
   function summarize(reply) {
     const hq = /^\s*HQ:\s*(.+)$/im.exec(reply || '');
     if (hq) return short(hq[1], 220);
@@ -38,7 +44,7 @@
     if (finished && !steps.length) steps.push({ t: 'Done', s: 'done' });
     let cur = steps.findIndex((x) => x.s === 'doing' || x.s === 'blocked');
     if (cur < 0) cur = steps.filter((x) => x.s === 'done').length;
-    const title = short(firstLine(s.prompt), 60) || 'No job yet';
+    const title = s.title || shortTitle(s.prompt) || 'No job yet';
     const fileMatch = /(Editing|Writing|Reading)\s+(\S+)/.exec(s.doing || '');
     const timeline = (s.actions || []).map((a, i) => { const [k, pose] = actKind(a.text); return { k, label: a.text, pose, id: id + '-' + (s.actions.length - i), at: a.t }; });
     const summary = s.lastReply ? summarize(s.lastReply) : s.prompt ? 'Working on: ' + short(plain(s.prompt), 140) : 'Nothing right now. It’s free for a new job.';
@@ -99,9 +105,9 @@
 
     // ── Real actions replace the demo ones ──
     const winName = (id) => { const s = (c.state.sessions || []).find((x) => x.id === id); return s ? s.name : 'Window ' + id; };
-    async function queue(id, text, label) {
+    async function queue(id, text, label, title) {
       const t = String(text || '').trim(); if (!t) return;
-      const r = await post('/api/queue', { window: winName(id), text: t });
+      const r = await post('/api/queue', { window: winName(id), text: t, title: title || '' });
       if (r.started) c.toast(winName(id) + ' started working on it.', 'play_arrow');
       else if (r.queued) c.toast(winName(id) + ' is busy. It starts this the second it finishes.', 'playlist_add');
       else if (r.copy) { const ok = await copy(r.text); c.toast(ok ? 'Copied. Paste it into ' + winName(id) + ' in VS Code.' : 'Could not copy. Open Output to copy it.', 'content_paste'); }
@@ -109,7 +115,7 @@
     }
     c.queueJob = (id, text) => queue(id, text);
     const planTask = (title) => ((last && last.plan && last.plan.tasks) || []).find((t) => t.t === title);
-    c.assign = (id, item) => { const t = planTask(item); queue(id, t && t.prompt ? t.prompt : item); };
+    c.assign = (id, item) => { const t = planTask(item); queue(id, t && t.prompt ? t.prompt : item, null, t ? t.t : ''); };
     c.send = (id, text, kind) => {
       const t = kind === 'shot' ? 'Take a Playwright screenshot of the screen you are working on and save it in the project.' : kind === 'explain' ? 'In 2 plain sentences: what are you doing right now and why?' : text;
       queue(id, t);
@@ -128,7 +134,6 @@
 
     // ── Pulse: swap the design's sample numbers for real ones ──
     const origVals = c.renderVals.bind(c);
-    const openRows = new Set();
     const fmtT = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
     const freeWindow = () => (c.state.sessions || []).find((s) => s.status === 'idle' || s.status === 'done' || s.status === 'testing') || (c.state.sessions || [])[0];
@@ -175,9 +180,16 @@
       const WHO = { you: 'person', ai: 'smart_toy', dad: 'escalator_warning' };
       const fw2 = freeWindow();
       const setDone = (id, done) => post('/api/plan/done', { id, done });
-      const taskBtn = (t) => t.who === 'ai' && fw2 ? { hasBtn: true, btn: 'Send to ' + fw2.name, go: () => { queue(fw2.id, t.prompt || t.t); } }
+      const taskBtn = (t) => t.who === 'ai' && fw2 ? { hasBtn: true, btn: 'Send to ' + fw2.name, go: () => { queue(fw2.id, t.prompt || t.t, null, t.t); } }
         : t.who === 'ai' ? { hasBtn: true, btn: 'Copy prompt', go: async () => { const ok = await copy(t.prompt || t.t); c.toast(ok ? 'Prompt copied' : 'Could not copy', 'content_copy'); } }
         : { hasBtn: true, btn: 'Done', go: () => setDone(t.id, true) };
+      const firstSentence = (t) => { t = String(t || '').trim(); const m = /^(.+?[.!?])(\s|$)/.exec(t); t = m ? m[1] : t; return t.length > 80 ? t.slice(0, 78).trim() + '…' : t; };
+      const taskRow = (t, when) => {
+        const who = t.who === 'dad' ? 'Needs Dad' : t.who === 'ai' ? 'AI job' : '';
+        const sub = [when, who, firstSentence(t.sub)].filter(Boolean).join(' · ');
+        const b = t.who === 'ai' ? taskBtn(t) : { hasBtn: false, btn: '', go: () => {} };
+        return { icon: WHO[t.who] || 'flag', t: t.t, sub, ...b, toggleOpen: () => card.open(t) };
+      };
       if (plan && v.ari && v.ariOn) {
         const A = v.ari;
         const today = plan.todayTasks || [];
@@ -187,9 +199,9 @@
         const add = () => { const el = c.ariInput && c.ariInput.current; const val = el && el.value.trim(); if (!val) return; post('/api/plan/add', { text: val }); el.value = ''; };
         A.add = add; A.key = (e) => { if (e.key === 'Enter') add(); };
         const firstOpen = today.find((t) => !t.done && t.group !== 'Extra');
-        if (firstOpen) A.doNow = [...A.doNow, { icon: WHO[firstOpen.who] || 'flag', t: firstOpen.t, sub: firstOpen.sub || "From today's goals", ...taskBtn(firstOpen) }];
+        if (firstOpen) A.doNow = [...A.doNow, taskRow(firstOpen, '')];
         A.doN = String(A.doNow.length); A.noDo = !A.doNow.length;
-        A.next = (plan.next || []).slice(0, 4).map((t) => ({ icon: WHO[t.who] || 'schedule', t: t.t, sub: dayName(t.day) + (t.sub ? ' · ' + t.sub : ''), ...(t.who === 'ai' ? taskBtn(t) : { hasBtn: false, btn: '', go: () => {} }) }));
+        A.next = (plan.next || []).slice(0, 4).map((t) => { const d = dayName(t.day); return taskRow(t, d === 'Tomorrow' || d === 'Today' ? '' : d); });
         A.important = [
           { icon: 'rocket_launch', t: plan.daysToLaunch + ' days to launch', sub: plan.project + ' on the App Store ' + shortDate(plan.launch) + '. Dad submits ' + shortDate(plan.submitBy) + '.' },
           plan.behind ? { icon: 'warning', t: 'You’re behind', sub: 'Every day until ' + shortDate(plan.submitBy) + ' got ' + Math.round((plan.squeeze - 1) * 100) + '% heavier so you still make it.' }
@@ -205,19 +217,11 @@
         v.so.accounts = (v.so.accounts || []).map((a) => ({ ...a, count: '–', delta: 'Not connected', spark: (a.spark || []).map(() => ({ h: 8, o: 0.3 })) }));
         v.so.total = '–'; v.so.top = 'No posts yet. Make your first slideshows from the ideas list.';
       }
-      // Ari rows start closed: title only. Click to open details + button.
+      // Design rows (merge, test...) open their own thing when clicked; buttons don't double-fire.
       if (v.ari && v.ariOn) {
-        const shortT = (t) => { t = String(t || ''); const cut = t.split(/(?<=[a-z0-9)])\. |: | — /i)[0]; return cut.length > 70 ? cut.slice(0, 68).trim() + '…' : cut; };
-        const fold = (it) => {
-          const key = it.t; const isOpen = openRows.has(key);
-          const go = it.go;
-          return { ...it, t: isOpen ? it.t : shortT(it.t), sub: isOpen ? it.sub : '', hasBtn: isOpen && it.hasBtn,
-            go: (e) => { if (e && e.stopPropagation) e.stopPropagation(); go && go(e); },
-            toggleOpen: () => { if (isOpen) openRows.delete(key); else openRows.add(key); c.setState({ _rows: Date.now() }); } };
-        };
-        v.ari.doNow = (v.ari.doNow || []).map(fold);
-        v.ari.next = (v.ari.next || []).map(fold);
-        v.ari.todos = (v.ari.todos || []).map((td) => ({ ...td, t: shortT(td.t) }));
+        const wrap = (it) => { const go = it.go; return { ...it, go: (e) => { if (e && e.stopPropagation) e.stopPropagation(); go && go(e); }, toggleOpen: it.toggleOpen || (() => go && go()) }; };
+        v.ari.doNow = (v.ari.doNow || []).map(wrap);
+        v.ari.next = (v.ari.next || []).map(wrap);
       }
       if (v.fs && v.focusOn) {
         const nm = v.fs.name;
@@ -300,6 +304,83 @@
       es.onopen = () => { drawer.setOffline(false); };
     }
     const drawer = makeDrawer(() => last);
+
+    // ── Task card: click a task in Ari's panel. Exact steps, links, and ask questions. ──
+    const card = (() => {
+      const css = document.createElement('style');
+      css.textContent = `
+        #hqc-bg{position:fixed;inset:0;z-index:99992;background:rgba(10,14,20,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+        #hqc-bg.open{display:flex}
+        #hqc{width:min(620px,100%);max-height:calc(100vh - 80px);overflow:auto;border-radius:30px;padding:26px 28px 24px;color:#fff;font:14px/1.5 Geist,-apple-system,sans-serif;
+          background:rgba(22,26,30,.62);backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
+          box-shadow:inset 0 1.5px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(255,255,255,.14),0 30px 80px rgba(0,0,0,.35)}
+        #hqc .top{display:flex;align-items:flex-start;gap:12px}
+        #hqc h2{font-size:22px;font-weight:500;letter-spacing:-.02em;margin:0;flex:1;line-height:1.25}
+        #hqc .x{width:36px;height:36px;border-radius:12px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;font-size:16px}
+        #hqc .tags{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+        #hqc .tag{height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.14);display:inline-flex;align-items:center;font-size:12.5px}
+        #hqc .why{color:rgba(255,255,255,.8);margin:10px 0 0}
+        #hqc h3{font-size:12.5px;font-weight:500;color:rgba(255,255,255,.65);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+        #hqc ol{margin:0;padding:0;list-style:none;counter-reset:s}
+        #hqc ol li{counter-increment:s;display:flex;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.08)}
+        #hqc ol li:first-child{border-top:0}
+        #hqc ol li::before{content:counter(s);flex:none;width:24px;height:24px;border-radius:8px;background:#fff;color:#1d2128;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+        #hqc a{color:#a9d0ff}
+        #hqc .btns{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+        #hqc button.b{height:40px;padding:0 16px;border:0;border-radius:13px;cursor:pointer;font:500 14px Geist,-apple-system,sans-serif}
+        #hqc button.w{background:#fff;color:#1d2128}
+        #hqc button.g{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+        #hqc .ask{display:flex;gap:8px;margin-top:8px}
+        #hqc .ask input{flex:1;height:42px;border-radius:13px;border:0;padding:0 14px;background:rgba(255,255,255,.12);color:#fff;font:14px Geist,-apple-system,sans-serif;outline:none}
+        #hqc .ans{white-space:pre-wrap;margin-top:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.08);display:none}
+        #hqc pre{white-space:pre-wrap;font:12.5px/1.45 'Geist Mono',monospace;background:rgba(0,0,0,.25);border-radius:14px;padding:12px;max-height:180px;overflow:auto;margin:0}`;
+      document.head.appendChild(css);
+      const bg = document.createElement('div'); bg.id = 'hqc-bg';
+      const el = document.createElement('div'); el.id = 'hqc'; bg.appendChild(el); document.body.appendChild(bg);
+      const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+      const linkify = (t) => esc(t).replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank">$1</a>');
+      const dayLabel = (k) => { const [y, m, d] = String(k).split('-').map(Number); const dt = new Date(y, m - 1, d); const t0 = new Date(); t0.setHours(0, 0, 0, 0); const n = Math.round((dt - t0) / 86400000); return n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : dt.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }); };
+      const close = () => bg.classList.remove('open');
+      bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, true);
+      function open(t) {
+        const fw = freeWindow();
+        const who = { you: 'You', ai: 'AI job', dad: 'Needs Dad' }[t.who] || 'You';
+        const steps = (t.steps && t.steps.length) ? t.steps
+          : t.who === 'ai' ? ['Click "Send to ' + (fw ? fw.name : 'a window') + '" below.', 'HQ says when it’s done (and out loud).', 'Test what it lists on your phone, then mark this done.']
+          : [];
+        const links = t.links || [];
+        el.innerHTML = `<div class="top"><h2>${esc(t.t)}</h2><button class="x" aria-label="Close">✕</button></div>
+          <div class="tags"><span class="tag">${who}</span>${t.day ? `<span class="tag">${esc(dayLabel(t.day))}</span>` : ''}${t.done ? '<span class="tag">Done ✓</span>' : ''}</div>
+          ${t.sub ? `<p class="why">${linkify(t.sub)}</p>` : ''}
+          <h3>Exactly what to do</h3>
+          ${steps.length ? `<ol>${steps.map((x) => `<li><span>${linkify(x)}</span></li>`).join('')}</ol>` : '<p class="why">No steps written for this one yet. Ask below and you’ll get them.</p>'}
+          ${links.length ? `<h3>Links</h3>${links.map((l) => `<div><a href="${esc(l.url || l)}" target="_blank">${esc(l.t || l.url || l)}</a></div>`).join('')}` : ''}
+          ${t.who === 'ai' && t.prompt ? `<h3>The prompt it sends</h3><pre>${esc(t.prompt)}</pre>` : ''}
+          <div class="btns">
+            ${t.who === 'ai' ? `<button class="b w" data-a="send">${fw ? 'Send to ' + esc(fw.name) : 'Copy prompt'}</button>` : ''}
+            <button class="b ${t.who === 'ai' ? 'g' : 'w'}" data-a="done">${t.done ? 'Mark not done' : 'Mark done'}</button>
+          </div>
+          <h3>Stuck? Ask anything</h3>
+          <div class="ask"><input placeholder="How do I do step 2?" /><button class="b w" data-a="ask">Ask</button></div>
+          <div class="ans"></div>`;
+        el.querySelector('.x').onclick = close;
+        const sendB = el.querySelector('[data-a=send]');
+        if (sendB) sendB.onclick = async () => { if (fw) { await queue(fw.id, t.prompt || t.t, null, t.t); close(); } else { const ok = await copy(t.prompt || t.t); sendB.textContent = ok ? 'Copied' : 'Copy failed'; } };
+        el.querySelector('[data-a=done]').onclick = async () => { await post('/api/plan/done', { id: t.id, done: !t.done }); close(); };
+        const inp = el.querySelector('.ask input'), ans = el.querySelector('.ans'), askB = el.querySelector('[data-a=ask]');
+        const ask = async () => {
+          const q = inp.value.trim(); if (!q) return;
+          askB.disabled = true; ans.style.display = 'block'; ans.textContent = 'Thinking… (this uses a little of your Claude usage)';
+          try { const r = await post('/api/ask', { id: t.id, title: t.t, question: q }); ans.innerHTML = r.answer ? linkify(r.answer) : esc(r.error || 'No answer.'); }
+          catch (e) { ans.textContent = 'Could not reach HQ.'; }
+          askB.disabled = false;
+        };
+        askB.onclick = ask; inp.onkeydown = (e) => { if (e.key === 'Enter') ask(); e.stopPropagation(); };
+        bg.classList.add('open');
+      }
+      return { open, close };
+    })();
     open();
   }
 

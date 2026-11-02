@@ -18,6 +18,10 @@ powershell -ExecutionPolicy Bypass -File make-shortcut.ps1
 
 Hooks from before still work. You don't need to run install-hooks again.
 
+## Updates
+
+HQ updates itself from GitHub every time you open it. Nothing to download.
+
 ## Every day
 
 Double-click **HQ**. It fills your screen. It talks out loud when a window is done, needs you, or is ready to test (turn sound off with the speaker button on the left).

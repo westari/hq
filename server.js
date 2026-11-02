@@ -189,7 +189,7 @@ function handleEvent(ev) {
     s.status = 'idle'; logActivity(s, 'Chat opened');
   } else if (name === 'UserPromptSubmit') {
     s.status = 'working'; s.prompt = String(ev.prompt || '').trim(); s.jobStart = Date.now();
-    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Reading your prompt';
+    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Reading your prompt'; s.title = s.nextTitle || ''; s.nextTitle = '';
     pushChat(s, 'you', s.prompt); logActivity(s, 'Started a new job');
   } else if (name === 'PreToolUse') {
     s.status = 'working'; s.inTool = Date.now(); s.doing = describeTool(ev.tool_name, ev.tool_input);
@@ -207,7 +207,7 @@ function handleEvent(ev) {
     if (finalText) { s.lastReply = finalText; s.tests = extractTests(finalText); pushChat(s, 'bot', finalText); }
     if (s.queue.length) {
       // A job you queued in HQ: hand it over right now instead of stopping.
-      const next = s.queue.shift();
+      const next = s.queue.shift(); s.title = (s.queueTitles || []).shift() || '';
       s.prompt = next; s.jobStart = Date.now(); s.todos = []; s.actions = []; s.tests = []; s.testsDone = false;
       s.status = 'working'; s.doing = 'Starting your queued job';
       pushChat(s, 'you', next); logActivity(s, 'Started a queued job', firstLine(next));
@@ -464,7 +464,7 @@ function buildPlan() {
   };
   open.filter((t) => t.group === 'Blocking').forEach(place);
   open.filter((t) => t.group !== 'Blocking').forEach(place);
-  const view = (t) => ({ id: t.id, t: t.t, sub: t.sub || '', who: t.who, pts: t.pts || 1, group: t.group, done: t.done, day: dayOf[t.id] || t.doneOn || null, prompt: t.prompt || '' });
+  const view = (t) => ({ id: t.id, t: t.t, sub: t.sub || '', steps: Array.isArray(t.steps) ? t.steps : [], links: Array.isArray(t.links) ? t.links : [], who: t.who, pts: t.pts || 1, group: t.group, done: t.done, day: dayOf[t.id] || t.doneOn || null, prompt: t.prompt || '' });
   const todayTasks = tasks.filter((t) => (!t.done && dayOf[t.id] === today) || t.doneOn === today).map(view);
   const extra = st.extra.filter((x) => x.day === today).map((x) => ({ id: x.id, t: x.t, sub: '', who: 'you', pts: 0, group: 'Extra', done: !!x.done, day: today, prompt: '' }));
   const nextTasks = open.filter((t) => dayOf[t.id] && dayOf[t.id] > today).sort((a, b) => (dayOf[a.id] < dayOf[b.id] ? -1 : dayOf[a.id] > dayOf[b.id] ? 1 : a.order - b.order)).slice(0, 6).map(view);
@@ -512,7 +512,7 @@ function folderForWindow(win) {
   for (const [folder, name] of Object.entries(config.windows || {})) if (name === win) return path.join(os.homedir(), folder);
   return null;
 }
-function startJob(win, text, s) {
+function startJob(win, text, s, title) {
   if (config.startJobs === false) return { error: 'Starting jobs from HQ is turned off.' };
   const exe = findClaude(); const cwd = folderForWindow(win);
   if (!exe) return { error: 'Could not find Claude Code on this PC.' };
@@ -535,7 +535,8 @@ function startJob(win, text, s) {
   if (s) {
     s.status = 'working'; s.prompt = text; s.jobStart = Date.now(); s.lastEvent = Date.now();
     s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Starting your job';
-    pushChat(s, 'you', text); logActivity(s, 'Started from HQ', firstLine(text));
+    s.title = String(title || ''); s.nextTitle = s.title;
+    pushChat(s, 'you', text); logActivity(s, 'Started from HQ', s.title || firstLine(text));
   }
   broadcast();
   return { started: true };
@@ -560,7 +561,7 @@ function snapshot() {
     if ((status === 'working' || status === 'needs-you') && !isBusy(s)) status = 'idle';
     return { id: s.id, window: w, project: projectFor(s.cwd), status, doing: s.doing, prompt: s.prompt.slice(0, 2000),
       todos: s.todos, actions: s.actions.slice(0, 40), lastEvent: s.lastEvent, jobStart: s.jobStart,
-      lastReply: s.lastReply.slice(0, 6000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
+      title: s.title || '', lastReply: s.lastReply.slice(0, 6000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
@@ -630,22 +631,22 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { window: win, summary: s.lastReply, prompt: s.prompt, tests: s.tests, messages: s.transcriptPath ? readTranscript(s.transcriptPath) : [] });
   }
   if (req.method === 'POST' && url === '/api/queue') {
-    const { window: win, text } = await readBody(req);
+    const { window: win, text, title } = await readBody(req);
     const t = String(text || '').trim(); if (!t) return json(res, 400, { error: 'Empty message.' });
     const full = t + logsNote();
     const s = sessionByWindow(win);
     if (isBusy(s)) {
-      s.queue.push(full); logActivity(s, 'Job queued', firstLine(t)); broadcast();
+      s.queue.push(full); s.queueTitles = s.queueTitles || []; s.queueTitles[s.queue.length - 1] = String(title || ''); logActivity(s, 'Job queued', title || firstLine(t)); broadcast();
       return json(res, 200, { queued: true, text: full });
     }
     // Free: start it right now.
-    const r = startJob(win, full, s);
+    const r = startJob(win, full, s, title);
     if (r.started) return json(res, 200, { started: true });
     return json(res, 200, { copy: true, text: full, error: r.error });
   }
   if (req.method === 'POST' && url === '/api/queue/clear') {
     const { window: win } = await readBody(req); const s = sessionByWindow(win);
-    if (s) { s.queue = []; broadcast(); } return json(res, 200, { ok: true });
+    if (s) { s.queue = []; s.queueTitles = []; broadcast(); } return json(res, 200, { ok: true });
   }
   if (req.method === 'POST' && url === '/api/tests/pass') {
     const { window: win } = await readBody(req); const s = sessionByWindow(win);
@@ -664,6 +665,35 @@ const server = http.createServer(async (req, res) => {
     if (!t) return json(res, 400, { error: 'empty' });
     const st = planState(); st.extra.push({ id: 'x' + Date.now(), t, day: dayKey(Date.now()), done: false });
     savePlanState(st); broadcast(); return json(res, 200, { ok: true });
+  }
+  // Ask a question about a task. Runs Claude Code in read-only "plan" mode in your main
+  // app folder (it can read your code but can't change anything). Uses your Claude usage.
+  if (req.method === 'POST' && url === '/api/ask') {
+    const b = await readBody(req);
+    const q = String(b.question || '').trim().slice(0, 2000); if (!q) return json(res, 400, { error: 'Empty question.' });
+    const exe = findClaude(); if (!exe) return json(res, 200, { error: 'Could not find Claude Code on this PC.' });
+    const plan = buildPlan() || { tasks: [] };
+    const t = plan.tasks.find((x) => x.id === b.id) || {};
+    const cwd = (config.git && config.git.mainRepo && fs.existsSync(config.git.mainRepo)) ? config.git.mainRepo : os.homedir();
+    const prompt = [
+      'I\'m Ari. I\'m launching my iOS app ' + (plan.project || '') + ' on the App Store. Answer my question about one task on my launch plan.',
+      'Rules: plain simple words, like you\'re explaining to a smart 10 year old. Exact click-by-click steps with real links when it\'s a website. Short. Don\'t change any files.',
+      '', 'TASK: ' + (t.t || b.title || ''), t.sub ? 'DETAIL: ' + t.sub : '',
+      (t.steps && t.steps.length) ? 'STEPS IN MY PLAN:\n' + t.steps.map((x, i) => (i + 1) + '. ' + x).join('\n') : '',
+      '', 'MY QUESTION: ' + q,
+    ].filter(Boolean).join('\n');
+    let out = '', err = '', done = false;
+    let child;
+    try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
+    catch (e) { return json(res, 200, { error: 'Could not start Claude Code: ' + e.message }); }
+    const finish = (obj) => { if (done) return; done = true; json(res, 200, obj); };
+    const timer = setTimeout(() => { try { child.kill(); } catch {} finish({ error: 'That took too long. Try a shorter question.' }); }, 4 * 60 * 1000);
+    child.stdout.on('data', (c) => { out += c; });
+    child.stderr.on('data', (c) => { err += c; });
+    child.on('error', (e) => { clearTimeout(timer); finish({ error: e.message }); });
+    child.on('exit', () => { clearTimeout(timer); finish(out.trim() ? { answer: out.trim() } : { error: firstLine(err) || 'No answer.' }); });
+    child.stdin.end(prompt);
+    return;
   }
   // Static files from /public. "/" opens the city.
   const rel = url === '/' ? '/HQ.html' : decodeURIComponent(url);
