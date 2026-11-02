@@ -525,7 +525,7 @@ function startJob(win, text, s, title) {
   const exe = findClaude(); const cwd = folderForWindow(win);
   if (!exe) return { error: 'Could not find Claude Code on this PC.' };
   if (!cwd || !fs.existsSync(cwd)) return { error: 'Could not find the folder for ' + win + '.' };
-  const args = ['-p', '--permission-mode', 'acceptEdits'];
+  const args = ['-p', '--permission-mode', 'acceptEdits', '--add-dir', ARCHIVE_DIR]; // so it can read your test logs
   if (s && s.id && !String(s.id).startsWith('hooktest')) args.push('--resume', s.id);
   let child;
   try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] }); }
