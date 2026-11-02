@@ -22,15 +22,16 @@
   function shortTitle(prompt) {
     const clean = String(prompt || '').replace(/\[(Pasted text|Image)[^\]]*\]/gi, ' ').replace(/[#*_>`~|{}\[\]<>]+/g, ' ');
     // First real sentence (3+ words). Skips things like "FormPal." or "Window A:".
-    const sentences = plain(clean).split(/(?<=[.!?:])\s+|\n/).map((x) => x.replace(/[.!?:]+$/, '').replace(/^(please|ok|okay|hey|so|now|also)[, ]+/i, '').trim());
-    let t = sentences.find((x) => x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 3) || '';
+    const sentences = plain(clean).replace(/(?:[A-Za-z]:)?(?:[\\/][\w .-]+)+[\\/]([\w.-]+)/g, '$1').split(/(?<=[.!?:])\s+|\n/).map((x) => x.replace(/[.!?:]+$/, '').replace(/^(please|ok|okay|hey|so|now|also)[, ]+/i, '').trim());
+    let t = sentences.find((x) => x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 2) || '';
     if (!t) return 'Your prompt';
     const words = t.split(' ').slice(0, 7).join(' ');
     return words.length < t.length ? words + '…' : words;
   }
-  function summarize(reply) {
-    const hq = /^\s*HQ:\s*(.+)$/im.exec(reply || '');
-    if (hq) return short(hq[1], 220);
+  function summarize(reply, title) {
+    const hq = /^\s*\**HQ:\**\s*(.+)$/im.exec(reply || '');
+    if (hq) return short(plain(hq[1]), 160);
+    if (title) return 'Finished: ' + title;
     // Paths like C:\Users\arize\hq\plan.json become just plan.json.
     const p = plain(reply).replace(/(?:[A-Za-z]:)?(?:[\\/][\w .-]+)+[\\/]([\w.-]+)/g, '$1').replace(/\s+/g, ' ');
     const sentences = (p.match(/[^.!?]+[.!?]+/g) || [p]).map((x) => x.trim())
@@ -57,7 +58,7 @@
     const working = status === 'working' || status === 'needs';
     const summary = working
       ? title + '.' + (nowStep ? ' Step ' + (doneN + 1) + ' of ' + steps.length + ': ' + nowStep.t + '.' : '')
-      : s.lastReply ? summarize(s.lastReply) : 'Nothing right now. It’s free for a new job.';
+      : s.lastReply ? summarize(s.lastReply, title) : 'Nothing right now. It’s free for a new job.';
     return {
       id, name: s.window, project: s.project, status, steps, cur, partial: status === 'working' ? 0.5 : 0,
       action: s.doing || (status === 'idle' ? 'Waiting for a job' : 'Thinking'),
@@ -236,6 +237,15 @@
         const wrap = (it) => { const go = it.go; return { ...it, go: (e) => { if (e && e.stopPropagation) e.stopPropagation(); go && go(e); }, toggleOpen: it.toggleOpen || (() => go && go()) }; };
         v.ari.doNow = (v.ari.doNow || []).map(wrap);
         v.ari.next = (v.ari.next || []).map(wrap);
+      }
+      if (v.fs && v.focusOn) {
+        const ss = (c.state.sessions || []).find((x) => x.name === v.fs.name);
+        if (ss && (ss.status === 'done' || ss.status === 'idle' || ss.status === 'testing')) {
+          const lastJob = ss._raw && ss._raw.lastReply ? ss.job.explain : '';
+          v.fs.explain = ss.status === 'testing' ? 'Done. Test it on your phone.' : 'Free for a new job.';
+          v.fs.action = lastJob ? 'Last job: ' + lastJob.replace(/^Finished: /, '') : 'No jobs yet';
+          v.fs.actIcon = 'history';
+        }
       }
       if (v.fs && v.focusOn) {
         const nm = v.fs.name;

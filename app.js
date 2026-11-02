@@ -48,6 +48,20 @@ ipcMain.on('hq-win', (_e, what) => {
   }
 });
 
+// One HQ icon on the taskbar: make your shortcuts (Desktop, Start menu, pinned taskbar)
+// carry the same app ID as the window, so Windows groups them together.
+function fixShortcuts() {
+  if (process.platform !== 'win32') return;
+  const fs = require('fs');
+  const opts = { target: process.execPath, args: '"' + __dirname + '"', cwd: __dirname, icon: path.join(__dirname, 'icon.ico'), iconIndex: 0, appUserModelId: 'com.ari.hq', description: 'HQ' };
+  const places = [
+    path.join(app.getPath('desktop'), 'HQ.lnk'),
+    path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'HQ.lnk'),
+    path.join(app.getPath('appData'), 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar', 'HQ.lnk'),
+  ];
+  for (const p of places) { try { if (fs.existsSync(p)) shell.writeShortcutLink(p, 'replace', opts); } catch (e) {} }
+}
+
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 // Auto-update: grab the latest HQ from GitHub before starting (skipped if offline or you changed files).
 function update() {
@@ -57,5 +71,5 @@ function update() {
     require('child_process').execFile('git', ['-C', __dirname, 'pull', '--ff-only', '--quiet'], { timeout: 15000, windowsHide: true }, () => resolve());
   });
 }
-app.whenReady().then(async () => { await update(); require('./server.js'); open(); });
+app.whenReady().then(async () => { await update(); fixShortcuts(); require('./server.js'); open(); });
 app.on('window-all-closed', () => app.quit());
