@@ -204,8 +204,15 @@ function handleEvent(ev) {
   } else if (name === 'Stop') {
     s.inTool = 0;
     const finalText = ev.last_assistant_message || (s.transcriptPath ? lastReplyFrom(s.transcriptPath) : '');
-    if (finalText) { s.lastReply = finalText; s.tests = extractTests(finalText); pushChat(s, 'bot', finalText); }
-    if (s.queue.length) {
+    const hit = limitFrom(finalText);
+    if (hit) {
+      // Claude's usage limit stopped this job. Keep its last real reply; continue by itself after the reset.
+      s.limitHit = { at: Date.now(), resumeAt: hit };
+      s.status = 'limit'; s.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hit).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      logActivity(s, 'Hit the usage limit');
+    } else if (finalText) { s.lastReply = finalText; s.tests = extractTests(finalText); pushChat(s, 'bot', finalText); }
+    if (hit) { /* wait for the reset */ }
+    else if (s.queue.length) {
       // A job you queued in HQ: hand it over right now instead of stopping.
       const next = s.queue.shift(); s.title = (s.queueTitles || []).shift() || '';
       s.prompt = next; s.jobStart = Date.now(); s.todos = []; s.actions = []; s.tests = []; s.testsDone = false;
@@ -496,6 +503,7 @@ const runners = new Map(); // window name -> running Claude Code process
 const STALE = 8 * 60 * 1000; // "working" with no news for 6 min = not really working
 function isBusy(s) {
   if (!s) return false;
+  if (s.status === 'limit') return true; // waiting for the usage limit to reset
   if (runners.has(windowName(s.cwd))) return true;
   if (s.status === 'working' && s.inTool && Date.now() - s.inTool < 60 * 60 * 1000) return true; // a long command is running
   return (s.status === 'working' || s.status === 'needs-you') && Date.now() - s.lastEvent < STALE;
@@ -575,6 +583,31 @@ async function pollYesterday() {
   const next = { date: yk, commits, tasks };
   if (JSON.stringify(next) !== JSON.stringify(yesterday)) { yesterday = next; broadcast(); }
 }
+
+// ─── Auto-continue after Claude's usage limit ──────────────────────────────
+// Claude Code says e.g. "You've hit your session limit · resets 3:45pm" (or "resets Mon 12:00am").
+function limitFrom(text) {
+  const t = String(text || '');
+  if (!/hit your .*limit|usage limit|limit reached/i.test(t)) return 0;
+  const m = /resets\s+(?:(sun|mon|tue|wed|thu|fri|sat)\w*\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(t);
+  const now = new Date();
+  if (m) {
+    let h = Number(m[2]) % 12; if (/pm/i.test(m[4])) h += 12;
+    const d = new Date(now); d.setHours(h, Number(m[3] || 0), 0, 0);
+    if (m[1]) { const want = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(m[1].toLowerCase().slice(0, 3)); while (d.getDay() !== want || d <= now) d.setDate(d.getDate() + 1); }
+    else if (d <= now) d.setDate(d.getDate() + 1);
+    return d.getTime() + 90 * 1000; // a minute and a half after the reset, to be safe
+  }
+  return (usage && usage.resetAt ? usage.resetAt : Date.now() + 5 * 3600 * 1000) + 90 * 1000;
+}
+setInterval(() => {
+  if (config.autoResume === false) return;
+  for (const s of sessions.values()) {
+    if (!s.limitHit || Date.now() < s.limitHit.resumeAt || runners.has(windowName(s.cwd))) continue;
+    s.limitHit = null;
+    startJob(windowName(s.cwd), 'Claude’s usage limit has reset. Continue exactly where you stopped and finish the job from my last message. Same rules as before.', s, s.title || 'Continue after the limit');
+  }
+}, 30 * 1000);
 
 // ─── Snapshot sent to the page ──────────────────────────────────────────────
 function snapshot() {

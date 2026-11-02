@@ -3,7 +3,7 @@
 // Everything that turns real data into the design's shapes lives here,
 // so you can redesign the city in Claude Design without losing the wiring.
 (function () {
-  const STATUS = { working: 'working', 'needs-you': 'needs', idle: 'idle', ended: 'idle' };
+  const STATUS = { working: 'working', 'needs-you': 'needs', idle: 'idle', ended: 'idle', limit: 'idle' };
   const letter = (name) => { const m = /window\s+([a-z0-9])/i.exec(name || ''); return m ? m[1].toUpperCase() : (name || '?')[0].toUpperCase(); };
   const firstLine = (t) => String(t || '').trim().split('\n').find((l) => l.trim()) || '';
   const short = (t, n) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
@@ -350,8 +350,10 @@
     }
     function announce(sessions) {
       for (const s of sessions) {
-        const was = prevStatus[s.id]; prevStatus[s.id] = s.status;
-        if (firstSnap || was === s.status) continue;
+        const rawSt = s._raw && s._raw.status === 'limit' ? 'limit' : s.status;
+        const was = prevStatus[s.id]; prevStatus[s.id] = rawSt;
+        if (firstSnap || was === rawSt) continue;
+        if (rawSt === 'limit') { say(s.name + ' hit the Claude limit. ' + String(s._raw.doing || '').replace('Hit the Claude limit. ', '') + '.'); continue; }
         const what = String((s.job && s.job.explain) || '').replace(/^Finished: /, '').replace(/[.]+$/, '');
         if (s.status === 'testing') say(s.name + ' is done' + (what ? ': ' + what : '') + '. Test it on your phone.');
         else if (s.status === 'done') say(s.name + ' is done' + (what ? ': ' + what : '') + '.');
