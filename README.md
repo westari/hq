@@ -72,6 +72,16 @@ Then Factory > Start build (or Pulse > New build) starts your iOS build.
 
 Opens claude.ai on the right side of HQ: your same chats and the ATHLT project. Sign in once with **Continue with email** (Google sign-in is blocked inside apps by Google). The microphone button works there too. It uses your normal Claude plan, nothing extra. HQ never reads what's in it.
 
+## Content (slideshows)
+
+Template 1 is **Hack → How to → App** (copied from the MenuFit format that works):
+
+1. **Hook:** a crazy, real-looking gym photo, your FormPal badge, and one big line: "THIS [specific workout or fix] [true result with a number]".
+2. **How to:** white page, "HOW TO DO IT", 4 numbered steps with one picture each. Always 5th-grade reading level (HQ measures it and makes Gemini fix it).
+3. **Your app:** your real app screenshot in a phone, 3 honest badges, and "COMMENT "FORM" TO GET AN APP THAT...".
+
+Free setup (once): a Gemini key (writes the words) and a free Cloudflare account (makes the pictures, about 35 posts a day, can't charge you). HQ draws all the text itself, so it's always sharp and spelled right. Each picture is checked for weird text or bodies and redone once if needed. Finished slides are in `content\<slideshow>\slide-1.png` to `slide-3.png`. Post them in order and add a trending sound.
+
 ## Test Lab (talk, then send)
 
 1. Test the app on your phone.

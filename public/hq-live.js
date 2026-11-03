@@ -311,25 +311,28 @@
       // Content building (was the Ideas building): your slideshow bot.
       if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Ideas' ? { ...t, short: 'Content', name: 'Content' } : t));
       if (v.bp && v.bp.name === 'Idea Vault') {
-        const C = (last && last.content) || { shows: [], templates: [], usage: {} };
+        const C = (last && last.content) || { shows: [], templates: [], usage: {}, pictures: {}, assets: {} };
         const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '', hasBtn: false, btn: '', go: () => {} };
         const items = [];
-        if (!C.hasKey) items.push({ ...base, t: 'Add your Gemini key', sub: 'Free key from aistudio.google.com. It stays on this PC, never on GitHub.', hasBtn: true, btn: 'Add key', icon: 'key', go: () => card.keyBox() });
-        else {
-          items.push({ ...base, t: 'New slideshow', sub: 'Pick a template, say what it’s about, check the slides, then make the pictures.', hasBtn: true, btn: 'Create', icon: 'add', go: () => card.newShow() });
-          const u = C.usage || {};
-          items.push({ ...base, t: 'Gemini today: ' + (u.images || 0) + ' pictures, ' + (u.writes || 0) + ' written', sub: u.limitHit ? 'You hit today’s free limit. It resets tomorrow. Nothing is charged.' : 'Free. Google doesn’t share the exact daily limit, so HQ counts and stops when you hit it.', hasBtn: true, btn: 'Templates', icon: 'tune', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.templateEditor() });
-          if (C.error) items.push({ ...base, t: 'Last problem', sub: C.error });
-        }
+        if (!C.hasKey) items.push({ ...base, t: 'Step 1: add your free Gemini key', sub: 'Gemini writes the words. Free key from aistudio.google.com. It stays on this PC.', hasBtn: true, btn: 'Add key', icon: 'key', go: () => card.keyBox() });
+        if (!C.hasPictures) items.push({ ...base, t: (C.hasKey ? 'Step 2' : 'Step 2') + ': turn on free pictures', sub: 'A free Cloudflare account makes the pictures. About 35 posts a day, $0, it can never charge you.', hasBtn: true, btn: 'Set up', icon: 'image', go: () => card.cfBox() });
+        if (!(C.assets || {}).screenshot) items.push({ ...base, t: 'Add your app screenshot', sub: 'For the phone on the last slide. Until then it shows the hook picture.', hasBtn: true, btn: 'Add', icon: 'add_photo_alternate', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.assetBox() });
+        if (C.hasKey) items.push({ ...base, t: 'New slideshow', sub: (C.templates[0] || {}).name + ': hook → how to → your app. You check the words before any picture is made.', hasBtn: true, btn: 'Create', icon: 'add', go: () => card.newShow() });
+        const P = C.pictures || {};
+        if (C.hasPictures) items.push({ ...base, t: 'Free pictures left today: about ' + (P.postsLeft || 0) + ' posts', sub: P.limitHit ? 'Used up for today. More at 7 pm. Nothing is charged.' : (P.images || 0) + ' pictures made today. Resets at 7 pm.' });
+        if (C.error) items.push({ ...base, t: 'Last problem', sub: C.error });
         for (const sh of C.shows || []) {
-          const n = sh.slides.length, pics = sh.slides.filter((x) => x.img).length;
+          const v2 = sh.v === 2; const im = sh.images || {}; const n = v2 ? 1 + sh.spec.steps.length : sh.slides.length;
+          const pics = v2 ? Object.values(im).filter((x) => x && x.file).length : sh.slides.filter((x) => x.img).length;
           const map = {
-            draft: ['Check the slides before pictures are made', 'Check', () => card.draftEditor(sh)],
-            making: ['Making pictures ' + pics + ' of ' + n, 'View', () => card.slides(sh)],
-            text: ['Adding the text…', 'View', () => card.slides(sh)],
-            partial: ['Some pictures failed. ' + pics + ' of ' + n, 'Retry', () => post('/api/content/pictures', { id: sh.id })],
-            limit: ['Paused: free limit hit. ' + pics + ' of ' + n + ' done', 'Continue', () => post('/api/content/pictures', { id: sh.id })],
-            ready: ['Ready to post · ' + n + ' slides', 'View', () => card.slides(sh)],
+            draft: ['Check the words, then make the pictures', 'Check', () => card.draftEditor(sh)],
+            making: ['Making pictures: ' + pics + ' of ' + n, 'View', () => card.slides(sh)],
+            layout: ['Putting the slides together…', 'View', () => card.slides(sh)],
+            text: ['Putting the slides together…', 'View', () => card.slides(sh)],
+            partial: ['Some pictures failed: ' + pics + ' of ' + n, 'Fix', () => card.slides(sh)],
+            stopped: ['Paused: ' + pics + ' of ' + n + ' pictures', 'Fix', () => card.slides(sh)],
+            limit: ['Paused: free limit hit', 'View', () => card.slides(sh)],
+            ready: ['Ready to post · ' + (v2 ? 3 : n) + ' slides', 'View', () => card.slides(sh)],
           }[sh.status] || ['', 'View', () => card.slides(sh)];
           items.push({ ...base, t: sh.title, sub: map[0], hasBtn: true, btn: map[1], icon: 'slideshow', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: map[2] });
         }
@@ -431,23 +434,23 @@
     }
     // Put each slide's text on its picture (1080x1920) and send the finished slide back to HQ.
     const drawing = new Set();
+    // Load the slide designer once.
+    const slidesLib = new Promise((res) => { if (window.HQSlides) return res(); const sc = document.createElement('script'); sc.src = '/slides-render.js?t=' + Date.now(); sc.onload = () => res(); sc.onerror = () => res(); document.head.appendChild(sc); });
+    const rendered = new Set();
     async function finishSlides(C) {
-      for (const sh of (C && C.shows) || []) sh.slides.forEach((x, i) => {
-        const k = sh.id + ':' + i; if (!x.img || x.final || drawing.has(k)) return; drawing.add(k);
-        const im = new Image(); im.onload = async () => {
-          const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
-          const sc = Math.max(W / im.width, H / im.height); g.drawImage(im, (W - im.width * sc) / 2, (H - im.height * sc) / 2, im.width * sc, im.height * sc);
-          const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, 'rgba(0,0,0,0.15)'); grad.addColorStop(0.45, 'rgba(0,0,0,0.45)'); grad.addColorStop(1, 'rgba(0,0,0,0.2)'); g.fillStyle = grad; g.fillRect(0, 0, W, H);
-          const size = i === 0 ? 96 : 72; g.font = `600 ${size}px Geist, -apple-system, sans-serif`; g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-          g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 24;
-          const words = String(x.text || '').split(/\s+/); const lines = []; let line = '';
-          for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > 900 && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line);
-          const lh = size * 1.18, at = sh.text === 'top' ? 0.2 : sh.text === 'bottom' ? 0.74 : 0.42, y0 = H * at - ((lines.length - 1) * lh) / 2; lines.forEach((l, j) => g.fillText(l, W / 2, y0 + j * lh));
-          try { await post('/api/content/final', { id: sh.id, i, png: cv.toDataURL('image/png') }); } catch (e) { drawing.delete(k); }
-        };
-        im.onerror = () => drawing.delete(k);
-        im.src = '/content/' + sh.id + '/' + x.img;
-      });
+      if (!C) return;
+      for (const sh of C.shows || []) {
+        if (sh.v !== 2) continue;
+        const im = sh.images || {}; const slots = ['hook', ...sh.spec.steps.map((_, i) => 'step' + i)];
+        if (!slots.every((k) => im[k] && im[k].file) || (sh.finals || []).filter(Boolean).length === 3) continue;
+        const key = sh.id + ':' + slots.map((k) => im[k].file).join(',') + ':' + JSON.stringify(sh.spec) + ':' + JSON.stringify(C.assets);
+        if (rendered.has(key)) continue; rendered.add(key);
+        try {
+          await slidesLib; const T = (C.templates || []).find((t) => t.id === sh.template) || C.templates[0];
+          const cvs = await window.HQSlides.render(sh, T, C.assets);
+          for (let i = 0; i < cvs.length; i++) await post('/api/content/final', { id: sh.id, i, png: cvs[i].toDataURL('image/png') });
+        } catch (e) { rendered.delete(key); console.error('HQ slides:', e); }
+      }
     }
     // Watchdog alerts: each one once. "ready" = new version to test → the UFO flies to Test Lab.
     let wdSeen = -1;
@@ -771,71 +774,89 @@
         const sv = async () => { const k = inp.value.trim(); if (!k) return; await post('/api/content/key', { key: k }); close(); c.toast('Gemini key saved', 'key'); };
         el.querySelector('[data-a=save]').onclick = sv; bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
       }
-      function newShow() {
-        const C = (last && last.content) || { templates: [] }; let tid = (C.templates[0] || {}).id;
-        const draw = () => {
-          const T = C.templates.find((x) => x.id === tid) || {};
-          el.innerHTML = `<div class="top"><div style="flex:1"><h2>New slideshow</h2><p class="why">Gemini writes the slides first. You check them. Pictures are only made after you say go.</p></div><button class="x" aria-label="Close">✕</button></div>
-            <h3 style="margin-top:18px">What is it about?</h3>
-            <div class="ask"><input placeholder="3 squat mistakes beginners make" /></div>
-            <h3 style="margin-top:18px">Template</h3>
-            <div class="btns" style="margin-top:0">${C.templates.map((x) => `<button class="b ${x.id === tid ? 'w' : 'g'}" data-t="${esc(x.id)}">${esc(x.name)} · ${x.slides}</button>`).join('')}<button class="b g" data-a="tpl">Edit templates</button></div>
-            <div class="panel" style="margin-top:12px;font-size:13px"><b>How it writes:</b> ${esc(T.write || '')}<br><b>Picture look:</b> ${esc(T.look || '')}<br><b>Text:</b> ${esc(T.text || 'middle')} of the picture</div>
-            <div class="btns"><button class="b w" data-a="go">Write the slides</button></div><div class="note">Writing uses 1 free Gemini request. No pictures yet.</div>`;
-          el.querySelector('.x').onclick = close;
-          el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => { const keep = el.querySelector('input').value; tid = b.dataset.t; draw(); el.querySelector('input').value = keep; }));
-          el.querySelector('[data-a=tpl]').onclick = () => templateEditor();
-          const inp = el.querySelector('input'); inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') go(); };
-          const go = async () => {
-            const topic = inp.value.trim(); if (!topic) { inp.focus(); return; }
-            const b = el.querySelector('[data-a=go]'); b.textContent = 'Writing…'; b.disabled = true;
-            const r = await post('/api/content/draft', { topic, template: tid });
-            if (r.show) draftEditor(r.show); else { b.disabled = false; b.textContent = 'Write the slides'; el.querySelector('.note').textContent = r.error === 'nokey' ? 'Add your Gemini key first.' : r.error; }
-          };
-          el.querySelector('[data-a=go]').onclick = go;
-          setTimeout(() => inp.focus(), 50);
+      const fileToData = (f) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => res(''); r.readAsDataURL(f); });
+      // Free pictures: Cloudflare account ID + token.
+      function cfBox() {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Turn on free pictures</h2><p class="why">Cloudflare gives every account a free amount of AI pictures each day (about 35 posts). On the free plan it can never charge you: when it’s used up, it just waits until tomorrow. No credit card.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="steps" style="margin-top:16px">${['Go to dash.cloudflare.com and make a free account (or sign in).', 'On the left, click <b>AI</b> → <b>Workers AI</b>.', 'Click <b>Use REST API</b>.', 'Click <b>Create a Workers AI API Token</b> → <b>Create API Token</b>. Copy the token (it’s only shown once).', 'On the same page, copy your <b>Account ID</b>.', 'Paste both below and press Save. HQ makes 1 tiny test picture to check.'].map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${x}</span></div>`).join('')}</div>
+          <h3 style="margin-top:16px">Account ID</h3><div class="ask"><input data-k="a" placeholder="32 letters and numbers" /></div>
+          <h3 style="margin-top:12px">API token</h3><div class="ask"><input data-k="t" type="password" placeholder="Paste the token" /></div>
+          <div class="btns"><button class="b w" data-a="save">Save and test</button><button class="b g" data-a="open">Open Cloudflare</button></div><div class="note">Saved only on this PC, in content\\cloudflare.json.</div>`;
+        el.querySelector('.x').onclick = close;
+        el.querySelectorAll('input').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
+        el.querySelector('[data-a=open]').onclick = () => window.open('https://dash.cloudflare.com/?to=/:account/ai/workers-ai');
+        el.querySelector('[data-a=save]').onclick = async (e) => {
+          e.target.textContent = 'Testing…'; e.target.disabled = true;
+          const r = await post('/api/content/cloudflare', { account: el.querySelector('[data-k=a]').value, token: el.querySelector('[data-k=t]').value });
+          if (r.ok) { close(); c.toast('Free pictures are on', 'image'); } else { e.target.disabled = false; e.target.textContent = 'Save and test'; el.querySelector('.note').textContent = r.error || 'That didn’t work.'; }
         };
-        draw(); bg.classList.add('open');
+        bg.classList.add('open');
       }
+      // Your real app screenshot (slide 3 phone) and app icon (badge on slide 1).
+      function assetBox() {
+        const A = ((last && last.content) || {}).assets || {};
+        const slot = (k, label, why) => `<div class="step" style="cursor:default;align-items:center"><div style="width:64px;height:${k === 'icon' ? 64 : 120}px;border-radius:12px;background:rgba(255,255,255,.12) center/cover no-repeat ${A[k] ? `url(${A[k]}?t=${Date.now()})` : ''};flex:none"></div><div style="flex:1"><b>${label}</b><div style="font-size:13px;opacity:.75">${why}</div></div><label class="b ${A[k] ? 'g' : 'w'}" style="display:inline-flex;align-items:center;cursor:pointer">${A[k] ? 'Change' : 'Choose'}<input type="file" accept="image/*" data-k="${k}" style="display:none"></label></div>`;
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Your app pictures</h2><p class="why">These make the slides look real. Use real screens from FormPal only.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="steps" style="margin-top:16px">${slot('screenshot', 'App screenshot', 'Goes inside the phone on the last slide. Pick your best screen (like the form check with a good score). A normal iPhone screenshot.')}${slot('icon', 'App icon', 'Shows next to “FormPal” on the first slide. Square picture.')}</div>
+          <div class="note">Saved only on this PC.</div>`;
+        el.querySelector('.x').onclick = close;
+        el.querySelectorAll('input[type=file]').forEach((inp) => (inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const png = await fileToData(f); const r = await post('/api/content/upload', { kind: inp.dataset.k, png }); c.toast(r.ok ? 'Saved' : 'That picture didn’t work', r.ok ? 'check' : 'error'); setTimeout(assetBox, 400); }));
+        bg.classList.add('open');
+      }
+      function newShow() {
+        const C = (last && last.content) || { templates: [] }; const T = C.templates[0] || {};
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>New slideshow</h2><p class="why">${esc(T.name || '')}: a crazy hook photo, a simple how-to with a picture for each step, then your app. Gemini writes the words first and you check them. Pictures are made only after you say go.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <h3 style="margin-top:18px">What is it about?</h3>
+          <div class="ask"><input placeholder="A 4-move leg day for beginners" /><button class="b g" data-a="ideas">Give me ideas</button></div>
+          <div class="btns" data-ideas style="margin-top:10px"></div>
+          <div class="btns"><button class="b w" data-a="go">Write it</button></div><div class="note">Writing is free (your Gemini key). HQ checks it’s 5th-grade reading level and fixes it if not.</div>`;
+        el.querySelector('.x').onclick = close;
+        const inp = el.querySelector('input'); inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') go(); };
+        el.querySelector('[data-a=ideas]').onclick = async (e) => {
+          e.target.textContent = 'Thinking…'; const r = await post('/api/content/ideas', { template: T.id }); e.target.textContent = 'More ideas';
+          const box = el.querySelector('[data-ideas]');
+          box.innerHTML = r.ideas ? r.ideas.map((x) => `<button class="b g" style="height:auto;min-height:36px;padding:8px 12px;text-align:left;white-space:normal">${esc(x)}</button>`).join('') : `<div class="note">${esc(r.error === 'nokey' ? 'Add your Gemini key first.' : r.error || '')}</div>`;
+          box.querySelectorAll('button').forEach((b) => (b.onclick = () => { inp.value = b.textContent; inp.focus(); }));
+        };
+        const go = async () => {
+          const topic = inp.value.trim(); if (!topic) { inp.focus(); return; }
+          const b = el.querySelector('[data-a=go]'); b.textContent = 'Writing…'; b.disabled = true;
+          const r = await post('/api/content/draft', { topic, template: T.id });
+          if (r.show) draftEditor(r.show); else { b.disabled = false; b.textContent = 'Write it'; el.querySelector('.note').textContent = r.error === 'nokey' ? 'Add your Gemini key first.' : r.error; }
+        };
+        el.querySelector('[data-a=go]').onclick = go;
+        bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
+      }
+      const ta = (k, val, rows, small) => `<textarea data-k="${k}" rows="${rows}" style="width:100%;box-sizing:border-box;resize:none;border:0;border-radius:12px;padding:${small ? '8px 10px' : '10px 12px'};background:rgba(255,255,255,${small ? '.08' : '.14'});color:#fff;font:${small ? '13px' : '15px'}/1.4 Geist,-apple-system,sans-serif;outline:none">${esc(val)}</textarea>`;
       function draftEditor(sh) {
-        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><p class="why">Change any slide. "Picture" is what the photo shows. Then make the pictures.</p></div><button class="x" aria-label="Close">✕</button></div>
-          <div class="steps" style="margin-top:16px">${sh.slides.map((x, i) => `<div class="step" style="cursor:default;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:center"><span class="n">${i + 1}</span><b>Slide text</b></div>
-            <textarea data-i="${i}" data-f="text" rows="2" style="resize:none;border:0;border-radius:12px;padding:10px;background:rgba(255,255,255,.14);color:#fff;font:15px/1.4 Geist,-apple-system,sans-serif;outline:none">${esc(x.text)}</textarea>
-            <div style="font-size:12px;opacity:.65">Picture</div>
-            <textarea data-i="${i}" data-f="scene" rows="1" style="resize:none;border:0;border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.08);color:#fff;font:13px/1.4 Geist,-apple-system,sans-serif;outline:none">${esc(x.scene)}</textarea></div>`).join('')}</div>
-          <div class="btns"><button class="b w" data-a="pics">Make ${sh.slides.length} pictures</button><button class="b g" data-a="del">Delete</button></div>
-          <div class="note">Uses ${sh.slides.length} free Gemini pictures. HQ tells you out loud when it’s ready.</div>`;
+        if (sh.v !== 2) return slides(sh);
+        const S = sh.spec; const C = (last && last.content) || {};
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><div class="tags"><span class="tag">Reading level: grade ${sh.grade}${sh.grade <= 5 ? ' ✓' : ''}</span><span class="tag">${S.steps.length} steps</span></div><p class="why">Change anything. “Picture” = what the photo shows. The words are drawn by HQ, never by the AI, so they’ll be spelled exactly like this.</p></div><button class="x" aria-label="Close">✕</button></div>
+          ${(sh.warnings || []).length ? `<div class="panel" style="margin-top:12px;font-size:13px">Heads up: ${esc(sh.warnings.join('; '))}</div>` : ''}
+          <h3 style="margin-top:16px">Slide 1 · Hook</h3>${ta('hook.text', S.hook.text, 2)}<div class="note" style="margin:6px 0 4px">Picture</div>${ta('hook.picture', S.hook.picture, 2, 1)}
+          <h3 style="margin-top:16px">Slide 2 · ${esc(S.howtoTitle)}</h3>
+          <div class="steps">${S.steps.map((st, i) => `<div class="step" style="cursor:default;flex-direction:column;gap:6px;align-items:stretch"><div style="display:flex;gap:10px;align-items:center"><span class="n">${i + 1}</span><b>Step</b></div>${ta('s' + i + '.title', st.title, 1)}<div class="note" style="margin:0">Bullets (one per line)</div>${ta('s' + i + '.bullets', st.bullets.join('\n'), 2, 1)}<div class="note" style="margin:0">Picture</div>${ta('s' + i + '.picture', st.picture, 1, 1)}</div>`).join('')}</div>
+          <h3 style="margin-top:16px">Slide 3 · Your app</h3><div class="panel" style="font-size:14px">${esc(S.cta)}</div>
+          <h3 style="margin-top:16px">Caption</h3>${ta('caption', S.caption + (S.hashtags.length ? '\n' + S.hashtags.join(' ') : ''), 2, 1)}
+          <div class="btns"><button class="b w" data-a="pics">${C.hasPictures ? 'Make the ' + (1 + S.steps.length) + ' pictures' : 'Turn on free pictures first'}</button><button class="b g" data-a="del">Delete</button></div>
+          <div class="note">Free (Cloudflare). Each picture gets checked for weird text or bodies and is redone once if needed.</div>`;
         el.querySelector('.x').onclick = close;
         el.querySelectorAll('textarea').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
+        const val = (k) => el.querySelector(`[data-k="${k}"]`).value.trim();
         el.querySelector('[data-a=pics]').onclick = async () => {
-          const slides = sh.slides.map((x, i) => ({ text: el.querySelector(`[data-i="${i}"][data-f=text]`).value, scene: el.querySelector(`[data-i="${i}"][data-f=scene]`).value }));
-          const r = await post('/api/content/pictures', { id: sh.id, slides });
-          if (r.started) { close(); c.toast('Making the pictures. HQ tells you when it’s ready.', 'auto_awesome'); } else el.querySelector('.note').textContent = r.error || 'Could not start.';
+          if (!C.hasPictures) return cfBox();
+          const capLines = val('caption').split('\n'); const tags = capLines.join(' ').match(/#\w+/g) || [];
+          const spec = { hook: { text: val('hook.text').toUpperCase(), picture: val('hook.picture') },
+            steps: S.steps.map((_, i) => ({ title: val('s' + i + '.title').toUpperCase(), bullets: val('s' + i + '.bullets').split('\n').map((x) => x.trim().toUpperCase()).filter(Boolean).slice(0, 2), picture: val('s' + i + '.picture') })),
+            caption: capLines.join(' ').replace(/#\w+/g, '').trim(), hashtags: tags.slice(0, 5) };
+          const r = await post('/api/content/pictures', { id: sh.id, spec });
+          if (r.started) { close(); c.toast('Making the pictures. HQ tells you when it’s ready.', 'auto_awesome'); }
+          else if (r.error === 'nocf') cfBox(); else el.querySelector('.note').textContent = r.error || 'Could not start.';
         };
         el.querySelector('[data-a=del]').onclick = async () => { await post('/api/content/delete', { id: sh.id }); close(); };
         bg.classList.add('open');
       }
-      function templateEditor(id) {
-        const C = (last && last.content) || { templates: [] };
-        const T = C.templates.find((x) => x.id === id) || C.templates[0] || { name: 'My template', slides: 6, write: '', look: '', text: 'middle' };
-        const fld = (k, label, rows, val) => `<h3 style="margin-top:14px">${label}</h3><textarea data-k="${k}" rows="${rows}" style="width:100%;box-sizing:border-box;resize:none;border:0;border-radius:12px;padding:10px;background:rgba(255,255,255,.14);color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;outline:none">${esc(val)}</textarea>`;
-        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Templates</h2><p class="why">A template is your locked format. Every slideshow made with it looks the same, only the topic changes.</p></div><button class="x" aria-label="Close">✕</button></div>
-          <div class="btns" style="margin-top:12px">${C.templates.map((x) => `<button class="b ${x.id === T.id ? 'w' : 'g'}" data-t="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="b g" data-a="new">+ New</button></div>
-          ${fld('name', 'Name', 1, T.name)}${fld('slides', 'Number of slides', 1, String(T.slides))}
-          ${fld('write', 'How Gemini writes the slides', 4, T.write)}${fld('look', 'Picture look (every picture uses this)', 3, T.look)}
-          <h3 style="margin-top:14px">Where the text goes</h3><div class="btns" style="margin-top:0">${['top', 'middle', 'bottom'].map((p) => `<button class="b ${T.text === p ? 'w' : 'g'}" data-p="${p}">${p}</button>`).join('')}</div>
-          <div class="btns"><button class="b w" data-a="save">Save template</button><button class="b g" data-a="back">Back to new slideshow</button></div>`;
-        let pos = T.text || 'middle';
-        el.querySelector('.x').onclick = close;
-        el.querySelectorAll('textarea').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
-        el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => templateEditor(b.dataset.t)));
-        el.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { pos = b.dataset.p; el.querySelectorAll('[data-p]').forEach((x) => (x.className = 'b ' + (x.dataset.p === pos ? 'w' : 'g'))); }));
-        el.querySelector('[data-a=new]').onclick = () => { T.id = ''; el.querySelector('[data-k=name]').value = 'New template'; };
-        const val = (k) => el.querySelector(`[data-k=${k}]`).value;
-        el.querySelector('[data-a=save]').onclick = async () => { await post('/api/content/template', { id: T.id, name: val('name'), slides: val('slides'), write: val('write'), look: val('look'), text: pos }); c.toast('Template saved', 'check'); };
-        el.querySelector('[data-a=back]').onclick = () => newShow();
-        bg.classList.add('open');
-      }
+      function templateEditor() { return newShow(); }
       function anyJob() {
         el.innerHTML = `<div class="top"><div style="flex:1"><h2>Job for the next free window</h2><p class="why">Whichever window is free first starts it. If both are busy, it waits and the first one to finish picks it up.</p></div><button class="x" aria-label="Close">✕</button></div>
           <h3 style="margin-top:16px">Short name</h3><div class="ask"><input placeholder="Fix the build" /></div>
@@ -892,16 +913,34 @@ Try: git status
         if (termJob) show(termJob);
         bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
       }
-      function slides(sh) {
-        const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
-        const caption = sh.title + '\n\n' + sh.slides.map((x) => x.text).join('\n');
-        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><div class="tags"><span class="tag">${esc(sh.exercise || '')}</span><span class="tag">${sh.slides.length} slides</span></div></div><button class="x" aria-label="Close">✕</button></div>
-          <div style="display:grid;grid-template-columns:repeat(${Math.min(6, sh.slides.length)},1fr);gap:10px;margin-top:18px">${sh.slides.map((x, i) => (x.img ? `<img src="${src(x)}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)">` : `<div class="panel" style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px">${esc(x.err || 'Making…')}</div>`)).join('')}</div>
-          <div class="btns"><button class="b w" data-a="folder">Open folder</button><button class="b g" data-a="cap">Copy caption</button></div>
-          <div class="note">Post the slide-1 to slide-${sh.slides.length} pictures from the folder, in order.</div>`;
+      function slides(shIn) {
+        const C = (last && last.content) || {}; const sh = (C.shows || []).find((x) => x.id === shIn.id) || shIn;
+        if (sh.v !== 2) { // older slideshows
+          const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
+          el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2></div><button class="x" aria-label="Close">✕</button></div><div style="display:grid;grid-template-columns:repeat(${Math.min(6, sh.slides.length)},1fr);gap:10px;margin-top:18px">${sh.slides.map((x) => (x.img ? `<img src="${src(x)}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:14px">` : '<div class="panel" style="aspect-ratio:9/16"></div>')).join('')}</div><div class="btns"><button class="b w" data-a="folder">Open folder</button></div>`;
+          el.querySelector('.x').onclick = close; el.querySelector('[data-a=folder]').onclick = () => post('/api/content/open', { id: sh.id }); bg.classList.add('open'); return;
+        }
+        const im = sh.images || {}; const slots = ['hook', ...sh.spec.steps.map((_, i) => 'step' + i)];
+        el.dataset.show = sh.id; el.dataset.sig = sh.status + JSON.stringify(im) + JSON.stringify(sh.finals || []);
+        const names = { hook: 'Hook photo' }; sh.spec.steps.forEach((st, i) => (names['step' + i] = 'Step ' + (i + 1)));
+        const fin = sh.finals || [];
+        const caption = [sh.spec.caption, (sh.spec.hashtags || []).join(' ')].filter(Boolean).join('\n\n');
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><div class="tags"><span class="tag">${sh.status === 'ready' ? 'Ready to post' : sh.status === 'making' ? 'Making pictures…' : sh.status === 'layout' ? 'Putting it together…' : 'Needs a fix'}</span><span class="tag">Grade ${sh.grade} reading</span></div></div><button class="x" aria-label="Close">✕</button></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">${[0, 1, 2].map((i) => fin[i] ? `<img src="/content/${sh.id}/${fin[i]}?t=${Date.now()}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:14px">` : `<div class="panel" style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px">${sh.status === 'making' ? 'Making pictures…' : 'Waiting for pictures'}</div>`).join('')}</div>
+          <h3 style="margin-top:18px">Pictures</h3>
+          <div style="display:grid;grid-template-columns:repeat(${slots.length},1fr);gap:10px">${slots.map((k) => { const x = im[k] || {}; return `<div style="display:flex;flex-direction:column;gap:6px"><div style="aspect-ratio:${k === 'hook' ? '9/16' : '1/1'};border-radius:12px;background:rgba(255,255,255,.1) center/cover no-repeat ${x.file ? `url(/content/${sh.id}/${x.file})` : ''};display:flex;align-items:center;justify-content:center;font-size:11px;text-align:center;padding:6px;box-sizing:border-box">${x.file ? '' : esc(x.err || (sh.status === 'making' ? 'Making…' : 'Not made yet'))}</div><div style="font-size:12px;opacity:.75">${names[k]}${x.note ? ' · ' + esc(x.note) : ''}</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="b g" data-redo="${k}" style="height:28px;padding:0 9px;font-size:12px">Redo</button><label class="b g" style="height:28px;padding:0 9px;font-size:12px;display:inline-flex;align-items:center;cursor:pointer">Mine<input type="file" accept="image/*" data-own="${k}" style="display:none"></label><button class="b g" data-prompt="${k}" style="height:28px;padding:0 9px;font-size:12px">Prompt</button></div></div>`; }).join('')}</div>
+          <div class="btns"><button class="b w" data-a="folder">Open folder</button><button class="b g" data-a="cap">Copy caption</button><button class="b g" data-a="edit">Change words</button>${['partial', 'stopped'].includes(sh.status) ? '<button class="b g" data-a="retry">Make missing pictures</button>' : ''}<button class="b g" data-a="del">Delete</button></div>
+          <div class="note">Post slide-1, slide-2, slide-3 from the folder in that order, then add a trending sound. “Mine” = use your own picture. “Prompt” copies the exact picture prompt (you can paste it in the Gemini app).</div>`;
         el.querySelector('.x').onclick = close;
         el.querySelector('[data-a=folder]').onclick = () => post('/api/content/open', { id: sh.id });
         el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
+        el.querySelector('[data-a=edit]').onclick = () => draftEditor(sh);
+        el.querySelector('[data-a=del]').onclick = async () => { await post('/api/content/delete', { id: sh.id }); close(); };
+        const rt = el.querySelector('[data-a=retry]'); if (rt) rt.onclick = async () => { const r = await post('/api/content/pictures', { id: sh.id }); c.toast(r.started ? 'Making the missing pictures' : (r.error === 'nocf' ? 'Turn on free pictures first' : r.error), 'image'); setTimeout(() => slides(sh), 800); };
+        el.querySelectorAll('[data-redo]').forEach((b) => (b.onclick = async () => { const r = await post('/api/content/pictures', { id: sh.id, only: b.dataset.redo }); c.toast(r.started ? 'Making a new ' + names[b.dataset.redo].toLowerCase() : (r.error === 'nocf' ? 'Turn on free pictures first' : r.error), 'refresh'); setTimeout(() => slides(sh), 800); }));
+        el.querySelectorAll('[data-own]').forEach((inp) => (inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const png = await fileToData(f); const r = await post('/api/content/upload', { id: sh.id, slot: inp.dataset.own, png }); c.toast(r.ok ? 'Using your picture' : 'That picture didn’t work', r.ok ? 'check' : 'error'); setTimeout(() => slides(sh), 600); }));
+        el.querySelectorAll('[data-prompt]').forEach((b) => (b.onclick = async () => { const x = im[b.dataset.prompt] || {}; b.textContent = (await copy(x.prompt || 'Make the pictures once first, then the prompt is here.')) ? 'Copied' : 'Copy failed'; }));
         bg.classList.add('open');
       }
       // A Watchdog "needs you" item: what's wrong, exactly what to do, and one button.
@@ -917,7 +956,13 @@ Try: git status
         const cp = el.querySelector('[data-a=copy]'); if (cp) cp.onclick = async () => { cp.textContent = (await copy(n.code)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
-      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail, terminal, need };
+      // Keep an open slideshow card up to date while pictures are being made.
+      setInterval(() => {
+        if (!bg.classList.contains('open') || !el.dataset.show || !el.querySelector('[data-redo]')) return;
+        const sh = (((last && last.content) || {}).shows || []).find((x) => x.id === el.dataset.show); if (!sh) return;
+        if (sh.status + JSON.stringify(sh.images || {}) + JSON.stringify(sh.finals || []) !== el.dataset.sig) slides(sh);
+      }, 1500);
+      return { open, close, info, output, keyBox, cfBox, assetBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail, terminal, need };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     window.addEventListener('hq-terminal', () => card.terminal());

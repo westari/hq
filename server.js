@@ -922,12 +922,12 @@ function stopShell(id) {
 }
 
 // ─── HTTP ───────────────────────────────────────────────────────────────────
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.jpg': 'image/jpeg' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.jpg': 'image/jpeg' };
 function readRaw(req, max) {
   return new Promise((resolve) => { const parts = []; let n = 0; req.on('data', (c) => { n += c.length; if (n > max) { req.destroy(); return resolve(null); } parts.push(c); }); req.on('end', () => resolve(Buffer.concat(parts))); req.on('error', () => resolve(null)); });
 }
-function readBody(req) {
-  return new Promise((resolve) => { let b = ''; req.on('data', (c) => { b += c; if (b.length > 2e6) req.destroy(); }); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
+function readBody(req, max) {
+  return new Promise((resolve) => { let b = ''; req.on('data', (c) => { b += c; if (b.length > (max || 2e6)) req.destroy(); }); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
 }
 const json = (res, code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
 function sessionByWindow(win) {
@@ -1068,10 +1068,16 @@ const server = http.createServer(async (req, res) => {
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/content/draft') { const b = await readBody(req); content.clearError(); const r = await content.draft(String(b.topic || '').slice(0, 300), b.template); broadcast(); return json(res, 200, r); }
-  if (req.method === 'POST' && url === '/api/content/pictures') { const b = await readBody(req); const r = await content.makePictures(b.id, b.slides, broadcast); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/pictures') { const b = await readBody(req); const r = await content.makePictures(b.id, b.spec, broadcast, b.only); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/ideas') { const b = await readBody(req); return json(res, 200, await content.ideas(b.template)); }
+  if (req.method === 'POST' && url === '/api/content/cloudflare') {
+    const b = await readBody(req); const r = content.setPictures(b.account, b.token); if (r.error) return json(res, 200, r);
+    try { await content.testPictures(); broadcast(); return json(res, 200, { ok: true }); } catch (e) { return json(res, 200, { error: e.message }); }
+  }
+  if (req.method === 'POST' && url === '/api/content/upload') { const b = await readBody(req, 25e6); const ok = b.slot ? content.uploadPicture(b.id, b.slot, b.png) : content.saveAsset(b.kind, b.png); broadcast(); return json(res, 200, { ok }); }
   if (req.method === 'POST' && url === '/api/content/template') { const b = await readBody(req); const t = content.saveTemplate(b); broadcast(); return json(res, 200, { template: t }); }
   if (req.method === 'POST' && url === '/api/content/delete') { const b = await readBody(req); content.remove(b.id); broadcast(); return json(res, 200, { ok: true }); }
-  if (req.method === 'POST' && url === '/api/content/final') { const b = await readBody(req); const ok = content.saveFinal(b.id, Number(b.i), b.png); broadcast(); return json(res, 200, { ok }); }
+  if (req.method === 'POST' && url === '/api/content/final') { const b = await readBody(req, 25e6); const ok = content.saveFinal(b.id, Number(b.i), b.png); broadcast(); return json(res, 200, { ok }); }
   if (req.method === 'POST' && url === '/api/content/open') {
     const b = await readBody(req); const dir = path.join(content.DIR, path.basename(String(b.id || '')));
     if (fs.existsSync(dir)) execFile(process.platform === 'win32' ? 'explorer' : 'xdg-open', [dir], { windowsHide: false }, () => {});
