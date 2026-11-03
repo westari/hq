@@ -442,6 +442,11 @@ function createWatchdog(hq) {
           need('stuck:' + win, { level: 'warn', title: win + ' looks stuck', text: `Nothing happened for ${Math.round(quiet / MIN)} minutes. Look at it in VS Code. If it’s waiting, press Esc and type “continue”.` });
         }
       }
+      // g) A job HQ started was refused some commands (not on the allow list). One click allows that kind next time.
+      if (s.denied && s.denied.length && now() - (s.deniedAt || 0) < 12 * HOUR) {
+        const pats = [...new Set(s.denied.map((d) => R.ruleFor(d.tool, d.cmd)).filter(Boolean))];
+        if (pats.length) need('denied:' + win, { level: 'warn', title: win + ' wasn\u2019t allowed to run some commands', text: 'Blocked: ' + s.denied.map((d) => d.cmd).slice(0, 4).join('  \u2022  ') + '. Allow these kinds of commands for HQ jobs from now on? (Deleting files, force pushes and builds always stay blocked.)', button: { label: 'Allow and continue', action: 'allowcmds', arg: { win, pats } } });
+      }
       // f) A job HQ started crashed (not the limit)
       if (s.status === 'done' && s.crashedAt && !s.crashHandled) {
         s.crashHandled = true;
@@ -757,6 +762,15 @@ function createWatchdog(hq) {
     if (name === 'installed') { st.build.installed = st.build.good && st.build.good.sha; save(); record('act', 'build', 'Ari installed the new build.'); setTimeout(tick, 500); return { ok: true }; }
     if (name === 'build') { const r = await startBuild('Ari pressed Build'); return r && r.started ? { ok: true } : { error: (r && r.error) || 'Could not start' }; }
     if (name === 'resetbreakers') { st.breakers = {}; save(); record('act', 'safety', 'Ari reset the “resting” areas.'); setTimeout(tick, 500); return { ok: true }; }
+    if (name === 'allowcmds') {
+      const pats = (arg && Array.isArray(arg.pats) ? arg.pats : []).filter((p) => /^(Bash|PowerShell)\([^()]{1,80}\)$/.test(p));
+      if (!pats.length) return { error: 'Nothing to allow' };
+      hq.allowJobRules(pats);
+      const s = hq.sessionByWindow(arg.win); if (s) { s.denied = []; }
+      record('act', 'windows', 'Ari allowed: ' + pats.join(', ') + '. Asked ' + arg.win + ' to continue.');
+      if (s) setTimeout(() => hq.startJob(arg.win, 'HQ now allows the commands that were blocked before. Continue the job from where you stopped and finish it.', s, s.title || 'Continue'), 500);
+      return { ok: true };
+    }
     if (name === 'checknow') { setTimeout(tick, 100); return { ok: true }; }
     if (name === 'pausefor') { st.paused = { until: now() + 24 * HOUR, why: 'A Claude job tried to use a paid API key, so HQ stopped it and paused. Remove the key (see “An Anthropic API key is on this PC”), then turn the Watchdog back on.' }; save(); record('act', 'safety', 'Paused: a job tried to use a paid API key.'); alert('paid', 'urgent', 'HQ stopped a job that would have cost money. Open the Watchdog.'); return { ok: true }; }
     return { error: 'Unknown action' };

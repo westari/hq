@@ -51,3 +51,17 @@ test('conflict markers are found, Markdown underlines are not', () => {
   assert.ok(R.MARKER_RE.test('>>>>>>> work-a'));
   assert.ok(!R.MARKER_RE.test('Title\n=======\ntext'));
 });
+
+test('HQ jobs may run commands with Bash AND PowerShell (Windows uses PowerShell)', () => {
+  for (const c of ['git revert *', 'npx tsc*', 'git push origin work-*']) { assert.ok(R.JOB_ALLOW.includes('Bash(' + c + ')')); assert.ok(R.JOB_ALLOW.includes('PowerShell(' + c + ')')); }
+  for (const c of ['Remove-Item*', 'git push --force*', 'gh workflow run*', 'git reset --hard*']) assert.ok(R.JOB_DENY.includes('PowerShell(' + c + ')'));
+});
+
+test('a blocked command becomes a safe "allow this kind" rule, never for deleting or builds', () => {
+  assert.strictEqual(R.ruleFor('PowerShell', 'git revert --no-edit a1486de'), 'PowerShell(git revert *)');
+  assert.strictEqual(R.ruleFor('Bash', 'npm run dev'), 'Bash(npm run *)');
+  assert.strictEqual(R.ruleFor('PowerShell', 'Remove-Item foo'), null);
+  assert.strictEqual(R.ruleFor('Bash', 'git push --force'), null);
+  assert.strictEqual(R.ruleFor('Bash', 'git status && rm -rf x'), null);
+  assert.strictEqual(R.ruleFor('Bash', 'eas build -p ios'), null);
+});

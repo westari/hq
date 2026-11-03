@@ -688,7 +688,7 @@ function startJob(win, text, s, title, opts) {
   catch (e) { return { error: 'Could not start Claude Code: ' + e.message }; }
   runners.set(win, child);
   const started = Date.now();
-  let err = '', buf = '', resultText = '', isError = false, apiErr = '', paid = false;
+  let err = '', buf = '', resultText = '', isError = false, apiErr = '', paid = false; const denied = [];
   child.stderr.on('data', (c) => { err += c; if (err.length > 6000) err = err.slice(-6000); });
   child.stdout.on('data', (c) => {
     buf += c; let i;
@@ -700,7 +700,14 @@ function startJob(win, text, s, title, opts) {
         paid = true; try { child.kill(); } catch {}
       }
       if (ev.type === 'system' && ev.subtype === 'api_retry' && ev.error) apiErr = String(ev.error);
-      if (ev.type === 'result') { resultText = String(ev.result || ''); isError = !!ev.is_error || /error/.test(String(ev.subtype || '')); }
+      if (ev.type === 'result') {
+        resultText = String(ev.result || ''); isError = !!ev.is_error || /error/.test(String(ev.subtype || ''));
+        // Commands Claude Code refused because they weren't on HQ's allow list (so HQ can offer to allow them).
+        for (const d of Array.isArray(ev.permission_denials) ? ev.permission_denials : []) {
+          const cmd = d && d.tool_input && (d.tool_input.command || d.tool_input.file_path); if (!cmd) continue;
+          denied.push({ tool: String(d.tool_name || ''), cmd: String(cmd).slice(0, 200) });
+        }
+      }
       const ss = sessionByWindow(win); if (ss) { ss.lastEvent = Date.now(); }
     }
   });
@@ -723,6 +730,7 @@ function startJob(win, text, s, title, opts) {
     const all = resultText + '\n' + err;
     const lim = R.parseLimit(all) || (/rate_limit/.test(apiErr) ? { resetAt: 0 } : null);
     const hitAt = lim ? (lim.resetAt || limitFrom(all) || (usage.resetAt || Date.now() + 5 * 3600 * 1000)) : 0;
+    if (ss && denied.length) { ss.denied = denied.slice(0, 12); ss.deniedAt = Date.now(); logActivity(ss, 'Some commands were blocked', denied.map((d) => d.cmd).slice(0, 3).join(' | ')); }
     if (ss && (ss.status === 'working' || ss.status === 'needs-you')) {
       ss.inTool = 0; ss.lastEvent = Date.now();
       if (hitAt) { ss.limitHit = { at: Date.now(), resumeAt: hitAt, weekly: !!(lim && lim.weekly) }; ss.status = 'limit'; ss.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hitAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); logActivity(ss, 'Hit the usage limit'); }
@@ -1237,6 +1245,7 @@ watchdog = createWatchdog({
   }),
   canAskClaude: () => !usage.hit && !!findClaude(),
   askClaudeJSON, setWatchdogMode,
+  allowJobRules: (pats) => { try { const c = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); c.watchdog = c.watchdog || {}; c.watchdog.jobAllow = [...new Set([...(c.watchdog.jobAllow || []), ...pats])]; fs.writeFileSync(CONFIG_PATH, JSON.stringify(c, null, 2)); config = c; } catch {} },
 });
 try { const r = require('./install-hooks.js').install({ onlyIfMissing: true, quiet: true, claudeDir: CLAUDE_DIR }); if (r === 'installed') console.log('[HQ] Added the new hooks to your Claude Code settings (backup saved).'); } catch {}
 if (config.watchdog === undefined || config.watchdog.enabled !== false) watchdog.start();

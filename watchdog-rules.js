@@ -90,25 +90,41 @@ function safeToApprove(tool, input, extra) {
 }
 
 // ─── What HQ-started jobs may do (Claude Code "dontAsk" mode: everything else is refused) ──
-const JOB_ALLOW = [
-  'Read', 'Edit', 'Write', 'MultiEdit', 'Glob', 'Grep', 'TodoWrite', 'Task', 'WebSearch', 'WebFetch', 'NotebookEdit',
-  'Bash(git status*)', 'Bash(git diff*)', 'Bash(git log*)', 'Bash(git show*)', 'Bash(git add *)', 'Bash(git commit *)',
-  'Bash(git merge *)', 'Bash(git fetch*)', 'Bash(git pull*)', 'Bash(git push)', 'Bash(git push origin work-*)', 'Bash(git push -u origin work-*)',
-  'Bash(git checkout *)', 'Bash(git switch *)', 'Bash(git branch*)', 'Bash(git rev-parse*)', 'Bash(git grep *)', 'Bash(git ls-files*)',
-  'Bash(npx tsc*)', 'Bash(npm test*)', 'Bash(npm run test*)', 'Bash(npm run lint*)', 'Bash(npx jest*)', 'Bash(npx playwright*)',
-  'Bash(npx expo-doctor*)', 'Bash(npx expo install *)', 'Bash(npm install*)', 'Bash(npm ls*)', 'Bash(node *)', 'Bash(ls*)', 'Bash(dir*)',
+// Commands a job may run. On Windows Claude Code usually runs commands with its PowerShell tool, not Bash,
+// so every rule is given for BOTH tools (the first version only had Bash rules, so every command was refused).
+const CMD_ALLOW = [
+  'git status*', 'git diff*', 'git log*', 'git show*', 'git add *', 'git commit *', 'git merge *', 'git fetch*', 'git pull*',
+  'git push', 'git push origin work-*', 'git push -u origin work-*', 'git push origin HEAD', 'git revert *', 'git cherry-pick *', 'git restore --staged *',
+  'git checkout *', 'git switch *', 'git branch*', 'git rev-parse*', 'git rev-list*', 'git grep *', 'git ls-files*', 'git ls-tree*', 'git blame *',
+  'git stash push*', 'git stash list*', 'git stash show*', 'git stash pop*', 'git merge-base *', 'git remote*', 'git config --get*',
+  'npx tsc*', 'npm test*', 'npm run test*', 'npm run lint*', 'npm run typecheck*', 'npx jest*', 'npx playwright*', 'npx expo-doctor*', 'npx expo install *',
+  'npx expo export*', 'npm install*', 'npm ls*', 'node *', 'ls*', 'dir*', 'cd *', 'mkdir *', 'cat *', 'type *', 'echo *', 'findstr *',
+  'Get-ChildItem*', 'Get-Content *', 'Select-String *', 'Test-Path *', 'Copy-Item *', 'New-Item *', 'Set-Location *', 'Get-Location*', 'Write-Output *',
 ];
+const CMD_DENY = [
+  'git push --force*', 'git push -f*', 'git push * --force*', 'git push * -f*', 'git push origin overnight-build*', 'git push origin main*', 'git push origin master*',
+  'git reset --hard*', 'git clean*', 'git checkout -- *', 'git branch -D*', 'git stash drop*', 'git stash clear*', 'git rm *',
+  'rm *', 'rm -rf*', 'rmdir*', 'del *', 'Remove-Item*', 'rd *', 'erase *',
+  'gh workflow run*', 'gh run rerun*', 'eas build*', 'npx eas*', 'eas submit*',
+];
+const both = (list) => list.flatMap((c) => ['Bash(' + c + ')', 'PowerShell(' + c + ')']);
+const JOB_ALLOW = ['Read', 'Edit', 'Write', 'MultiEdit', 'Glob', 'Grep', 'TodoWrite', 'Task', 'WebSearch', 'WebFetch', 'NotebookEdit'].concat(both(CMD_ALLOW));
 // Never, in any mode. Deny rules beat allow rules.
-const JOB_DENY = [
-  'Bash(git push --force*)', 'Bash(git push -f*)', 'Bash(git push * --force*)', 'Bash(git push * -f*)', 'Bash(git push origin overnight-build*)',
-  'Bash(git push origin main*)', 'Bash(git push origin master*)', 'Bash(git reset --hard*)', 'Bash(git clean*)', 'Bash(git checkout -- *)',
-  'Bash(git branch -D*)', 'Bash(git stash drop*)', 'Bash(git stash clear*)', 'Bash(rm -rf*)', 'Bash(rm -r *)', 'Bash(del /s*)', 'Bash(rmdir*)',
-  'Bash(gh workflow run*)', 'Bash(gh run rerun*)', 'Bash(eas build*)', 'Bash(npx eas*)', 'Bash(eas submit*)',
-];
+const JOB_DENY = both(CMD_DENY);
 
 // ─── The prompt every Watchdog fix job ends with ────────────────────────────
 function jobRules(branch) {
   return `\n\nRules for this job:\n- Work only on your branch (${branch}). Never push to overnight-build, main or master.\n- Never start iOS builds (no gh workflow run, no eas build). HQ starts builds itself.\n- Never force push, reset, clean, or delete anyone's work.\n- Check your work with npx tsc --noEmit before you commit.\n- Commit with a clear message and push your branch.\n- End with one line that starts with HQ: and says in plain words what you did.`;
 }
 
-module.exports = { BUILD_RULES, classifyBuild, parseLimit, MARKER_RE, MARKER_GREP, tscErrors, newErrors, safeToApprove, SAFE_EXACT, JOB_ALLOW, JOB_DENY, jobRules };
+// A blocked command → the safe allow rule for "that kind" of command (first two words + *).
+// Never for deleting, force pushing or builds (those stay blocked on purpose).
+function ruleFor(tool, cmd) {
+  const t = /powershell/i.test(tool) ? 'PowerShell' : 'Bash';
+  const c = String(cmd || '').trim().replace(/\s+/g, ' ');
+  if (!c || /[;&|<>`$\n]/.test(c)) return null;
+  if (CMD_DENY.some((d) => new RegExp('^' + d.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$', 'i').test(c))) return null;
+  const words = c.split(' ').slice(0, /^(git|npm|npx|node)$/i.test(c.split(' ')[0]) ? 2 : 1);
+  return `${t}(${words.join(' ')} *)`;
+}
+module.exports = { ruleFor, BUILD_RULES, classifyBuild, parseLimit, MARKER_RE, MARKER_GREP, tscErrors, newErrors, safeToApprove, SAFE_EXACT, JOB_ALLOW, JOB_DENY, jobRules };
