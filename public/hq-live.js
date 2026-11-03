@@ -281,6 +281,22 @@
         v.ari.next = (v.ari.next || []).map(wrap);
         v.ari.important = (v.ari.important || []).map((it) => ({ ...it, toggleOpen: it.toggleOpen || (() => {}) }));
       }
+      // FormPal building: send a job to whichever window frees up first.
+      if (v.bp && plan && v.bp.name === plan.project && v.bp.L) {
+        const Q = last.anyQueue || [];
+        const row = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128',
+          t: 'Next free window', sub: Q.length ? Q.length + ' waiting: ' + Q.map((j) => j.title || 'job').join(', ') : 'Write a job. The first window that’s free picks it up.', hasBtn: true, btn: 'Write job', icon: 'edit_note', go: () => card.anyJob() };
+        v.bp.L = { ...v.bp.L, items: [row, ...(v.bp.L.items || [])], empty: false };
+      }
+      // Factory: say exactly why a build failed. No GitHub website needed.
+      if (v.bp && v.bp.name === 'Factory' && v.bp.R) {
+        const failed = (last.runs || []).filter((r) => r.st === 'failed');
+        v.bp.R.items = (v.bp.R.items || []).map((it, k) => {
+          const r = failed[k]; if (!r) return it;
+          return { ...it, sub: r.note || it.sub, hasBtn: true, btn: 'Why it failed', icon: 'help',
+            go: () => card.buildFail(r) };
+        });
+      }
       // Factory: a real "Start build" button on top.
       if (v.bp && v.bp.name === 'Factory' && v.bp.L) {
         const running = (last.runs || []).some((r) => r.st === 'running');
@@ -760,6 +776,33 @@
         el.querySelector('[data-a=back]').onclick = () => newShow();
         bg.classList.add('open');
       }
+      function anyJob() {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Job for the next free window</h2><p class="why">Whichever window is free first starts it. If both are busy, it waits and the first one to finish picks it up.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <h3 style="margin-top:16px">Short name</h3><div class="ask"><input placeholder="Fix the build" /></div>
+          <h3 style="margin-top:16px">The job</h3><textarea rows="8" style="width:100%;box-sizing:border-box;resize:none;border:0;border-radius:14px;padding:12px;background:rgba(255,255,255,.14);color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;outline:none" placeholder="Paste or write the prompt"></textarea>
+          <div class="btns"><button class="b w" data-a="go">Send</button>${(last.anyQueue || []).length ? '<button class="b g" data-a="clr">Clear waiting jobs</button>' : ''}</div><div class="note">Your latest test logs are added for you.</div>`;
+        el.querySelector('.x').onclick = close;
+        el.querySelectorAll('input,textarea').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
+        el.querySelector('[data-a=go]').onclick = async () => {
+          const text = el.querySelector('textarea').value.trim(); if (!text) return;
+          const r = await post('/api/queue-any', { text, title: el.querySelector('input').value.trim() || shortTitle(text) });
+          close(); c.toast(r.started ? r.started + ' started it.' : 'Waiting. The first window to finish picks it up.', r.started ? 'play_arrow' : 'playlist_add');
+        };
+        const clr = el.querySelector('[data-a=clr]'); if (clr) clr.onclick = async () => { await post('/api/queue-any/clear', {}); close(); };
+        bg.classList.add('open');
+      }
+      function buildFail(r) {
+        const lines = r.fail || [];
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Why the build failed</h2><div class="tags"><span class="tag">${esc(r.wf)}</span><span class="tag">${esc(r.br || '')}</span></div></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="panel" style="margin-top:16px;font-size:15px">${esc(r.note || '')}</div>
+          ${lines.length ? `<h3 style="margin-top:16px">The error lines</h3><pre style="max-height:300px">${esc(lines.join('\n'))}</pre>` : ''}
+          <div class="btns"><button class="b w" data-a="fix">Send to the next free window</button><button class="b g" data-a="copy">Copy</button></div>`;
+        el.querySelector('.x').onclick = close;
+        const prompt = 'The iOS build "' + r.wf + '" on ' + r.br + ' failed. The error lines:\n\n' + lines.join('\n') + '\n\nFind the cause, fix it, start a new build (gh workflow run), and keep going until a build is GREEN. Report what it was in plain words. Questions at the END only.';
+        el.querySelector('[data-a=fix]').onclick = async () => { const res = await post('/api/queue-any', { text: prompt, title: 'Fix the failed build' }); close(); c.toast(res.started ? res.started + ' is fixing the build.' : 'Waiting for a free window.', 'build'); };
+        el.querySelector('[data-a=copy]').onclick = async (e) => { e.target.textContent = (await copy(prompt)) ? 'Copied' : 'Copy failed'; };
+        bg.classList.add('open');
+      }
       function slides(sh) {
         const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
         const caption = sh.title + '\n\n' + sh.slides.map((x) => x.text).join('\n');
@@ -772,7 +815,7 @@
         el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
-      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor };
+      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     open();

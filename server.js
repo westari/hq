@@ -214,6 +214,10 @@ function handleEvent(ev) {
       logActivity(s, 'Hit the usage limit');
     } else if (finalText) { s.lastReply = finalText; s.tests = extractTests(finalText); pushChat(s, 'bot', finalText); }
     if (hit) { /* wait for the reset */ }
+    else if (!s.queue.length && anyQueue.length && /^window\s+[a-z]$/i.test(windowName(s.cwd))) {
+      const j = takeAny(s); s.queue.push(j.text); s.queueTitles = s.queueTitles || []; s.queueTitles[s.queue.length - 1] = j.title || '';
+    }
+    if (hit) { /* wait */ }
     else if (s.queue.length) {
       // A job you queued in HQ: hand it over right now instead of stopping.
       const next = s.queue.shift(); s.title = (s.queueTitles || []).shift() || '';
@@ -353,9 +357,13 @@ function pollRuns() {
     res.on('end', () => {
       try {
         const j = JSON.parse(body); if (!Array.isArray(j.workflow_runs)) return;
-        runs = j.workflow_runs.map((r) => ({ id: 'r' + r.id, wf: r.name, br: r.head_branch,
-          st: r.status !== 'completed' ? 'running' : r.conclusion === 'success' ? 'done' : 'failed',
-          note: r.status === 'completed' && r.conclusion !== 'success' ? `${r.conclusion} · open on GitHub` : '', at: Date.parse(r.updated_at), url: r.html_url }));
+        runs = j.workflow_runs.map((r) => {
+          const st = r.status !== 'completed' ? 'running' : r.conclusion === 'success' ? 'done' : 'failed';
+          const why = failWhy[r.id];
+          if (st === 'failed' && !why) fetchFailure(r.id);
+          return { id: 'r' + r.id, wf: r.name, br: r.head_branch, st, at: Date.parse(r.updated_at), url: r.html_url,
+            note: st === 'failed' ? (why ? why.short : 'Finding out why it failed\u2026') : '', fail: why ? why.lines : [] };
+        });
         broadcast();
       } catch {}
     });
@@ -363,6 +371,32 @@ function pollRuns() {
   req.on('error', () => {}); req.on('timeout', () => req.destroy());
 }
 
+// Why a build failed, in plain lines, read with the GitHub CLI ("gh", logged in as you). No GitHub website needed.
+const GH = ['gh', 'C:\\Program Files\\GitHub CLI\\gh.exe', path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'GitHub CLI', 'gh.exe')];
+function gh(args) {
+  return new Promise((resolve) => {
+    const tryRun = (i) => {
+      if (i >= GH.length) return resolve({ ok: false, text: 'nogh' });
+      execFile(GH[i], args, { timeout: 60000, windowsHide: true, maxBuffer: 20 * 1024 * 1024 }, (err, out, errOut) => {
+        if (err && err.code === 'ENOENT') return tryRun(i + 1);
+        resolve({ ok: !err, text: String(out || '') + (err ? String(errOut || err.message) : '') });
+      });
+    };
+    tryRun(0);
+  });
+}
+const failWhy = {}; const failAsked = {};
+async function fetchFailure(id) {
+  if (failAsked[id]) return; failAsked[id] = true;
+  const r = await gh(['run', 'view', String(id), '-R', config.githubRepo, '--log-failed']);
+  if (r.text === 'nogh') { failWhy[id] = { short: 'Install and log in to GitHub CLI to see why (see README)', lines: [] }; return broadcast(); }
+  // Lines look like "job<TAB>step<TAB>2026-...Z message". Keep just the message.
+  const all = r.text.split('\n').map((l) => l.split('\t').pop().replace(/^\S+Z\s/, '').replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(Boolean);
+  const bad = all.filter((l) => /error|failed|fatal|exception|❌|denied|not found|cannot|does not/i.test(l) && !/^##\[group\]/.test(l));
+  const lines = [...new Set((bad.length ? bad : all).slice(-20))];
+  failWhy[id] = { short: (lines.find((l) => /error/i.test(l)) || lines[lines.length - 1] || 'Failed (no details)').slice(0, 160), lines };
+  pollRuns();
+}
 // ─── Shipping Dock: finished work waiting to be merged ─────────────────────
 let merges = [];
 function git(args) {
@@ -577,6 +611,7 @@ function startJob(win, text, s, title) {
   child.on('error', (e) => { runners.delete(win); activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Could not start: ' + e.message, job: '' }); broadcast(); });
   child.on('exit', (code) => {
     runners.delete(win);
+    setTimeout(() => { if (!runners.has(win) && anyQueue.length && !isBusy(sessionByWindow(win))) { const j = anyQueue.shift(); startJob(win, j.text, sessionByWindow(win), j.title); } }, 3000);
     if (code) activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Stopped with an error', job: firstLine(err).slice(0, 120) });
     broadcast();
   });
@@ -644,6 +679,21 @@ setInterval(() => {
   }
 }, 30 * 1000);
 
+// ─── "First free window" queue: a job for whichever window frees up first ────
+const anyQueue = []; // [{ text, title }]
+function freeWindowName() {
+  for (const name of Object.values(config.windows || {})) {
+    if (!/^window\s+[a-z]$/i.test(name)) continue;
+    const s = sessionByWindow(name);
+    if (!s || !isBusy(s)) return name;
+  }
+  return null;
+}
+function takeAny(s) { // called when a window finishes; returns the job text to deliver, if any
+  if (!anyQueue.length) return null;
+  const j = anyQueue.shift(); logActivity(s, 'Picked up a shared job', j.title || firstLine(j.text)); return j;
+}
+
 // ─── Snapshot sent to the page ──────────────────────────────────────────────
 function snapshot() {
   const now = Date.now();
@@ -667,7 +717,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState, usage, plan: buildPlan(), yesterday, content: content.state(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState, anyQueue, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -821,6 +871,13 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 500, { error: e.message }); }
   }
   if (url === '/api/voice') return json(res, 200, voice.status());
+  if (req.method === 'POST' && url === '/api/queue-any') {
+    const b = await readBody(req); const t = String(b.text || '').trim(); if (!t) return json(res, 400, { error: 'Empty message.' });
+    const full = t + logsNote(); const free = freeWindowName();
+    if (free) { const r = startJob(free, full, sessionByWindow(free), b.title); if (r.started) return json(res, 200, { started: free }); }
+    anyQueue.push({ text: full, title: String(b.title || '') }); broadcast(); return json(res, 200, { queued: anyQueue.length });
+  }
+  if (req.method === 'POST' && url === '/api/queue-any/clear') { anyQueue.length = 0; broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); broadcast(); return json(res, 200, r); }
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
