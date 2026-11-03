@@ -104,6 +104,18 @@ function createWatchdog(hq) {
   // ── "Needs Ari": things only you can do. Rebuilt every tick, so fixed problems disappear by themselves. ──
   let needs = new Map(), nextNeeds = new Map();
   function need(key, n) { nextNeeds.set(key, { key, at: (needs.get(key) || {}).at || now(), ...n }); }
+  // Problems HQ is already fixing by itself. Shown in the Watchdog tower as "Fixing now", never as "needs you".
+  let fixingNow = new Map(), nextFixing = new Map();
+  function fixing(key, n) { nextFixing.set(key, { key, at: (fixingNow.get(key) || {}).at || now(), ...n }); }
+  // Before HQ changes your app folder, it copies anything that could be lost into hq\backups\<time>\.
+  async function backup(why, files) {
+    const dst = path.join(dir, 'backups', new Date(now()).toISOString().replace(/[:.]/g, '-').slice(0, 19));
+    fs.mkdirSync(dst, { recursive: true });
+    const d = await git(['diff', 'HEAD']); fs.writeFileSync(path.join(dst, 'changes.diff'), d.out || '');
+    for (const f of files || []) { try { const src = path.join(repo(), f); if (fs.existsSync(src)) { const to = path.join(dst, 'files', f); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(src, to); } } catch {} }
+    fs.writeFileSync(path.join(dst, 'WHY.txt'), why + '\n');
+    return dst;
+  }
 
   // ─── Shell helpers ────────────────────────────────────────────────────────
   const GITENV = { ...process.env, GIT_EDITOR: 'true', GIT_MERGE_AUTOEDIT: 'no', GIT_TERMINAL_PROMPT: '0', GIT_PAGER: 'cat' };
@@ -445,15 +457,33 @@ function createWatchdog(hq) {
   async function checkGit(f) {
     if (!f) { mergeView = { list: [], stuck: false, conflicts: [], leftovers: [], text: 'No app folder set' }; return; }
     mergeView = { list: f.branches.map((b) => ({ window: b.window, branch: b.branch, ahead: b.ahead, last: b.last })), stuck: f.mergeHead, conflicts: f.unmerged, leftovers: f.leftovers, dirty: f.dirty, current: f.current, lastMerge: st.lastMerge };
-    if (f.current !== f.main) { need('wrongbranch', { level: 'warn', title: 'Your app folder is on the wrong branch', text: `It’s on “${f.current}”. HQ only merges into “${f.main}”. Switch back in PowerShell:`, code: `cd "${repo()}"\ngit switch ${f.main}` }); return; }
+    if (f.current !== f.main && !f.mergeHead) {
+      if (!f.dirty.length && f.current !== 'HEAD') {
+        fixing('wrongbranch', { title: 'Switching your app folder back to ' + f.main, text: `It was on “${f.current}”.` });
+        await act('merge', 'switch:' + f.current + ':' + f.head, `Your app folder was on “${f.current}”. Switched it back to “${f.main}” (nothing was lost: “${f.current}” still exists).`, async () => {
+          const r = await withGitLock(() => git(['switch', f.main])); if (!r || r.ok === false) throw new Error((r && r.text.trim().split('\n').pop()) || 'git switch failed');
+        });
+      } else need('wrongbranch', { level: 'warn', title: 'Your app folder is on the wrong branch', text: `It’s on “${f.current}” and has unsaved changes, so HQ won’t switch it by itself. Paste this in the Terminal (Pulse):`, code: `git stash push -m "saved by Ari"\ngit switch ${f.main}` });
+      return;
+    }
     // A half-done merge that someone started by hand.
     if (f.mergeHead) {
-      if (f.unmerged.length) need('halfmerge', { level: 'warn', title: 'A half-done merge is in your app folder', text: 'It has conflicts in ' + f.unmerged.map(short).join(', ') + '. Undoing it is safe: all the work is still on the windows’ branches, and HQ merges it again the safe way.', button: { label: 'Undo the half-done merge', action: 'abortmerge' } });
-      else {
-        const left = await markerFiles(repo());
-        if (!left.length) await act('merge', 'finishmerge:' + f.head, 'Finished a half-done merge in your app folder (it had no conflicts).', async () => { await withGitLock(() => git(['commit', '--no-edit'])); });
-        else need('halfmerge', { level: 'warn', title: 'A half-done merge is in your app folder', text: 'It still has conflict lines. Undo it; HQ merges again the safe way.', button: { label: 'Undo the half-done merge', action: 'abortmerge' } });
+      const left = f.unmerged.length ? [] : await markerFiles(repo());
+      if (!f.unmerged.length && !left.length) {
+        await act('merge', 'finishmerge:' + f.head, 'Finished a half-done merge in your app folder (it had no conflicts).', async () => { const r = await withGitLock(() => git(['commit', '--no-edit'])); if (!r || r.ok === false) throw new Error('git commit failed'); });
+        return;
       }
+      // Is the other side of the merge safe on a branch? Then undoing loses nothing.
+      const mh = ((await gitv(['rev-parse', 'MERGE_HEAD'])) || '').trim();
+      let safe = false;
+      for (const ref of Object.values(branches()).flatMap((b) => [b, 'origin/' + b]).concat(['origin/' + f.main])) { if (mh && (await git(['merge-base', '--is-ancestor', mh, ref])).ok) { safe = true; break; } }
+      if (safe) {
+        fixing('halfmerge', { title: 'Undoing a half-done merge', text: 'It had conflicts. All the work is still on the windows’ branches, so HQ undoes it and merges again the safe way.' });
+        await act('merge', 'abort:' + mh + ':' + f.head, 'Undid a half-done merge in your app folder (conflicts in ' + (f.unmerged.length ? f.unmerged.map(short).join(', ') : left.map(short).join(', ')) + '). Nothing was lost: it\u2019s all on the windows’ branches, and a backup is in hq\\backups.', async () => {
+          await backup('A half-done merge with conflicts was undone by the Watchdog.', f.unmerged.concat(left));
+          const r = await withGitLock(() => git(['merge', '--abort'])); if (!r || r.ok === false) throw new Error((r && r.text.trim().split('\n').pop()) || 'git merge --abort failed');
+        });
+      } else need('halfmerge', { level: 'warn', title: 'A half-done merge is in your app folder', text: 'HQ can’t find the other side of this merge on any branch, so undoing it could lose work. HQ won’t guess.', button: { label: 'Undo it anyway (makes a backup first)', action: 'abortmerge' } });
       return;
     }
     // Your app folder is behind GitHub (someone pushed): catch up if it's a simple fast-forward.
@@ -462,14 +492,27 @@ function createWatchdog(hq) {
         const r = await withGitLock(() => git(['merge', '--ff-only', 'origin/' + f.main]));
         if (r && r.ok === false) need('pull', { level: 'warn', title: 'Couldn’t update your app folder', text: r.text.trim().split('\n').pop() });
       });
-    } else if (f.behindOrigin && f.aheadOrigin) need('diverged', { level: 'warn', title: 'Your app folder and GitHub went different ways', text: `It has ${f.aheadOrigin} change(s) GitHub doesn’t, and GitHub has ${f.behindOrigin} it doesn’t. HQ won’t guess. Ask a window to “merge origin/${f.main} into ${f.main} and push”.` });
+    } else if (f.behindOrigin && f.aheadOrigin) {
+      fixing('diverged', { title: 'Joining your app folder with GitHub', text: `Your folder has ${f.aheadOrigin} change(s) GitHub doesn’t, and GitHub has ${f.behindOrigin}. HQ joins them the safe way.` });
+      const key = 'diverge:' + f.head + ':' + f.originHead;
+      if (once(key)) {
+        if (!acting()) await act('merge', key, 'Join your app folder with GitHub.', async () => {});
+        else {
+          mark(key);
+          const r = await safeMerge({ window: 'GitHub', branch: 'origin/' + f.main, ref: 'origin/' + f.main, sha: f.originHead }, 'diverged');
+          if (r.ok) { const p = await withGitLock(push); record('act', 'merge', 'Joined your app folder with GitHub' + (p && p.error ? ' (push failed: ' + p.error + ')' : ' and pushed it') + '.'); }
+          else if (!r.busy) need('diverged', { level: 'warn', title: 'Your app folder and GitHub clash', text: (r.error === 'conflict' ? 'Both changed ' + (r.files || []).map(short).join(', ') + '. ' : '') + 'Ask Window A: “merge origin/' + f.main + ' into ' + f.main + ' carefully, keep both sides, and push”.' });
+          else delete st.done[key];
+        }
+      }
+    }
     else if (f.aheadOrigin) {
       if (budget('push', 3, HOUR)) await act('merge', 'push:' + f.head, 'Pushed your app folder to GitHub.', async () => { spend('push'); const p = await withGitLock(push); if (p && p.error) record('error', 'merge', 'Push failed: ' + p.error); });
     }
     // Broken leftovers already in your app: ask Window A to fix them on its branch.
     if (f.leftovers.length) {
       const key = 'leftover:' + f.head;
-      need('leftover', { level: 'urgent', title: 'Your app won’t open', text: 'A merge left broken lines (<<<<<<<) in ' + f.leftovers.map(short).join(', ') + '. HQ asked a window to fix them.' });
+      fixing('leftover', { title: 'Fixing broken merge lines', text: 'Your app won’t open until ' + f.leftovers.map(short).join(', ') + ' is fixed. Window A is fixing it; HQ merges the fix by itself.' });
       const win = Object.keys(branches())[0];
       if (win && budget('leftoverfix', 2, 6 * HOUR)) await act('merge', key, `Asked ${win} to fix the broken merge lines in ${f.leftovers.map(short).join(', ')}.`, async () => {
         spend('leftoverfix');
@@ -527,8 +570,17 @@ function createWatchdog(hq) {
       });
       else need('types:' + br, { level: 'warn', title: `${win}’s work has code errors`, text: r.lines.slice(0, 3).join('\n') });
     } else if (r.error === 'dirty') {
-      need('dirty', { level: 'warn', title: 'Your app folder has unsaved changes', text: 'HQ can’t update it without overwriting them: ' + (r.files || []).map(short).join(', ') + '. HQ never deletes your changes. If they’re not yours, ask a window what they are.' });
-      delete st.done['merge:' + f.head + ':' + b.sha]; // try again once you've cleaned up
+      // Unsaved edits in the app folder block the update. Put them aside (git stash = nothing is lost), then merge.
+      const files = (r.files || []).map(short).join(', ');
+      if (budget('stash', 2, 6 * HOUR)) {
+        const ok = await act('merge', 'stash:' + f.head + ':' + b.sha, `Your app folder had unsaved changes (${files}) in the way. Put them aside safely (git stash; get them back with “git stash pop”) and merged.`, async () => {
+          spend('stash'); await backup('Unsaved changes were put aside (git stash) so new work could be merged.', r.files || []);
+          const st2 = await withGitLock(() => git(['stash', 'push', '-m', 'HQ put these aside before merging ' + new Date(now()).toLocaleString()]));
+          if (!st2 || st2.ok === false) throw new Error((st2 && st2.text.trim().split('\n').pop()) || 'git stash failed');
+        });
+        delete st.done['merge:' + f.head + ':' + b.sha]; // merge again on the next check
+        if (!ok) need('dirty', { level: 'warn', title: 'Your app folder has unsaved changes', text: 'HQ couldn’t put them aside: ' + files });
+      } else need('dirty', { level: 'warn', title: 'Your app folder keeps getting unsaved changes', text: files + '. Something is editing files in your app folder directly. Ask a window what they are.' });
     } else if (r.error === 'wrongbranch') {
       need('wrongbranch', { level: 'warn', title: 'Your app folder is on the wrong branch', text: r.text });
     } else {
@@ -543,13 +595,21 @@ function createWatchdog(hq) {
     const B = st.build;
     // a) Watch finished runs. (The first time, old runs are just remembered, not acted on.)
     if (!B.init && runs.length) { for (const run of runs) if (run.st !== 'running') B.seenRuns[run.id] = now(); B.init = true; save(); }
+    // Explain the newest failed build even if it happened before HQ started (explain only, no action).
+    const newest = runs.find((x) => x.st !== 'running');
+    if (newest && newest.st === 'failed' && (newest.fail.length || newest.raw) && (!B.lastFail || B.lastFail.id !== newest.id)) {
+      const cls = R.classifyBuild((newest.raw || '') + '\n' + newest.fail.join('\n') + '\n' + newest.note);
+      B.lastFail = { id: newest.id, cls: cls.id, at: newest.at, title: cls.title, plain: cls.plain, steps: cls.steps || [], lines: newest.fail.slice(0, 8), who: cls.human ? 'you' : 'window',
+        doing: cls.human ? 'Only you or Dad can fix this. HQ won\u2019t retry it (it would fail the same way).' : 'HQ sends the next failure like this to a window to fix by itself. For this older one, press \u201cSee the error\u201d.' }; save();
+    }
+    if (B.lastFail && B.lastFail.who === 'you') need('buildhuman:' + (B.lastFail.cls || B.lastFail.title), { level: 'urgent', title: B.lastFail.title, text: B.lastFail.plain, steps: B.lastFail.steps, lines: B.lastFail.lines });
     for (const run of runs) {
       if (run.st === 'running' || B.seenRuns[run.id]) continue;
       if (run.st === 'failed' && !run.raw && !run.fail.length) continue; // still reading the log
       B.seenRuns[run.id] = now(); save();
       const rec = run.sha && B.records[run.sha];
       if (run.st === 'done') {
-        breakerOk('build');
+        breakerOk('build'); if (B.lastFail && (B.lastFail.at || 0) < (run.at || 0)) { B.lastFail = null; save(); }
         if (rec && rec.fp) { B.good = { sha: run.sha, fp: rec.fp, at: now() }; save(); }
         else if (f && run.sha === f.head) { const fp = await fingerprint(); if (fp && fp.hash) { B.good = { sha: run.sha, fp: fp.hash, at: now() }; save(); } }
         if (now() - (run.at || 0) < 2 * HOUR) { record('act', 'build', 'A new iOS build finished. Install it on your phone.'); alert('built:' + run.id, 'warn', 'Your new iOS build is ready. Install it on your phone.', 'built'); }
@@ -560,6 +620,8 @@ function createWatchdog(hq) {
       breakerFail('build', run.note);
       const cls = R.classifyBuild((run.raw || '') + '\n' + run.fail.join('\n') + '\n' + run.note);
       record('see', 'build', `Build failed: ${cls.title}.`);
+      B.lastFail = { id: run.id, cls: cls.id, at: run.at, title: cls.title, plain: cls.plain, steps: cls.steps || [], lines: run.fail.slice(0, 8),
+        who: cls.human ? 'you' : cls.retry ? 'retry' : 'window', doing: cls.human ? 'Only you or Dad can fix this. HQ won\u2019t retry it (it would fail the same way).' : cls.retry ? 'HQ is trying once more.' : 'HQ sent it to a window to fix. It builds again by itself after the fix is merged.' }; save();
       if (cls.human) {
         need('buildhuman:' + cls.id, { level: 'urgent', title: cls.title, text: cls.plain, steps: cls.steps, lines: run.fail.slice(0, 6) });
         alert('buildfail:' + run.id, 'urgent', 'The build failed: ' + cls.title + '. Only you or Dad can fix this one. Open the Watchdog.');
@@ -586,7 +648,7 @@ function createWatchdog(hq) {
     if (tc && tc.errors && tc.errors.length && !tc.skipped) {
       const parent = (await gitv(['rev-parse', 'HEAD~1'])) || '';
       const pt = st.tsc[parent];
-      if (!pt || R.newErrors(pt.errors, tc.errors).length) { need('typesbeforebuild', { level: 'warn', title: 'Not building: the code has new errors', text: 'HQ won’t waste a build on broken code. A window has been asked to fix it.' }); return; }
+      if (!pt || R.newErrors(pt.errors, tc.errors).length) { fixing('typesbeforebuild', { title: 'Waiting for a code fix before building', text: 'HQ won’t waste a build on broken code. A window is fixing it.' }); return; }
     }
     if (breakerOpen('build')) { need('buildbreaker', { level: 'warn', title: 'Automatic builds are resting', text: '3 builds failed in a row. Fix the problem in the Factory, then press Build.' }); return; }
     if (!budget('autobuild', cfg().maxAutoBuildsPerDay, 24 * HOUR)) { need('buildcap', { level: 'info', title: 'Daily build limit reached', text: `HQ started ${cfg().maxAutoBuildsPerDay} builds today. Press Build if you really need another.` }); return; }
@@ -656,7 +718,7 @@ function createWatchdog(hq) {
   let running = false, lastTick = 0, lastGuards = 0, lastFacts = null, tickErr = '';
   const areaOk = {};
   async function tick() {
-    if (running) return; running = true; lastTick = now(); nextNeeds = new Map();
+    if (running) return; running = true; lastTick = now(); nextNeeds = new Map(); nextFixing = new Map();
     const step = async (name, fn) => { try { await fn(); areaOk[name] = { ok: true, at: now() }; } catch (e) { areaOk[name] = { ok: false, at: now(), err: String(e && e.message || e) }; record('error', name, 'Check crashed: ' + (e && e.message || e)); } };
     try {
       await step('safety', checkSafety);
@@ -671,7 +733,7 @@ function createWatchdog(hq) {
       pausedNeed(); heartbeat(); prune();
       tickErr = '';
     } catch (e) { tickErr = String(e && e.message || e); }
-    finally { needs = nextNeeds; running = false; hq.changed(); }
+    finally { needs = nextNeeds; fixingNow = nextFixing; running = false; hq.changed(); }
   }
   let timer = null;
   function start() { if (timer) return; setTimeout(tick, 4000); timer = setInterval(tick, cfg().tickSeconds * 1000); }
@@ -691,7 +753,7 @@ function createWatchdog(hq) {
   async function action(name, arg) {
     if (name === 'mode') { hq.setWatchdogMode(arg === 'watch' ? 'watch' : 'act'); record('act', 'safety', arg === 'watch' ? 'Switched to watch-only mode.' : 'Switched to act mode.'); return { ok: true }; }
     if (name === 'unpause') { st.paused = null; save(); record('act', 'safety', 'Ari turned the Watchdog back on.'); setTimeout(tick, 500); return { ok: true }; }
-    if (name === 'abortmerge') { const r = await withGitLock(() => git(['merge', '--abort'])); record('act', 'merge', 'Ari undid the half-done merge. HQ will merge again the safe way.'); setTimeout(tick, 1000); return { ok: !(r && r.ok === false) }; }
+    if (name === 'abortmerge') { await backup('Ari pressed “Undo it anyway”.', ((await gitv(['diff', '--name-only', '--diff-filter=U'])) || '').split('\n').filter(Boolean)); const r = await withGitLock(() => git(['merge', '--abort'])); record('act', 'merge', 'Ari undid the half-done merge. HQ will merge again the safe way.'); setTimeout(tick, 1000); return { ok: !(r && r.ok === false) }; }
     if (name === 'installed') { st.build.installed = st.build.good && st.build.good.sha; save(); record('act', 'build', 'Ari installed the new build.'); setTimeout(tick, 500); return { ok: true }; }
     if (name === 'build') { const r = await startBuild('Ari pressed Build'); return r && r.started ? { ok: true } : { error: (r && r.error) || 'Could not start' }; }
     if (name === 'resetbreakers') { st.breakers = {}; save(); record('act', 'safety', 'Ari reset the “resting” areas.'); setTimeout(tick, 500); return { ok: true }; }
@@ -718,10 +780,11 @@ function createWatchdog(hq) {
   function view() {
     return {
       mode: cfg().mode, acting: acting(), paused: st.paused, lastTick, tickErr, areas: areaOk,
+      fixing: [...fixingNow.values()],
       needs: [...needs.values()].sort((a, b) => ({ urgent: 0, warn: 1, info: 2 }[a.level] - { urgent: 0, warn: 1, info: 2 }[b.level])),
       log: log.filter((e) => e.kind !== 'see').slice(0, 60), seen: log.filter((e) => e.kind === 'see').slice(0, 20),
       alerts, phone, merge: mergeView,
-      build: { good: st.build.good, installed: st.build.installed, needBuild: !!st.build.needBuild, autoToday: (st.budgets.autobuild || []).filter((t) => now() - t < 24 * HOUR).length, max: cfg().maxAutoBuildsPerDay, resting: breakerOpen('build') },
+      build: { lastFail: st.build.lastFail || null, good: st.build.good, installed: st.build.installed, needBuild: !!st.build.needBuild, autoToday: (st.budgets.autobuild || []).filter((t) => now() - t < 24 * HOUR).length, max: cfg().maxAutoBuildsPerDay, resting: breakerOpen('build') },
       breakers: Object.fromEntries(Object.entries(st.breakers).filter(([, b]) => b.openUntil && now() < b.openUntil).map(([k, b]) => [k, b.openUntil])),
     };
   }

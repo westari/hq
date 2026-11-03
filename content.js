@@ -13,7 +13,9 @@ const ASSETS = path.join(DIR, 'assets');
 const KEY_FILE = path.join(DIR, 'gemini.key');
 const TPL_FILE = path.join(DIR, 'templates.json');
 const USE_FILE = path.join(DIR, 'usage.json');
-const TEXT_MODEL = 'gemini-2.5-flash';
+// Google renames models often, so HQ uses Google's "latest" names and falls back if one isn't free for your key.
+const TEXT_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash'];
+let goodModel = '';
 fs.mkdirSync(ASSETS, { recursive: true });
 const img = createImageGen(DIR);
 
@@ -86,13 +88,22 @@ function bump(k) { const u = usage(); if (k === 'limitHit') u.limitHit = true; e
 // ─── Gemini (text only, free) ────────────────────────────────────────────────
 async function gemini(body) {
   const base = process.env.HQ_GEMINI_BASE || 'https://generativelanguage.googleapis.com';
-  let r;
-  try { r = await fetch(`${base}/v1beta/models/${TEXT_MODEL}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getKey() }, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) }); }
-  catch (e) { throw new Error(/abort|timeout/i.test(e.name + e.message) ? 'Gemini took too long' : 'Can\u2019t reach Gemini (' + e.message + ')'); }
-  let j = {}; try { j = await r.json(); } catch {}
-  if (r.status === 429) { bump('limitHit'); throw new Error('limit'); }
-  if (r.status >= 400) throw new Error((j.error && j.error.message) || 'Gemini error ' + r.status);
-  return ((((j.candidates || [])[0] || {}).content || {}).parts || []).map((p) => p.text || '').join('');
+  const order = goodModel ? [goodModel, ...TEXT_MODELS.filter((m) => m !== goodModel)] : TEXT_MODELS;
+  let lastErr = null;
+  for (const model of order) {
+    let r;
+    try { r = await fetch(`${base}/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getKey() }, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) }); }
+    catch (e) { throw new Error(/abort|timeout/i.test(e.name + e.message) ? 'Gemini took too long' : 'Can\u2019t reach Gemini (' + e.message + ')'); }
+    let j = {}; try { j = await r.json(); } catch {}
+    const msg = (j.error && j.error.message) || '';
+    // This model isn't free / doesn't exist for this key: try the next one.
+    if (r.status === 404 || (r.status === 400 && /not found|not supported/i.test(msg)) || (r.status === 429 && /limit:\s*0\b|free_tier.*limit.*\b0\b/i.test(msg))) { lastErr = new Error(msg || 'model not available'); continue; }
+    if (r.status === 429) { bump('limitHit'); throw new Error('limit'); }
+    if (r.status >= 400) throw new Error(msg || 'Gemini error ' + r.status);
+    goodModel = model;
+    return ((((j.candidates || [])[0] || {}).content || {}).parts || []).map((p) => p.text || '').join('');
+  }
+  throw lastErr || new Error('No free Gemini model worked for your key');
 }
 const askJSON = async (prompt, images) => {
   const parts = [{ text: prompt }, ...(images || []).map((b) => ({ inlineData: { mimeType: 'image/png', data: b.toString('base64') } }))];

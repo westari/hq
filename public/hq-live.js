@@ -292,21 +292,25 @@
         v.ari.next = (v.ari.next || []).map(wrap);
         v.ari.important = (v.ari.important || []).map((it) => ({ ...it, toggleOpen: it.toggleOpen || (() => {}) }));
       }
-      // Factory: say exactly why a build failed. No GitHub website needed.
-      if (v.bp && v.bp.name === 'Factory' && v.bp.R) {
-        const failed = (last.runs || []).filter((r) => r.st === 'failed');
-        v.bp.R.items = (v.bp.R.items || []).map((it, k) => {
-          const r = failed[k]; if (!r) return it;
-          return { ...it, sub: r.note || it.sub, hasBtn: true, btn: 'Why it failed', icon: 'help',
-            go: () => card.buildFail(r) };
-        });
-      }
-      // Factory: a real "Start build" button on top.
-      if (v.bp && v.bp.name === 'Factory' && v.bp.L) {
-        const running = (last.runs || []).some((r) => r.st === 'running');
-        v.bp.L.items = [{ t: running ? 'A build is running' : 'New iOS build', sub: running ? 'HQ tells you when it\u2019s done' : 'Builds your app on GitHub (about 20\u201330 min)', hasBtn: !running, btn: 'Start build', icon: 'rocket_launch', go: startBuild,
-          hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128' }, ...(v.bp.L.items || [])];
-        v.bp.L.empty = false;
+      // Factory: your iOS builds in plain words. The Watchdog decides when a build is needed and what a failure means.
+      if (v.bp && v.bp.name === 'Factory') {
+        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', icon: '', hasBtn: false, btn: '', go: () => {} };
+        const W = last.watchdog || {}; const Bd = W.build || {}; const runs = last.runs || []; const running = runs.find((r) => r.st === 'running');
+        const tm2 = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const L = [];
+        L.push(running ? { ...base, t: 'Building now', sub: 'Started ' + tm2(running.at) + '. Takes about 20–30 minutes. HQ tells you when it’s done.', hasChip: true, chipT: 'Building', chipC: '#ffcf70' }
+          : Bd.needBuild ? { ...base, t: 'A new build is needed', sub: 'The part of the app that needs a build changed. HQ starts it by itself once the code is ready.', hasChip: true, chipT: 'Needed', chipC: '#ffcf70', hasBtn: true, btn: 'Start it now', icon: 'rocket_launch', bg: '#ffffff', fg: '#1d2128', go: startBuild }
+          : { ...base, t: 'No build needed', sub: 'Your changes reach your phone without one: just reload the app. HQ builds by itself when it’s really needed.', hasChip: true, chipT: 'Up to date', chipC: '#8fe3b4', hasBtn: true, btn: 'Build anyway', icon: 'rocket_launch', go: startBuild });
+        runs.slice(0, 4).forEach((r) => L.push({ ...base, t: r.st === 'done' ? '✓ Built' : r.st === 'failed' ? '✕ Failed' : '● Building', sub: tm2(r.at) + (r.st === 'failed' ? ' · ' + (Bd.lastFail && Bd.lastFail.id === r.id ? Bd.lastFail.title : (r.note || '')).slice(0, 90) : r.st === 'done' ? ' · install it from Expo on your phone' : '') }));
+        v.bp.L = { title: 'iOS builds', icon: 'deployed_code', hv: String(runs.filter((r) => r.st === 'done').length), hl: 'built', items: L, empty: false };
+        const F = Bd.lastFail;
+        if (F) {
+          v.bp.hasR = true;
+          v.bp.R = { title: 'Last problem', icon: 'build', hv: '1', hl: F.who === 'you' ? 'needs you' : 'HQ is on it', empty: false, items: [
+            { ...base, t: F.title, sub: F.plain, hasChip: true, chipT: F.who === 'you' ? 'Needs you or Dad' : 'HQ is fixing it', chipC: F.who === 'you' ? '#ff9a8a' : '#8fe3b4' },
+            { ...base, t: 'What HQ is doing', sub: F.doing, hasBtn: true, btn: F.who === 'you' ? 'Show me what to do' : 'See the error', icon: 'help', bg: '#ffffff', fg: '#1d2128',
+              go: () => card.need({ title: F.title, level: F.who === 'you' ? 'urgent' : 'warn', text: F.plain + ' ' + F.doing, steps: F.steps, lines: F.lines }) }] };
+        } else v.bp.hasR = false;
       }
       // Content building (was the Ideas building): your slideshow bot.
       if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Ideas' ? { ...t, short: 'Content', name: 'Content' } : t));
@@ -314,10 +318,12 @@
         const C = (last && last.content) || { shows: [], templates: [], usage: {}, pictures: {}, assets: {} };
         const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '', hasBtn: false, btn: '', go: () => {} };
         const items = [];
-        if (!C.hasKey) items.push({ ...base, t: 'Step 1: add your free Gemini key', sub: 'Gemini writes the words. Free key from aistudio.google.com. It stays on this PC.', hasBtn: true, btn: 'Add key', icon: 'key', go: () => card.keyBox() });
-        if (!C.hasPictures) items.push({ ...base, t: (C.hasKey ? 'Step 2' : 'Step 2') + ': turn on free pictures', sub: 'A free Cloudflare account makes the pictures. About 35 posts a day, $0, it can never charge you.', hasBtn: true, btn: 'Set up', icon: 'image', go: () => card.cfBox() });
-        if (!(C.assets || {}).screenshot) items.push({ ...base, t: 'Add your app screenshot', sub: 'For the phone on the last slide. Until then it shows the hook picture.', hasBtn: true, btn: 'Add', icon: 'add_photo_alternate', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.assetBox() });
-        if (C.hasKey) items.push({ ...base, t: 'New slideshow', sub: (C.templates[0] || {}).name + ': hook → how to → your app. You check the words before any picture is made.', hasBtn: true, btn: 'Create', icon: 'add', go: () => card.newShow() });
+        const A2 = C.assets || {};
+        const setup = [['Writing', C.hasKey, () => card.keyBox()], ['Pictures', C.hasPictures, () => card.cfBox()], ['App screenshot', !!A2.screenshot, () => card.assetBox()]];
+        const todo = setup.find((x) => !x[1]);
+        if (todo) items.push({ ...base, t: 'Set up (once, about 3 minutes)', sub: setup.map((x) => (x[1] ? '✓ ' : '○ ') + x[0]).join('   ') + '. Next: ' + { Writing: 'add your free Gemini key (it writes the words).', Pictures: 'turn on free pictures (Cloudflare makes them).', 'App screenshot': 'add a screenshot of FormPal (one app screen, not your logo).' }[todo[0]],
+          hasBtn: true, btn: 'Do the next step', icon: 'checklist', go: todo[2] });
+        if (C.hasKey) items.push({ ...base, t: 'Make a TikTok slideshow', sub: 'Type what it’s about (like “leg day”). HQ writes it, makes the pictures and builds all 3 slides. You check the words first.', hasBtn: true, btn: 'Make one', icon: 'add', go: () => card.newShow() });
         const P = C.pictures || {};
         if (C.hasPictures) items.push({ ...base, t: 'Free pictures left today: about ' + (P.postsLeft || 0) + ' posts', sub: P.limitHit ? 'Used up for today. More at 7 pm. Nothing is charged.' : (P.images || 0) + ' pictures made today. Resets at 7 pm.' });
         if (C.error) items.push({ ...base, t: 'Last problem', sub: C.error });
@@ -337,7 +343,7 @@
           items.push({ ...base, t: sh.title, sub: map[0], hasBtn: true, btn: map[1], icon: 'slideshow', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: map[2] });
         }
         v.bp.name = 'Content'; v.bp.icon = 'slideshow';
-        v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String((C.shows || []).filter((x) => x.status === 'ready').length), hl: 'ready to post', items, empty: false };
+        v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String((C.shows || []).filter((x) => x.status === 'ready').length), hl: 'slideshows ready to post', items, empty: false };
       }
       // Watchdog building (was the Shipping Dock): what needs you, and everything it did by itself.
       if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Dock' ? { ...t, short: 'Watchdog', name: 'Watchdog' } : t));
@@ -352,6 +358,8 @@
           hasBtn: true, btn: W.paused ? 'Turn back on' : W.acting ? 'Switch to watch only' : 'Let it fix things', icon: W.paused ? 'play_arrow' : W.acting ? 'visibility' : 'build', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: W.paused ? wd('unpause') : wd('mode', W.acting ? 'watch' : 'act') });
         for (const n of W.needs || []) L.push({ ...base, t: n.title, sub: n.text, hasChip: true, chipT: n.level === 'urgent' ? 'Important' : 'Needs you', chipC: n.level === 'urgent' ? '#ff9a8a' : '#ffcf70', chipA: 'none',
           hasBtn: true, btn: n.button && !(n.steps || n.code) ? n.button.label : 'Show me how', icon: n.button && !(n.steps || n.code) ? 'bolt' : 'help', go: n.button && !(n.steps || n.code) ? wd(n.button.action, n.button.arg) : () => card.need(n) });
+        for (const fx of W.fixing || []) L.push({ ...base, t: fx.title, sub: fx.text, hasChip: true, chipT: 'HQ is fixing it', chipC: '#8fe3b4', chipA: 'none', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff' });
+        if (!(W.needs || []).length && !(W.fixing || []).length) L.push({ ...base, t: 'All good', sub: 'Nothing needs you. You don\u2019t have to open this tower: HQ tells you out loud when something needs you.', hasChip: true, chipT: '\u2713', chipC: '#8fe3b4', chipA: 'none', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff' });
         const ph = W.phone || {};
         L.push({ ...base, t: 'Your phone', sub: ph.text || 'Checking…', hasChip: true, chipT: ph.ready ? 'Ready to test' : ph.metro ? 'App server on' : 'App server off', chipC: ph.ready ? '#8fe3b4' : 'rgba(255,255,255,.6)', chipA: 'none',
           hasBtn: ph.step === 'install', btn: 'I installed it', icon: 'install_mobile', go: wd('installed') });
@@ -376,11 +384,13 @@
         const items = wins.map((ss) => {
           const raw = ss._raw || {}; const working = ss.status === 'working' || ss.status === 'needs';
           const what = raw.jobLine || raw.title || (raw.prompt ? shortTitle(raw.prompt) : '');
-          return { ...base, t: ss.name + (what ? ': ' + what : ''), sub: working ? 'Still working: ' + (raw.doing || '') : raw.status === 'limit' ? 'Paused by the Claude limit' : (ss.job && ss.job.explain) || 'No finished job yet',
+          const cut = (t, n) => { t = String(t || '').replace(/^Finished:\s*/, ''); if (t.length <= n) return t; const c = t.slice(0, n); return c.slice(0, c.lastIndexOf(' ') > n * 0.6 ? c.lastIndexOf(' ') : n).replace(/[,.;:\s]+$/, '') + '\u2026'; };
+          return { ...base, t: ss.name + (what ? ' \u00b7 ' + cut(what, 34) : ''), sub: working ? 'Working on it' : raw.status === 'limit' ? 'Paused by the Claude limit' : cut((ss.job && ss.job.explain) || 'No finished job yet', 70),
             hasChip: true, chipT: working ? 'Working' : raw.status === 'limit' ? 'Paused' : raw.lastReply ? 'Done' : 'Free', chipC: working ? '#ffcf70' : raw.lastReply ? '#8fe3b4' : 'rgba(255,255,255,.6)', chipA: 'none' };
         });
         const lm = (W.merge || {}).lastMerge;
-        items.push({ ...base, t: ph.ready ? 'Your phone: ready to test' : 'Your phone', sub: (ph.text || 'Checking…') + (lm ? ' Last merged ' + new Date(lm.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ': ' + lm.text + '.' : ''),
+        void lm;
+        items.push({ ...base, t: ph.ready ? 'Your phone is ready' : 'Your phone', sub: ph.ready ? 'Shake your phone \u2192 Reload, then test.' : (ph.text || 'Checking\u2026'),
           hasChip: true, chipT: ph.ready ? 'Ready' : ph.step === 'metro' ? 'App server off' : ph.step === 'install' ? 'Install build' : 'Wait', chipC: ph.ready ? '#8fe3b4' : '#ffcf70', chipA: 'none',
           hasBtn: ph.step === 'install' || ph.step === 'build', btn: ph.step === 'install' ? 'I installed it' : 'Start the build', icon: ph.step === 'install' ? 'install_mobile' : 'rocket_launch',
           go: ph.step === 'install' ? () => post('/api/watchdog', { name: 'installed' }) : startBuild });
@@ -797,7 +807,7 @@
         const A = ((last && last.content) || {}).assets || {};
         const slot = (k, label, why) => `<div class="step" style="cursor:default;align-items:center"><div style="width:64px;height:${k === 'icon' ? 64 : 120}px;border-radius:12px;background:rgba(255,255,255,.12) center/cover no-repeat ${A[k] ? `url(${A[k]}?t=${Date.now()})` : ''};flex:none"></div><div style="flex:1"><b>${label}</b><div style="font-size:13px;opacity:.75">${why}</div></div><label class="b ${A[k] ? 'g' : 'w'}" style="display:inline-flex;align-items:center;cursor:pointer">${A[k] ? 'Change' : 'Choose'}<input type="file" accept="image/*" data-k="${k}" style="display:none"></label></div>`;
         el.innerHTML = `<div class="top"><div style="flex:1"><h2>Your app pictures</h2><p class="why">These make the slides look real. Use real screens from FormPal only.</p></div><button class="x" aria-label="Close">✕</button></div>
-          <div class="steps" style="margin-top:16px">${slot('screenshot', 'App screenshot', 'Goes inside the phone on the last slide. Pick your best screen (like the form check with a good score). A normal iPhone screenshot.')}${slot('icon', 'App icon', 'Shows next to “FormPal” on the first slide. Square picture.')}</div>
+          <div class="steps" style="margin-top:16px">${slot('screenshot', 'Screenshot of FormPal (not your logo)', 'Take a normal iPhone screenshot of your best FormPal screen (like the form check with a good score). It goes inside the phone on slide 3.')}${slot('icon', 'Logo / app icon (optional)', 'A square picture. It shows next to “FormPal” on slide 1.')}</div>
           <div class="note">Saved only on this PC.</div>`;
         el.querySelector('.x').onclick = close;
         el.querySelectorAll('input[type=file]').forEach((inp) => (inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const png = await fileToData(f); const r = await post('/api/content/upload', { kind: inp.dataset.k, png }); c.toast(r.ok ? 'Saved' : 'That picture didn’t work', r.ok ? 'check' : 'error'); setTimeout(assetBox, 400); }));

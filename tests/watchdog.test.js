@@ -111,7 +111,8 @@ test('leftover conflict lines already in the app: Window A is asked to fix them,
   const env = setup(t);
   W(path.join(env.app, 'app/other.tsx'), 'a\n<<<<<<< HEAD\nb\n=======\nc\n>>>>>>> x\n'); G(env.app, 'commit', '-qam', 'bad merge'); G(env.app, 'push', '-q');
   await env.tick(); await env.tick();
-  assert.ok(needKeys(env).includes('leftover'));
+  assert.ok(env.wd.view().fixing.some((x) => x.key === 'leftover'), 'shown as "fixing now", not as needs-you');
+  assert.ok(!needKeys(env).includes('leftover'));
   assert.strictEqual(env.calls.sent.filter((s) => /leftovers/.test(s.text)).length, 1);
 });
 
@@ -137,13 +138,24 @@ test('git-ignored source files (like constants/api.ts) are used by the type chec
   assert.ok(fs.existsSync(path.join(env.app, 'app/new.tsx')), 'merged: the ignored file was there for the check');
 });
 
-test('unsaved changes in the app folder are never overwritten', async (t) => {
+test('unsaved changes in the way are put aside safely (never deleted), then the merge happens', async (t) => {
   const env = setup(t);
   env.onWork('work-a', 'app/index.tsx', 'line1\nA\nline3\n');
   W(path.join(env.app, 'app/index.tsx'), 'my unsaved edit\n');
   await env.tick();
-  assert.strictEqual(fs.readFileSync(path.join(env.app, 'app/index.tsx'), 'utf8'), 'my unsaved edit\n');
-  assert.ok(needKeys(env).includes('dirty'));
+  assert.match(G(env.app, 'stash', 'show', '-p', 'stash@{0}'), /my unsaved edit/, 'kept in git stash');
+  assert.ok(fs.readdirSync(path.join(env.home, 'backups')).length >= 1, 'and a backup copy');
+  await env.tick();
+  assert.strictEqual(fs.readFileSync(path.join(env.app, 'app/index.tsx'), 'utf8'), 'line1\nA\nline3\n', 'then merged');
+  assert.ok(!needKeys(env).includes('dirty'));
+});
+
+test('app folder on the wrong branch is switched back by itself', async (t) => {
+  const env = setup(t);
+  G(env.app, 'switch', '-q', '-c', 'oops');
+  await env.tick();
+  assert.strictEqual(G(env.app, 'rev-parse', '--abbrev-ref', 'HEAD'), 'overnight-build');
+  assert.ok(G(env.app, 'branch', '--list', 'oops'), 'the other branch still exists');
 });
 
 test('a busy window is not merged until it is done', async (t) => {
@@ -158,16 +170,19 @@ test('a busy window is not merged until it is done', async (t) => {
   assert.notStrictEqual(head(env), before);
 });
 
-test('a half-done merge with conflicts: Ari can undo it, then HQ merges the safe way', async (t) => {
+test('a half-done merge with conflicts is undone by itself (backup first), then merged the safe way', async (t) => {
   const env = setup(t);
   env.onWork('work-a', 'app/index.tsx', 'line1\nAAA\nline3\n');
   W(path.join(env.app, 'app/index.tsx'), 'line1\nMAIN\nline3\n'); G(env.app, 'commit', '-qam', 'main change'); G(env.app, 'push', '-q');
   try { G(env.app, 'merge', 'work-a'); } catch {}
   assert.ok(fs.existsSync(path.join(env.app, '.git', 'MERGE_HEAD')));
   await env.tick();
-  assert.ok(needKeys(env).includes('halfmerge'));
-  await env.wd.action('abortmerge');
-  assert.ok(!fs.existsSync(path.join(env.app, '.git', 'MERGE_HEAD')));
+  assert.ok(!fs.existsSync(path.join(env.app, '.git', 'MERGE_HEAD')), 'undone by itself');
+  assert.ok(!needKeys(env).includes('halfmerge'));
+  assert.ok(fs.readdirSync(path.join(env.home, 'backups')).length >= 1, 'backup made first');
+  assert.strictEqual(G(env.app, 'show', 'work-a:app/index.tsx'), 'line1\nAAA\nline3', 'the window\'s work is still on its branch');
+  await env.tick();
+  assert.ok(env.calls.sent.some((s) => s.w === 'Window A' && /conflict/.test(s.text)), 'then merged the safe way: Window A asked to combine');
 });
 
 test('watch mode changes nothing and only says what it would do', async (t) => {
