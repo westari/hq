@@ -759,6 +759,39 @@ function allowed(req) {
   return (cookie && cookie[1] === phoneKey) || (q && q[1] === phoneKey);
 }
 
+// ─── Terminal inside HQ: run PowerShell commands in one of your folders ─────
+// Only from this PC (never from the phone link), and only from the HQ window itself
+// (a secret token is put into the page, so other websites can't send commands).
+const SHELL_TOKEN = crypto.randomBytes(16).toString('hex');
+const shellJobs = new Map(); let shellSeq = 0;
+function isLocal(req) { const ip = req.socket.remoteAddress || ''; return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1'; }
+function shellFolders() {
+  const out = {};
+  for (const [folder, name] of Object.entries(config.windows || {})) out[name] = path.join(os.homedir(), folder);
+  out.HQ = __dirname;
+  return out;
+}
+function runShell(cmd, folderName) {
+  const cwd = shellFolders()[folderName] || os.homedir();
+  const id = ++shellSeq;
+  const child = process.platform === 'win32'
+    ? spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], { cwd, windowsHide: true, env: { ...process.env, GIT_EDITOR: 'notepad', GIT_MERGE_AUTOEDIT: 'no' } })
+    : spawn('bash', ['-lc', cmd], { cwd });
+  const job = { id, cmd, folder: folderName, cwd, out: '', done: false, code: null, at: Date.now(), child };
+  const add = (c) => { job.out += String(c); if (job.out.length > 300000) job.out = job.out.slice(-200000); };
+  child.stdout.on('data', add); child.stderr.on('data', add);
+  child.on('error', (e) => { add('\n' + e.message + '\n'); job.done = true; job.code = -1; });
+  child.on('exit', (code) => { job.done = true; job.code = code; });
+  shellJobs.set(id, job);
+  if (shellJobs.size > 30) shellJobs.delete(Math.min(...shellJobs.keys()));
+  return job;
+}
+function stopShell(id) {
+  const j = shellJobs.get(Number(id)); if (!j || j.done) return;
+  if (process.platform === 'win32') execFile('taskkill', ['/pid', String(j.child.pid), '/t', '/f'], { windowsHide: true }, () => {});
+  else j.child.kill();
+}
+
 // ─── HTTP ───────────────────────────────────────────────────────────────────
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.jpg': 'image/jpeg' };
 function readBody(req) {
@@ -891,6 +924,13 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === 'POST' && url === '/api/queue-any/clear') { anyQueue.length = 0; broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); broadcast(); return json(res, 200, r); }
+  if (url.startsWith('/api/shell')) {
+    if (!isLocal(req) || req.headers['x-hq-token'] !== SHELL_TOKEN) return json(res, 403, { error: 'Only from the HQ window on this PC.' });
+    if (req.method === 'POST' && url === '/api/shell') { const b = await readBody(req); const cmd = String(b.cmd || '').trim(); if (!cmd) return json(res, 400, { error: 'Empty' }); const j = runShell(cmd, b.folder); return json(res, 200, { id: j.id }); }
+    if (req.method === 'POST' && url === '/api/shell/stop') { const b = await readBody(req); stopShell(b.id); return json(res, 200, { ok: true }); }
+    if (url === '/api/shell/job') { const q = new URL(req.url, 'http://x').searchParams; const j = shellJobs.get(Number(q.get('id'))); if (!j) return json(res, 404, {}); const from = Number(q.get('from') || 0); return json(res, 200, { out: j.out.slice(from), len: j.out.length, done: j.done, code: j.code }); }
+    if (url === '/api/shell/list') return json(res, 200, { folders: Object.keys(shellFolders()), jobs: [...shellJobs.values()].map((j) => ({ id: j.id, cmd: j.cmd, folder: j.folder, done: j.done, code: j.code, at: j.at })) });
+  }
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/content/draft') { const b = await readBody(req); content.clearError(); const r = await content.draft(String(b.topic || '').slice(0, 300), b.template); broadcast(); return json(res, 200, r); }
@@ -915,7 +955,7 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(fp, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
     // Files under /v/ get a version tag (their change time) so an updated city is never stuck in the cache.
-    if (rel === '/HQ.html') data = Buffer.from(String(data).replace(/\/v\/([\w.-]+)/g, (m0, f) => { try { return m0 + '?t=' + Math.round(fs.statSync(path.join(PUBLIC_DIR, 'v', f)).mtimeMs); } catch { return m0; } }));
+    if (rel === '/HQ.html') data = Buffer.from(String(data).replace('<script src="/hq-live.js">', '<script>window.__hqToken="' + SHELL_TOKEN + '";</script><script src="/hq-live.js">').replace(/\/v\/([\w.-]+)/g, (m0, f) => { try { return m0 + '?t=' + Math.round(fs.statSync(path.join(PUBLIC_DIR, 'v', f)).mtimeMs); } catch { return m0; } }));
     res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream', 'Cache-Control': rel.startsWith('/v/') ? 'max-age=31536000' : 'no-store' }); res.end(data);
   });
 });

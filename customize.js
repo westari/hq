@@ -2,7 +2,8 @@
 // If one stops matching after a redesign, it's skipped and listed so you know.
 module.exports = function customize(tpl) {
   const skipped = [];
-  const swap = (name, from, to) => { if (tpl.includes(from)) tpl = tpl.split(from).join(to); else if (!tpl.includes(to)) skipped.push(name); };
+  // Never apply the same change twice (some changes contain the original text).
+  const swap = (name, from, to) => { if (tpl.includes(to)) return; if (tpl.includes(from)) tpl = tpl.split(from).join(to); else skipped.push(name); };
 
   swap('fill the whole window',
     '<div style="position:relative; width:1440px; height:100vh;',

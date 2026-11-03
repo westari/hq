@@ -213,7 +213,7 @@
         if (!m) return { ...b, branch: '–', add: 0, del: 0, meta: 'No branch', cta: 'Output', icon: 'terminal', go: () => drawer.open(b.name) };
         const ready = m.ahead > 0;
         return { ...b, branch: m.branch, add: m.add || 0, del: m.del || 0,
-          meta: ready ? (m.files || 0) + ' files · ' + m.ahead + ' commits not merged' : 'All merged',
+          meta: ready ? m.ahead + ' new change' + (m.ahead === 1 ? '' : 's') + ' not in your app yet' : '✓ Everything is in your app',
           cta: ready ? 'Merge now' : 'Merged', icon: ready ? 'merge' : 'done_all',
           bg: ready ? '#ffffff' : 'rgba(255,255,255,0.14)', fg: ready ? '#1d2128' : '#ffffff',
           go: () => { if (ready) mergeNow(); } };
@@ -270,7 +270,9 @@
       // Merge: always visible in Do now when your phone would run old code.
       if (v.ari && v.ariOn && last.mergeState) {
         const M = last.mergeState; const behind = (M.list || []).filter((m) => m.ahead > 0);
-        const mergeRow = M.stuck ? { icon: 'warning', t: 'Your merge is stuck', sub: M.conflicts && M.conflicts.length ? 'Conflict in ' + M.conflicts.join(', ') + '. Paste this to Claude.' : 'Your phone runs old code until it’s finished.', hasBtn: !(M.conflicts && M.conflicts.length), btn: 'Fix and merge', go: mergeNow }
+        const LA = M.lastAuto;
+        const autoErr = LA && !LA.ok ? { icon: 'warning', t: 'Auto-merge stopped', sub: LA.text, hasBtn: true, btn: 'Ask a window to fix it', go: () => post('/api/queue-any', { text: 'HQ tried to merge work-a and work-b into my app folder (C:\\Users\\arize\\gym app) and it stopped with: ' + LA.text + '\n\nFix it without losing ANY work (no reset, no discard, no force). If there are uncommitted changes in that folder, tell me exactly what they are first. Then finish the merge and push.', title: 'Fix the stuck merge' }).then(() => c.toast('Sent to the next free window', 'send')) } : null;
+        const mergeRow = autoErr ? autoErr : M.stuck ? { icon: 'warning', t: 'Your merge is stuck', sub: M.conflicts && M.conflicts.length ? 'Conflict in ' + M.conflicts.join(', ') + '. Paste this to Claude.' : 'Your phone runs old code until it’s finished.', hasBtn: !(M.conflicts && M.conflicts.length), btn: 'Fix and merge', go: mergeNow }
           : behind.length ? { icon: 'merge', t: 'Merge ' + behind.map((m) => m.window).join(' and '), sub: 'Your phone runs old code until you merge.', hasBtn: true, btn: 'Merge now', go: mergeNow } : null;
         if (mergeRow) { v.ari.doNow = [{ ...mergeRow, toggleOpen: () => {} }, ...(v.ari.doNow || []).filter((d) => !/^Merge /.test(d.t))]; v.ari.doN = String(v.ari.doNow.length); v.ari.noDo = false; }
       }
@@ -418,7 +420,7 @@
     function announceMerge(M) {
       const a = M && M.lastAuto; if (!a || a.at === lastAutoSeen) return; const first = !lastAutoSeen; lastAutoSeen = a.at; if (first) return;
       if (a.ok && /Merged/.test(a.text)) { c.toast('Auto-merged: ' + a.text, 'merge'); say('New work merged into your app.'); }
-      else if (!a.ok) { c.toast('Auto-merge stopped: ' + a.text, 'warning'); say('Auto merge stopped. Check HQ.'); }
+      else if (!a.ok) { c.toast('Auto-merge stopped: ' + a.text, 'warning'); say(/local changes|overwritten/i.test(a.text) ? 'Auto merge stopped. Your app folder has unsaved changes. Open Ari to fix it.' : /conflict/i.test(a.text) ? 'Auto merge stopped on a conflict. Open Ari.' : 'Auto merge stopped. Open Ari to see why.'); }
     }
     const showSeen = {}; let firstShows = true;
     function announceContent(C) {
@@ -447,6 +449,8 @@
       playing = playing.then(() => playVoice('Window A is done. Test it on your phone.', next));
     });
     function say(text) {
+      // A Windows notification too, when HQ isn't the window you're looking at.
+      try { if (document.hidden || !document.hasFocus()) new Notification('HQ', { body: text, silent: true }); } catch (e) {}
       if (c.state.sound === false) return;
       try { c.chime(); } catch (e) {}
       playing = playing.then(() => new Promise((r) => setTimeout(r, 700))).then(() => playVoice(text)).catch(() => {});
@@ -815,6 +819,33 @@
         el.querySelector('[data-a=copy]').onclick = async (e) => { e.target.textContent = (await copy(prompt)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
+      // Terminal: run PowerShell commands right here, in one of your folders.
+      let termTimer = null; let termFolder = null; let termJob = null;
+      async function terminal() {
+        clearInterval(termTimer);
+        const H = { 'Content-Type': 'application/json', 'x-hq-token': window.__hqToken || '' };
+        const api = async (u, body) => (await fetch(u, body ? { method: 'POST', headers: H, body: JSON.stringify(body) } : { headers: H })).json();
+        const L = await api('/api/shell/list');
+        if (L.error) { c.toast(L.error, 'error'); return; }
+        termFolder = termFolder || L.folders.find((f) => /main/i.test(f)) || L.folders[0];
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Terminal</h2><p class="why">Runs PowerShell in the folder you pick. Long ones (like npm run dev) keep running here. Stop ends them.</p></div><button class="x" aria-label="Close">\u2715</button></div>
+          <div class="btns" style="margin-top:12px">${L.folders.map((f) => `<button class="b ${f === termFolder ? 'w' : 'g'}" data-f="${esc(f)}">${esc(f)}</button>`).join('')}</div>
+          <pre class="term" style="height:46vh;max-height:none;margin-top:14px;background:rgba(0,0,0,.45);font-size:12.5px"></pre>
+          <div class="ask" style="margin-top:10px"><span style="align-self:center;font:12.5px 'Geist Mono',monospace;opacity:.7">PS ${esc(termFolder)}&gt;</span><input placeholder="git status" style="font-family:'Geist Mono',monospace" /><button class="b w" data-a="run">Run</button><button class="b g" data-a="stop">Stop</button></div>
+          ${L.jobs.length ? `<div class="btns">${L.jobs.slice(-6).reverse().map((j) => `<button class="b g" data-j="${j.id}" style="height:32px;font-size:12px">${j.done ? '' : '\u25cf '}${esc(j.cmd.slice(0, 28))}</button>`).join('')}</div>` : ''}`;
+        el.querySelector('.x').onclick = () => { clearInterval(termTimer); close(); };
+        const pre = el.querySelector('.term'), inp = el.querySelector('input');
+        let len = 0;
+        const show = async (id) => { termJob = id; len = 0; pre.textContent = ''; clearInterval(termTimer); const tick = async () => { const r = await api('/api/shell/job?id=' + id + '&from=' + len); if (!r || r.out === undefined) return; if (r.out) { pre.textContent += r.out; len = r.len; pre.scrollTop = pre.scrollHeight; } if (r.done) { pre.textContent += '\n[done' + (r.code ? ', exit ' + r.code : '') + ']\n'; clearInterval(termTimer); } }; await tick(); termTimer = setInterval(tick, 700); };
+        const run = async () => { const cmd = inp.value.trim(); if (!cmd) return; inp.value = ''; const r = await api('/api/shell', { cmd, folder: termFolder }); if (r.id) { await show(r.id); pre.textContent = 'PS ' + termFolder + '> ' + cmd + '\n' + pre.textContent; } };
+        inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') run(); };
+        el.querySelector('[data-a=run]').onclick = run;
+        el.querySelector('[data-a=stop]').onclick = () => termJob && api('/api/shell/stop', { id: termJob });
+        el.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { termFolder = b.dataset.f; terminal(); }));
+        el.querySelectorAll('[data-j]').forEach((b) => (b.onclick = () => show(Number(b.dataset.j))));
+        if (termJob) show(termJob);
+        bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
+      }
       function slides(sh) {
         const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
         const caption = sh.title + '\n\n' + sh.slides.map((x) => x.text).join('\n');
@@ -827,9 +858,10 @@
         el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
-      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail };
+      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail, terminal };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
+    window.addEventListener('hq-terminal', () => card.terminal());
     open();
   }
 

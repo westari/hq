@@ -19,6 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const box = document.createElement('div'); box.id = 'hqwin';
   const btn = (title, svg, cls, fn) => { const b = document.createElement('button'); b.title = title; b.className = cls || ''; b.innerHTML = svg; b.onclick = fn; box.appendChild(b); return b; };
   const reload = btn('Get updates and restart', '<svg viewBox="0 0 12 12"><path d="M10 6a4 4 0 1 1-1.2-2.85M10 1.8v2.6H7.4"/></svg>', '', () => { reload.style.opacity = '.4'; ipcRenderer.send('hq-win', 'update'); });
+  btn('Terminal', '<svg viewBox="0 0 12 12"><path d="M2 3.5l3 2.5-3 2.5M6.5 9h3.5"/></svg>', '', () => window.dispatchEvent(new Event('hq-terminal')));
   const mute = btn('Sound on/off', '', '', () => window.dispatchEvent(new Event('hq-toggle-sound')));
   btn('Change voice (click to hear the next one)', '<svg viewBox="0 0 12 12"><circle cx="6" cy="4" r="2.2"/><path d="M2 10.5c.6-2 2.1-3 4-3s3.4 1 4 3"/></svg>', '', () => window.dispatchEvent(new Event('hq-next-voice')));
   const setMute = () => {
