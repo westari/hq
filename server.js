@@ -392,9 +392,13 @@ async function fetchFailure(id) {
   if (r.text === 'nogh') { failWhy[id] = { short: 'Install and log in to GitHub CLI to see why (see README)', lines: [] }; return broadcast(); }
   // Lines look like "job<TAB>step<TAB>2026-...Z message". Keep just the message.
   const all = r.text.split('\n').map((l) => l.split('\t').pop().replace(/^\S+Z\s/, '').replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(Boolean);
-  const bad = all.filter((l) => /error|failed|fatal|exception|❌|denied|not found|cannot|does not/i.test(l) && !/^##\[group\]/.test(l));
-  const lines = [...new Set((bad.length ? bad : all).slice(-20))];
-  failWhy[id] = { short: (lines.find((l) => /error/i.test(l)) || lines[lines.length - 1] || 'Failed (no details)').slice(0, 160), lines };
+  // Skip GitHub's generic "Process completed with exit code N" and find the REAL errors.
+  const generic = (l) => /^##\[error\]Process completed with exit code/i.test(l) || /^##\[(group|endgroup)\]/.test(l);
+  const real = all.filter((l) => !generic(l) && /(^|\W)(error|fatal|exception)\b|❌|failed|denied|not found|cannot|does not|requires a provisioning|code signing|No such file/i.test(l));
+  const tail = all.filter((l) => !generic(l)).slice(-40);
+  const lines = [...new Set(real.length ? real.slice(-25) : tail)];
+  const best = real.find((l) => /error:|❌|fatal/i.test(l)) || real[0] || tail[tail.length - 1] || 'Failed (no details)';
+  failWhy[id] = { short: best.slice(0, 180), lines };
   pollRuns();
 }
 // ─── Shipping Dock: finished work waiting to be merged ─────────────────────
