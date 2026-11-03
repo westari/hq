@@ -5,3 +5,5 @@ plan-state.json
 hq.config.json
 .phone-key
 public/HQ.previous.html
+content/
+*.key

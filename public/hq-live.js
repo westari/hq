@@ -274,6 +274,23 @@
           hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128' }, ...(v.bp.L.items || [])];
         v.bp.L.empty = false;
       }
+      // Content building (was the Ideas building): your slideshow bot.
+      if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Ideas' ? { ...t, short: 'Content', name: 'Content' } : t));
+      if (v.bp && v.bp.name === 'Idea Vault') {
+        const C = (last && last.content) || { shows: [] };
+        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '' };
+        const items = [];
+        if (!C.hasKey) items.push({ ...base, t: 'Add your Gemini key', sub: 'Free key from aistudio.google.com. It stays on this PC, never on GitHub.', hasBtn: true, btn: 'Add key', icon: 'key', go: () => card.keyBox() });
+        else items.push({ ...base, t: C.busy ? 'Making slideshows…' : 'Make new slideshows', sub: C.busy ? 'Gemini is writing and making the pictures. A few minutes.' : (C.error ? C.error : 'Gemini writes 3 and makes every picture. Free.'), hasBtn: !C.busy, btn: 'Make 3', icon: 'auto_awesome',
+          go: async () => { const r = await post('/api/content/make', { count: 3 }); if (r.error === 'nokey') card.keyBox(); else if (r.error) c.toast(r.error, 'error'); else c.toast('Making 3 slideshows. HQ tells you when they’re ready.', 'auto_awesome'); } });
+        for (const sh of C.shows) {
+          const n = sh.slides.length, pics = sh.slides.filter((x) => x.img).length, done = sh.slides.filter((x) => x.final).length;
+          const st = sh.status === 'ready' ? 'Ready · ' + n + ' slides' : sh.status === 'limit' ? 'Paused: out of free images today' : sh.status === 'making' ? 'Making pictures ' + pics + ' of ' + n : 'Adding text ' + done + ' of ' + n;
+          items.push({ ...base, t: sh.title, sub: st, hasBtn: sh.status === 'ready' || pics > 0, btn: 'View', icon: 'slideshow', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.slides(sh) });
+        }
+        v.bp.name = 'Content'; v.bp.icon = 'slideshow';
+        v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String(C.shows.filter((x) => x.status === 'ready').length), hl: 'ready to post', items, empty: false };
+      }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
       if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
         const tests = c.state.tests || [];
@@ -329,6 +346,32 @@
       (K.LISTING || []).forEach((l) => { if (L[l.k]) l.st = done(L[l.k]) ? 'ready' : 'missing'; else if (l.k === 'shots61') l.st = 'optional'; else if (l.k === 'video') l.st = 'optional'; else if (l.k === 'age') l.st = done('submit') ? 'ready' : 'missing'; });
       const vault = ideas.map((i) => ({ t: i.t, d: i.d }));
       if (JSON.stringify(vault) !== JSON.stringify(c.state.vault)) c.setState({ vault });
+    }
+    // Put each slide's text on its picture (1080x1920) and send the finished slide back to HQ.
+    const drawing = new Set();
+    async function finishSlides(C) {
+      for (const sh of (C && C.shows) || []) sh.slides.forEach((x, i) => {
+        const k = sh.id + ':' + i; if (!x.img || x.final || drawing.has(k)) return; drawing.add(k);
+        const im = new Image(); im.onload = async () => {
+          const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+          const sc = Math.max(W / im.width, H / im.height); g.drawImage(im, (W - im.width * sc) / 2, (H - im.height * sc) / 2, im.width * sc, im.height * sc);
+          const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, 'rgba(0,0,0,0.15)'); grad.addColorStop(0.45, 'rgba(0,0,0,0.45)'); grad.addColorStop(1, 'rgba(0,0,0,0.2)'); g.fillStyle = grad; g.fillRect(0, 0, W, H);
+          const size = i === 0 ? 96 : 72; g.font = `600 ${size}px Geist, -apple-system, sans-serif`; g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 24;
+          const words = String(x.text || '').split(/\s+/); const lines = []; let line = '';
+          for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > 900 && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line);
+          const lh = size * 1.18, y0 = H * 0.42 - ((lines.length - 1) * lh) / 2; lines.forEach((l, j) => g.fillText(l, W / 2, y0 + j * lh));
+          try { await post('/api/content/final', { id: sh.id, i, png: cv.toDataURL('image/png') }); } catch (e) { drawing.delete(k); }
+        };
+        im.onerror = () => drawing.delete(k);
+        im.src = '/content/' + sh.id + '/' + x.img;
+      });
+    }
+    const showSeen = {}; let firstShows = true;
+    function announceContent(C) {
+      for (const sh of (C && C.shows) || []) { const was = showSeen[sh.id]; showSeen[sh.id] = sh.status;
+        if (!firstShows && was && was !== 'ready' && sh.status === 'ready') say('Your slideshow is ready: ' + sh.title + '.'); }
+      firstShows = false;
     }
     // ── Voice alerts: so you hear it while gaming ──
     const prevStatus = {}; let firstSnap = true;
@@ -400,7 +443,7 @@
       }
       const merged = {};
       for (const m of snap.merges || []) { const id = letter(m.window); merged[id] = m.ahead === 0; }
-      announce(sessions); announceRuns(snap.runs);
+      announce(sessions); announceRuns(snap.runs); finishSlides(snap.content); announceContent(snap.content);
       fixSamples(snap.plan);
       const u = snap.usage || {};
       c.setState({ sessions, tests, chat, jobQ, merged, events: mapEvents(snap.activity), projects: withPlan(mapProjects(snap.projects, knownProjects), snap.plan), runs: snap.runs || [], usage: u.pct || 0, resetAt: u.resetAt || Date.now() + 5 * 3600000 });
@@ -621,7 +664,27 @@
         // While the window is working, keep this view live (like Claude Code's spinner).
         liveTimer = setInterval(() => { if (!bg.classList.contains('open')) return clearInterval(liveTimer); const st = ((c.state.sessions || []).find((x) => x.name === win) || {}).status; if (st === 'working' || st === 'needs') load(); }, 3000);
       }
-      return { open, close, info, output };
+      function keyBox() {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Add your Gemini key</h2><p class="why">Make it free at aistudio.google.com → Get API key → Create API key. Don’t turn on billing, then it can never cost money. The key is saved only on this PC.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="ask" style="margin-top:18px"><input type="password" placeholder="Paste your key" /><button class="b w" data-a="save">Save</button></div>`;
+        el.querySelector('.x').onclick = close;
+        const inp = el.querySelector('input'); inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') sv(); };
+        const sv = async () => { const k = inp.value.trim(); if (!k) return; await post('/api/content/key', { key: k }); close(); c.toast('Gemini key saved', 'key'); };
+        el.querySelector('[data-a=save]').onclick = sv; bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
+      }
+      function slides(sh) {
+        const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
+        const caption = sh.title + '\n\n' + sh.slides.map((x) => x.text).join('\n');
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><div class="tags"><span class="tag">${esc(sh.exercise || '')}</span><span class="tag">${sh.slides.length} slides</span></div></div><button class="x" aria-label="Close">✕</button></div>
+          <div style="display:grid;grid-template-columns:repeat(${Math.min(6, sh.slides.length)},1fr);gap:10px;margin-top:18px">${sh.slides.map((x, i) => (x.img ? `<img src="${src(x)}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)">` : `<div class="panel" style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px">${esc(x.err || 'Making…')}</div>`)).join('')}</div>
+          <div class="btns"><button class="b w" data-a="folder">Open folder</button><button class="b g" data-a="cap">Copy caption</button></div>
+          <div class="note">Post the slide-1 to slide-${sh.slides.length} pictures from the folder, in order.</div>`;
+        el.querySelector('.x').onclick = close;
+        el.querySelector('[data-a=folder]').onclick = () => post('/api/content/open', { id: sh.id });
+        el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
+        bg.classList.add('open');
+      }
+      return { open, close, info, output, keyBox, slides };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     open();

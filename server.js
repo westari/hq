@@ -16,6 +16,7 @@ const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const CONFIG_PATH = path.join(__dirname, 'hq.config.json');
 const ARCHIVE_DIR = path.join(__dirname, 'logs-archive');
+const content = require('./content.js');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 function loadConfig() {
@@ -635,7 +636,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, usage, plan: buildPlan(), yesterday,
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -780,6 +781,20 @@ const server = http.createServer(async (req, res) => {
       });
     };
     return tryRun(0);
+  }
+  // ── Content bot ──
+  if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
+  if (req.method === 'POST' && url === '/api/content/make') { const b = await readBody(req); content.clearError(); const r = await content.make(Math.max(1, Math.min(5, Number(b.count) || 3)), broadcast); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/final') { const b = await readBody(req); const ok = content.saveFinal(b.id, Number(b.i), b.png); broadcast(); return json(res, 200, { ok }); }
+  if (req.method === 'POST' && url === '/api/content/open') {
+    const b = await readBody(req); const dir = path.join(content.DIR, path.basename(String(b.id || '')));
+    if (fs.existsSync(dir)) execFile(process.platform === 'win32' ? 'explorer' : 'xdg-open', [dir], { windowsHide: false }, () => {});
+    return json(res, 200, { ok: true });
+  }
+  if (url.startsWith('/content/')) {
+    const rel = decodeURIComponent(url.slice('/content/'.length)).split('/').map((x) => path.basename(x));
+    if (rel.length !== 2 || !/\.png$/i.test(rel[1])) { res.writeHead(404); return res.end(); }
+    return fs.readFile(path.join(content.DIR, rel[0], rel[1]), (err, data) => { if (err) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }); res.end(data); });
   }
   // Static files from /public. "/" opens the city.
   const rel = url === '/' ? '/HQ.html' : decodeURIComponent(url);
