@@ -189,7 +189,7 @@ function handleEvent(ev) {
     s.status = 'idle'; logActivity(s, 'Chat opened');
   } else if (name === 'UserPromptSubmit') {
     s.status = 'working'; s.prompt = String(ev.prompt || '').trim(); s.jobStart = Date.now();
-    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Reading your prompt'; s.title = s.nextTitle || ''; s.nextTitle = '';
+    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Reading your prompt'; s.title = s.nextTitle || ''; s.nextTitle = ''; s.jobLine = '';
     pushChat(s, 'you', s.prompt); logActivity(s, 'Started a new job');
   } else if (name === 'PreToolUse') {
     s.status = 'working'; s.inTool = Date.now(); s.doing = describeTool(ev.tool_name, ev.tool_input);
@@ -269,6 +269,7 @@ function readChunk(fp, start, end, fallbackId) {
       if (c.name === 'TaskCreate' || c.name === 'TaskUpdate') applyTaskTool(s, c.name, c.input || {});
       if (s.status !== 'done') s.doing = describeTool(c.name, c.input);
     }
+    if (o.type === 'assistant') for (const c of content) if (c.type === 'text') { const m = /^\s*\**HQ-JOB:\**\s*(.+)$/m.exec(c.text || ''); if (m) s.jobLine = m[1].trim().slice(0, 200); }
     if (o.type === 'last-prompt' && o.lastPrompt) s.prompt = String(o.lastPrompt).trim();
     else if (o.type === 'user' && !o.isMeta && !o.isCompactSummary && typeof (o.message && o.message.content) === 'string' && !o.message.content.startsWith('<')) s.prompt = o.message.content.trim();
     changed = true;
@@ -564,8 +565,10 @@ function startJob(win, text, s, title) {
   const fp = path.join(CLAUDE_DIR, 'CLAUDE.md');
   try {
     const cur = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : '';
-    if (/^HQ:|starts with HQ:/m.test(cur)) return;
-    fs.appendFileSync(fp, '\n\n## HQ\nEnd every final message with one line that starts with HQ: and says in one plain sentence (under 15 words, no file paths) what you did.\n');
+    let add = '';
+    if (!/starts with HQ:/m.test(cur)) add += '\n\n## HQ\nEnd every final message with one line that starts with HQ: and says in one plain sentence (under 15 words, no file paths) what you did.\n';
+    if (!/HQ-JOB:/m.test(cur)) add += (add ? '' : '\n') + 'Start every job with one line that starts with HQ-JOB: and says in one plain sentence (under 20 words, no file paths) what I asked you to do.\n';
+    if (add) fs.appendFileSync(fp, add);
   } catch {}
 })();
 
@@ -628,7 +631,7 @@ function snapshot() {
     if ((status === 'working' || status === 'needs-you') && !isBusy(s)) status = 'idle';
     return { id: s.id, window: w, project: projectFor(s.cwd), status, doing: s.doing, prompt: s.prompt.slice(0, 2000),
       todos: s.todos, actions: s.actions.slice(0, 40), lastEvent: s.lastEvent, jobStart: s.jobStart,
-      title: s.title || '', lastReply: s.lastReply.slice(0, 20000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
+      title: s.title || '', jobLine: s.jobLine || '', lastReply: s.lastReply.slice(0, 20000), tests: s.testsDone ? [] : s.tests, queue: s.queue, chat: s.chat };
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));

@@ -25,8 +25,7 @@
     const sentences = plain(clean).replace(/(?:[A-Za-z]:)?(?:[\\/][\w .-]+)+[\\/]([\w.-]+)/g, '$1').split(/(?<=[.!?:])\s+|\n/).map((x) => x.replace(/[.!?:]+$/, '').replace(/^(please|ok|okay|hey|so|now|also)[, ]+/i, '').trim());
     let t = sentences.find((x) => x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 2) || '';
     if (!t) return 'Your prompt';
-    const words = t.split(' ').slice(0, 7).join(' ');
-    return words.length < t.length ? words + '…' : words;
+    return t.length > 140 ? t.slice(0, 138).replace(/\s+\S*$/, '') + '…' : t;
   }
   function summarize(reply, title) {
     const hq = /^\s*\**HQ:\**\s*(.+)$/im.exec(reply || '');
@@ -50,7 +49,7 @@
     if (finished && !steps.length) steps.push({ t: 'Done', s: 'done' });
     let cur = steps.findIndex((x) => x.s === 'doing' || x.s === 'blocked');
     if (cur < 0) cur = steps.filter((x) => x.s === 'done').length;
-    const title = s.title || shortTitle(s.prompt) || 'No job yet';
+    const title = s.jobLine || s.title || shortTitle(s.prompt) || 'No job yet';
     const fileMatch = /(Editing|Writing|Reading)\s+(\S+)/.exec(s.doing || '');
     const timeline = (s.actions || []).map((a, i) => { const [k, pose] = actKind(a.text); return { k, label: a.text, pose, id: id + '-' + (s.actions.length - i), at: a.t }; });
     const nowStep = steps.find((x) => x.s === 'doing' || x.s === 'blocked');
