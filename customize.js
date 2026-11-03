@@ -47,6 +47,11 @@ module.exports = function customize(tpl) {
     '<span style="position:relative; width:7px; height:7px; border-radius:50%; background:{{ c.color }};"><span style="position:absolute; inset:0; border-radius:50%; background:{{ c.color }}; animation:{{ c.ping }};"></span></span>{{ c.label }}',
     '<span style="position:relative; width:{{ c.dotSize }}px; height:{{ c.dotSize }}px; border-radius:50%; background:{{ c.dotBg }}; animation:{{ c.dotSpin }};"><span style="position:absolute; inset:{{ c.dotInset }}px; border-radius:50%; background:{{ c.dotHole }}; animation:{{ c.ping }};"></span></span>{{ c.label }}');
 
+  // Ari and Pulse are drawn by HQ itself (hq-live.js), so hide the design's versions.
+  swap('hide design ari panel', '<sc-if value="{{ ariOn }}" hint-placeholder-val="{{ false }}">', '<sc-if value="{{ false && ariOn }}" hint-placeholder-val="{{ false }}">');
+  swap('pulse subtitle', 'Usage, builds and code across your windows', 'Merges, builds and your terminal');
+  swap('hide design pulse grid', '<div style="flex:1; min-height:0; display:grid; grid-template-columns:0.9fr 1fr 1.1fr;', '<div style="visibility:hidden; flex:1; min-height:0; display:grid; grid-template-columns:0.9fr 1fr 1.1fr;');
+
   return { tpl, skipped };
 };
 

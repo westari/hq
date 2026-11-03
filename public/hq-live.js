@@ -510,7 +510,7 @@
       fixSamples(snap.plan);
       const u = snap.usage || {};
       c.setState({ sessions, tests, chat, jobQ, merged, events: mapEvents(snap.activity), projects: withPlan(mapProjects(snap.projects, knownProjects), snap.plan), runs: snap.runs || [], usage: u.pct || 0, resetAt: u.resetAt || Date.now() + 5 * 3600000 });
-      drawer.refresh(snap);
+      drawer.refresh(snap); ui.refresh();
     }
     function open() {
       const es = new EventSource('/stream');
@@ -838,7 +838,9 @@
         termFolder = termFolder || L.folders.find((f) => /main/i.test(f)) || L.folders[0];
         el.innerHTML = `<div class="top"><div style="flex:1"><h2>Terminal</h2><p class="why">Runs PowerShell in the folder you pick. Long ones (like npm run dev) keep running here. Stop ends them.</p></div><button class="x" aria-label="Close">\u2715</button></div>
           <div class="btns" style="margin-top:12px">${L.folders.map((f) => `<button class="b ${f === termFolder ? 'w' : 'g'}" data-f="${esc(f)}">${esc(f)}</button>`).join('')}</div>
-          <pre class="term" style="height:46vh;max-height:none;margin-top:14px;background:rgba(0,0,0,.45);font-size:12.5px"></pre>
+          <pre class="term" style="height:46vh;max-height:none;margin-top:14px;background:rgba(0,0,0,.45);font-size:12.5px">Pick a folder above, type a command below, press Enter.
+Try: git status
+</pre>
           <div class="ask" style="margin-top:10px"><span style="align-self:center;font:12.5px 'Geist Mono',monospace;opacity:.7">PS ${esc(termFolder)}&gt;</span><input placeholder="git status" style="font-family:'Geist Mono',monospace" /><button class="b w" data-a="run">Run</button><button class="b g" data-a="stop">Stop</button></div>
           ${L.jobs.length ? `<div class="btns">${L.jobs.slice(-6).reverse().map((j) => `<button class="b g" data-j="${j.id}" style="height:32px;font-size:12px">${j.done ? '' : '\u25cf '}${esc(j.cmd.slice(0, 28))}</button>`).join('')}</div>` : ''}`;
         el.querySelector('.x').onclick = () => { clearInterval(termTimer); close(); };
@@ -870,6 +872,133 @@
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     window.addEventListener('hq-terminal', () => card.terminal());
+
+    // ── Ari and Pulse, drawn by HQ (cleaner than the design's versions) ──
+    const ui = (() => {
+      const css = document.createElement('style');
+      css.textContent = `
+        #hqp{position:fixed;left:138px;right:138px;bottom:54px;height:416px;z-index:7;display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:16px;color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;opacity:0;pointer-events:none;transition:opacity .5s}
+        #hqp.on{opacity:1;pointer-events:auto}
+        #hqp .col{border-radius:24px;padding:18px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+        #hqp h4{margin:0;font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+        #hqp .row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08)}
+        #hqp .row .t{flex:1;min-width:0}
+        #hqp .row .s{font-size:12.5px;opacity:.7}
+        #hqp .ok{color:#8fe3b4}#hqp .warn{color:#ffd27a}#hqp .bad{color:#ff9a8a}
+        #hqp button{height:36px;padding:0 14px;border:0;border-radius:12px;cursor:pointer;font:500 13.5px Geist,-apple-system,sans-serif;background:#fff;color:#1d2128}
+        #hqp button.g{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+        #hqp pre{flex:1;margin:0;min-height:0;overflow:auto;white-space:pre-wrap;font:12px/1.45 'Geist Mono',monospace;background:rgba(0,0,0,.35);border-radius:14px;padding:10px;scrollbar-width:none}
+        #hqp input{flex:1;min-width:0;height:36px;border:0;border-radius:12px;padding:0 12px;background:rgba(255,255,255,.14);color:#fff;font:13px 'Geist Mono',monospace;outline:none}
+        #hqp .chips{display:flex;gap:6px;flex-wrap:wrap}#hqp .chips button{height:28px;padding:0 10px;font-size:12px}
+        #hqp .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden}#hqp .bar i{display:block;height:100%;background:#fff;border-radius:4px}
+        #hqa .goal{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08);cursor:pointer}
+        #hqa .box{width:20px;height:20px;flex:none;border-radius:7px;border:1.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:13px}
+        #hqa .goal.d{opacity:.45}#hqa .goal.d .box{background:#fff;color:#1d2128;border:0}
+        #hqa .item{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer}
+        #hqa .item .s{font-size:12.5px;opacity:.7}
+        #hqa .ms{font-family:'Material Symbols Rounded';font-size:20px;line-height:1}`;
+      document.head.appendChild(css);
+      const P = document.createElement('div'); P.id = 'hqp'; document.body.appendChild(P);
+      const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+      const ago = (t) => { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+      const H = () => ({ 'Content-Type': 'application/json', 'x-hq-token': window.__hqToken || '' });
+      let tFolder = 'Main folder', tJob = null, tLen = 0, tTimer = null, built = false;
+      function buildPulse() {
+        P.innerHTML = `<div class="col" id="hqp-merge"></div>
+          <div class="col"><h4><span class="ms" style="font-family:'Material Symbols Rounded'">terminal</span>Terminal</h4>
+            <div class="chips" id="hqp-folders"></div><pre id="hqp-out">Pick a folder, type a command, press Enter.\nTry: git status\n</pre>
+            <div style="display:flex;gap:8px"><input id="hqp-in" placeholder="git status" /><button id="hqp-run">Run</button><button class="g" id="hqp-stop">Stop</button></div></div>
+          <div class="col" id="hqp-builds"></div>`;
+        const inp = P.querySelector('#hqp-in'), out = P.querySelector('#hqp-out');
+        const poll = async () => { if (!tJob) return; const r = await (await fetch('/api/shell/job?id=' + tJob + '&from=' + tLen, { headers: H() })).json(); if (r.out) { out.textContent += r.out; tLen = r.len; out.scrollTop = out.scrollHeight; } if (r.done) { out.textContent += '\n[done' + (r.code ? ', exit ' + r.code : '') + ']\n'; out.scrollTop = out.scrollHeight; clearInterval(tTimer); tTimer = null; } };
+        const run = async () => { const cmd = inp.value.trim(); if (!cmd) return; inp.value = '';
+          const r = await (await fetch('/api/shell', { method: 'POST', headers: H(), body: JSON.stringify({ cmd, folder: tFolder }) })).json();
+          if (!r.id) { out.textContent += '\n' + (r.error || 'Could not run') + '\n'; return; }
+          out.textContent += '\nPS ' + tFolder + '> ' + cmd + '\n'; tJob = r.id; tLen = 0; clearInterval(tTimer); tTimer = setInterval(poll, 600); poll(); };
+        inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') run(); };
+        P.querySelector('#hqp-run').onclick = run;
+        P.querySelector('#hqp-stop').onclick = () => tJob && fetch('/api/shell/stop', { method: 'POST', headers: H(), body: JSON.stringify({ id: tJob }) });
+        P.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
+        fetch('/api/shell/list', { headers: H() }).then((r) => r.json()).then((L) => {
+          const fs = P.querySelector('#hqp-folders'); const draw = () => { fs.innerHTML = (L.folders || []).map((f) => `<button class="${f === tFolder ? '' : 'g'}" data-f="${esc(f)}">${esc(f)}</button>`).join(''); fs.querySelectorAll('button').forEach((b) => (b.onclick = () => { tFolder = b.dataset.f; draw(); inp.placeholder = 'PS ' + tFolder + '>'; })); };
+          if (!(L.folders || []).includes(tFolder)) tFolder = (L.folders || [])[0]; draw();
+        }).catch(() => {});
+        built = true;
+      }
+      function drawPulse(snap) {
+        if (!built) buildPulse();
+        const M = snap.mergeState || {}; const list = M.list || [];
+        const LA = M.lastAuto;
+        const rows = list.map((m) => `<div class="row"><div class="t">${esc(m.window)}<div class="s ${m.ahead ? 'warn' : 'ok'}">${m.ahead ? m.ahead + ' new change' + (m.ahead === 1 ? '' : 's') + ' not in your app yet' : '✓ In your app'}</div></div></div>`).join('');
+        const allIn = !M.stuck && list.every((m) => !m.ahead);
+        P.querySelector('#hqp-merge').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">merge</span>Your app</h4>
+          <div class="row" style="background:${allIn ? 'rgba(143,227,180,.14)' : 'rgba(255,210,122,.14)'}"><div class="t"><b>${M.stuck ? 'A merge is stuck' : allIn ? 'Everything is in your app' : 'New work to merge'}</b><div class="s">${M.stuck ? (M.conflicts && M.conflicts.length ? 'Conflict in ' + esc(M.conflicts.join(', ')) : 'Click Merge now to finish it') : allIn ? 'Your phone runs the newest code (restart npm run dev after merges)' : 'Auto-merge does this within a minute'}</div></div></div>
+          ${rows}
+          ${LA ? `<div class="s ${LA.ok ? '' : 'bad'}" style="font-size:12.5px">${LA.ok ? 'Last auto-merge ' + ago(LA.at) + ': ' + esc(LA.text) : 'Auto-merge stopped ' + ago(LA.at) + ': ' + esc(LA.text)}</div>` : ''}
+          <div style="margin-top:auto"><button id="hqp-mergebtn" ${allIn ? 'class="g"' : ''}>Merge now</button></div>`;
+        P.querySelector('#hqp-mergebtn').onclick = mergeNow;
+        const runs = snap.runs || []; const r0 = runs[0]; const u = snap.usage || {};
+        P.querySelector('#hqp-builds').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">deployed_code</span>iOS builds</h4>
+          ${r0 ? `<div class="row"><div class="t">${esc(r0.wf)} · ${esc(r0.br)}<div class="s ${r0.st === 'failed' ? 'bad' : r0.st === 'done' ? 'ok' : 'warn'}">${r0.st === 'running' ? 'Building… ' + ago(r0.at) : r0.st === 'done' ? '✓ Built ' + ago(r0.at) + '. Install it on your phone.' : 'Failed: ' + esc(r0.note || '')}</div></div>${r0.st === 'failed' ? '<button class="g" id="hqp-why">Why</button>' : ''}</div>` : '<div class="row"><div class="t s">No builds yet</div></div>'}
+          ${runs.slice(1, 3).map((r) => `<div class="s" style="font-size:12.5px">${r.st === 'failed' ? '✕' : r.st === 'done' ? '✓' : '●'} ${esc(r.br)} · ${ago(r.at)}</div>`).join('')}
+          <button id="hqp-build">Start a new build</button>
+          <h4 style="margin-top:6px"><span class="ms" style="font-family:'Material Symbols Rounded'">data_usage</span>Claude usage ${u.pct || 0}%</h4>
+          <div class="bar"><i style="width:${Math.min(100, u.pct || 0)}%"></i></div>
+          <div class="s" style="font-size:12.5px">${u.resetAt ? 'Resets ' + new Date(u.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'No use in the last 5 hours'}</div>`;
+        P.querySelector('#hqp-build').onclick = startBuild;
+        const why = P.querySelector('#hqp-why'); if (why) why.onclick = () => card.buildFail(r0);
+      }
+      function sync() {
+        const on = c.state.layer === 4 && !c.state.focus && !c.state.bld;
+        P.classList.toggle('on', on);
+        if (on && last && last !== drawnSnap) { drawnSnap = last; drawPulse(last); }
+        if (!on) drawnSnap = null;
+        if (c.state.focus === 'pilot' && !ariOpen) { ariOpen = true; drawAri(); }
+        else if (c.state.focus === 'pilot' && !document.getElementById('hqc-bg').classList.contains('open')) { ariOpen = false; c.setState({ focus: null }); }
+        if (c.state.focus !== 'pilot') ariOpen = false;
+      }
+      let ariOpen = false, drawnSnap = null;
+      function drawAri() {
+        if (!last) return; const plan = last.plan || {}; const el = document.getElementById('hqc'), bg = document.getElementById('hqc-bg');
+        const today = plan.todayTasks || []; const dn = today.filter((t) => t.done).length;
+        const M = last.mergeState || {}; const behind = (M.list || []).filter((m) => m.ahead > 0);
+        const tests = c.state.tests || []; const failed = (last.runs || []).filter((r) => r.st === 'failed').slice(0, 1);
+        const needs = (c.state.sessions || []).filter((s) => s.status === 'needs');
+        const doNow = [
+          ...(M.stuck || behind.length ? [{ i: 'merge', t: M.stuck ? 'Finish the stuck merge' : 'Merge ' + behind.map((m) => m.window).join(' and '), s: 'Your phone runs old code until you do', go: mergeNow }] : []),
+          ...needs.map((s) => ({ i: 'front_hand', t: s.name + ' needs you', s: 'Answer it in VS Code', go: () => {} })),
+          ...tests.map((t) => ({ i: 'phone_iphone', t: 'Test ' + t.from + '’s work', s: t.checks.length + ' things to check on your phone', go: () => { bg.classList.remove('open'); c.setState({ focus: null }); c.openBuilding('lab'); } })),
+          ...failed.map((r) => ({ i: 'error', t: 'A build failed', s: r.note || r.br, go: () => card.buildFail(r) })),
+        ];
+        const next = (plan.next || []).slice(0, 3);
+        el.innerHTML = `<div id="hqa"><div class="top"><div style="flex:1"><h2>${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, Ari</h2>
+            <div class="tags">${plan.launch ? `<span class="tag">${plan.daysToLaunch} days to launch</span><span class="tag">${plan.behind ? 'Behind: days got heavier' : 'On track'}</span>` : ''}</div></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="grid">
+            <div class="col"><h3>Today · ${dn} of ${today.length} done</h3>
+              <div class="bar" style="height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin-bottom:10px"><i style="display:block;height:100%;width:${today.length ? Math.round(dn / today.length * 100) : 0}%;background:#fff;border-radius:3px"></i></div>
+              <div class="steps">${today.map((t) => `<div class="goal ${t.done ? 'd' : ''}" data-g="${esc(t.id)}"><span class="box">${t.done ? '✓' : ''}</span><span style="flex:1">${esc(t.t)}</span><span class="ms" data-open="${esc(t.id)}" style="opacity:.6">chevron_right</span></div>`).join('') || '<div class="panel">Nothing planned today.</div>'}</div>
+              <div class="ask" style="margin-top:10px"><input placeholder="Add a goal for today" /></div>
+            </div>
+            <div class="col side">
+              <h3>Do now</h3>
+              ${doNow.length ? doNow.map((d, i) => `<div class="item" data-d="${i}"><span class="ms">${d.i}</span><div style="flex:1"><div>${esc(d.t)}</div><div class="s">${esc(d.s)}</div></div></div>`).join('') : '<div class="panel">✓ Nothing needs you right now</div>'}
+              <h3 style="margin-top:10px">Next up</h3>
+              ${next.map((t) => `<div class="item" data-n="${esc(t.id)}"><span class="ms">${t.who === 'ai' ? 'smart_toy' : t.who === 'dad' ? 'escalator_warning' : 'person'}</span><div style="flex:1"><div>${esc(t.t)}</div><div class="s">${t.who === 'dad' ? 'Needs Dad' : t.who === 'ai' ? 'AI job' : ''}</div></div></div>`).join('') || '<div class="panel">Nothing yet</div>'}
+            </div>
+          </div></div>`;
+        const closeAri = () => { bg.classList.remove('open'); c.setState({ focus: null }); };
+        el.querySelector('.x').onclick = closeAri;
+        bg.onclick = (e) => { if (e.target === bg && c.state.focus === 'pilot') c.setState({ focus: null }); };
+        const all = plan.tasks || [];
+        el.querySelectorAll('[data-g]').forEach((g) => (g.onclick = async (e) => { const id = g.dataset.g; if (e.target.dataset.open) { card.open(all.find((x) => x.id === id) || today.find((x) => x.id === id)); return; } const t = today.find((x) => x.id === id); await post('/api/plan/done', { id, done: !t.done }); setTimeout(drawAri, 400); }));
+        el.querySelectorAll('[data-d]').forEach((d) => (d.onclick = () => doNow[Number(d.dataset.d)].go()));
+        el.querySelectorAll('[data-n]').forEach((n) => (n.onclick = () => card.open(all.find((x) => x.id === n.dataset.n))));
+        const inp = el.querySelector('#hqa input'); inp.onkeydown = async (e) => { e.stopPropagation(); if (e.key === 'Enter' && inp.value.trim()) { await post('/api/plan/add', { text: inp.value.trim() }); inp.value = ''; setTimeout(drawAri, 400); } };
+        bg.classList.add('open');
+      }
+      setInterval(sync, 300);
+      return { refresh() {} };
+    })();
     open();
   }
 
