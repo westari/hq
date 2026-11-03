@@ -277,19 +277,30 @@
       // Content building (was the Ideas building): your slideshow bot.
       if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Ideas' ? { ...t, short: 'Content', name: 'Content' } : t));
       if (v.bp && v.bp.name === 'Idea Vault') {
-        const C = (last && last.content) || { shows: [] };
-        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '' };
+        const C = (last && last.content) || { shows: [], templates: [], usage: {} };
+        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '', hasBtn: false, btn: '', go: () => {} };
         const items = [];
         if (!C.hasKey) items.push({ ...base, t: 'Add your Gemini key', sub: 'Free key from aistudio.google.com. It stays on this PC, never on GitHub.', hasBtn: true, btn: 'Add key', icon: 'key', go: () => card.keyBox() });
-        else items.push({ ...base, t: C.busy ? 'Making slideshows…' : 'Make new slideshows', sub: C.busy ? 'Gemini is writing and making the pictures. A few minutes.' : (C.error ? C.error : 'Gemini writes 3 and makes every picture. Free.'), hasBtn: !C.busy, btn: 'Make 3', icon: 'auto_awesome',
-          go: async () => { const r = await post('/api/content/make', { count: 3 }); if (r.error === 'nokey') card.keyBox(); else if (r.error) c.toast(r.error, 'error'); else c.toast('Making 3 slideshows. HQ tells you when they’re ready.', 'auto_awesome'); } });
-        for (const sh of C.shows) {
-          const n = sh.slides.length, pics = sh.slides.filter((x) => x.img).length, done = sh.slides.filter((x) => x.final).length;
-          const st = sh.status === 'ready' ? 'Ready · ' + n + ' slides' : sh.status === 'limit' ? 'Paused: out of free images today' : sh.status === 'making' ? 'Making pictures ' + pics + ' of ' + n : 'Adding text ' + done + ' of ' + n;
-          items.push({ ...base, t: sh.title, sub: st, hasBtn: sh.status === 'ready' || pics > 0, btn: 'View', icon: 'slideshow', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.slides(sh) });
+        else {
+          items.push({ ...base, t: 'New slideshow', sub: 'Pick a template, say what it’s about, check the slides, then make the pictures.', hasBtn: true, btn: 'Create', icon: 'add', go: () => card.newShow() });
+          const u = C.usage || {};
+          items.push({ ...base, t: 'Gemini today: ' + (u.images || 0) + ' pictures, ' + (u.writes || 0) + ' written', sub: u.limitHit ? 'You hit today’s free limit. It resets tomorrow. Nothing is charged.' : 'Free. Google doesn’t share the exact daily limit, so HQ counts and stops when you hit it.', hasBtn: true, btn: 'Templates', icon: 'tune', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: () => card.templateEditor() });
+          if (C.error) items.push({ ...base, t: 'Last problem', sub: C.error });
+        }
+        for (const sh of C.shows || []) {
+          const n = sh.slides.length, pics = sh.slides.filter((x) => x.img).length;
+          const map = {
+            draft: ['Check the slides before pictures are made', 'Check', () => card.draftEditor(sh)],
+            making: ['Making pictures ' + pics + ' of ' + n, 'View', () => card.slides(sh)],
+            text: ['Adding the text…', 'View', () => card.slides(sh)],
+            partial: ['Some pictures failed. ' + pics + ' of ' + n, 'Retry', () => post('/api/content/pictures', { id: sh.id })],
+            limit: ['Paused: free limit hit. ' + pics + ' of ' + n + ' done', 'Continue', () => post('/api/content/pictures', { id: sh.id })],
+            ready: ['Ready to post · ' + n + ' slides', 'View', () => card.slides(sh)],
+          }[sh.status] || ['', 'View', () => card.slides(sh)];
+          items.push({ ...base, t: sh.title, sub: map[0], hasBtn: true, btn: map[1], icon: 'slideshow', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: map[2] });
         }
         v.bp.name = 'Content'; v.bp.icon = 'slideshow';
-        v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String(C.shows.filter((x) => x.status === 'ready').length), hl: 'ready to post', items, empty: false };
+        v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String((C.shows || []).filter((x) => x.status === 'ready').length), hl: 'ready to post', items, empty: false };
       }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
       if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
@@ -360,7 +371,7 @@
           g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 24;
           const words = String(x.text || '').split(/\s+/); const lines = []; let line = '';
           for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > 900 && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line);
-          const lh = size * 1.18, y0 = H * 0.42 - ((lines.length - 1) * lh) / 2; lines.forEach((l, j) => g.fillText(l, W / 2, y0 + j * lh));
+          const lh = size * 1.18, at = sh.text === 'top' ? 0.2 : sh.text === 'bottom' ? 0.74 : 0.42, y0 = H * at - ((lines.length - 1) * lh) / 2; lines.forEach((l, j) => g.fillText(l, W / 2, y0 + j * lh));
           try { await post('/api/content/final', { id: sh.id, i, png: cv.toDataURL('image/png') }); } catch (e) { drawing.delete(k); }
         };
         im.onerror = () => drawing.delete(k);
@@ -672,6 +683,71 @@
         const sv = async () => { const k = inp.value.trim(); if (!k) return; await post('/api/content/key', { key: k }); close(); c.toast('Gemini key saved', 'key'); };
         el.querySelector('[data-a=save]').onclick = sv; bg.classList.add('open'); setTimeout(() => inp.focus(), 50);
       }
+      function newShow() {
+        const C = (last && last.content) || { templates: [] }; let tid = (C.templates[0] || {}).id;
+        const draw = () => {
+          const T = C.templates.find((x) => x.id === tid) || {};
+          el.innerHTML = `<div class="top"><div style="flex:1"><h2>New slideshow</h2><p class="why">Gemini writes the slides first. You check them. Pictures are only made after you say go.</p></div><button class="x" aria-label="Close">✕</button></div>
+            <h3 style="margin-top:18px">What is it about?</h3>
+            <div class="ask"><input placeholder="3 squat mistakes beginners make" /></div>
+            <h3 style="margin-top:18px">Template</h3>
+            <div class="btns" style="margin-top:0">${C.templates.map((x) => `<button class="b ${x.id === tid ? 'w' : 'g'}" data-t="${esc(x.id)}">${esc(x.name)} · ${x.slides}</button>`).join('')}<button class="b g" data-a="tpl">Edit templates</button></div>
+            <div class="panel" style="margin-top:12px;font-size:13px"><b>How it writes:</b> ${esc(T.write || '')}<br><b>Picture look:</b> ${esc(T.look || '')}<br><b>Text:</b> ${esc(T.text || 'middle')} of the picture</div>
+            <div class="btns"><button class="b w" data-a="go">Write the slides</button></div><div class="note">Writing uses 1 free Gemini request. No pictures yet.</div>`;
+          el.querySelector('.x').onclick = close;
+          el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => { const keep = el.querySelector('input').value; tid = b.dataset.t; draw(); el.querySelector('input').value = keep; }));
+          el.querySelector('[data-a=tpl]').onclick = () => templateEditor();
+          const inp = el.querySelector('input'); inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') go(); };
+          const go = async () => {
+            const topic = inp.value.trim(); if (!topic) { inp.focus(); return; }
+            const b = el.querySelector('[data-a=go]'); b.textContent = 'Writing…'; b.disabled = true;
+            const r = await post('/api/content/draft', { topic, template: tid });
+            if (r.show) draftEditor(r.show); else { b.disabled = false; b.textContent = 'Write the slides'; el.querySelector('.note').textContent = r.error === 'nokey' ? 'Add your Gemini key first.' : r.error; }
+          };
+          el.querySelector('[data-a=go]').onclick = go;
+          setTimeout(() => inp.focus(), 50);
+        };
+        draw(); bg.classList.add('open');
+      }
+      function draftEditor(sh) {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(sh.title)}</h2><p class="why">Change any slide. "Picture" is what the photo shows. Then make the pictures.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="steps" style="margin-top:16px">${sh.slides.map((x, i) => `<div class="step" style="cursor:default;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:center"><span class="n">${i + 1}</span><b>Slide text</b></div>
+            <textarea data-i="${i}" data-f="text" rows="2" style="resize:none;border:0;border-radius:12px;padding:10px;background:rgba(255,255,255,.14);color:#fff;font:15px/1.4 Geist,-apple-system,sans-serif;outline:none">${esc(x.text)}</textarea>
+            <div style="font-size:12px;opacity:.65">Picture</div>
+            <textarea data-i="${i}" data-f="scene" rows="1" style="resize:none;border:0;border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.08);color:#fff;font:13px/1.4 Geist,-apple-system,sans-serif;outline:none">${esc(x.scene)}</textarea></div>`).join('')}</div>
+          <div class="btns"><button class="b w" data-a="pics">Make ${sh.slides.length} pictures</button><button class="b g" data-a="del">Delete</button></div>
+          <div class="note">Uses ${sh.slides.length} free Gemini pictures. HQ tells you out loud when it’s ready.</div>`;
+        el.querySelector('.x').onclick = close;
+        el.querySelectorAll('textarea').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
+        el.querySelector('[data-a=pics]').onclick = async () => {
+          const slides = sh.slides.map((x, i) => ({ text: el.querySelector(`[data-i="${i}"][data-f=text]`).value, scene: el.querySelector(`[data-i="${i}"][data-f=scene]`).value }));
+          const r = await post('/api/content/pictures', { id: sh.id, slides });
+          if (r.started) { close(); c.toast('Making the pictures. HQ tells you when it’s ready.', 'auto_awesome'); } else el.querySelector('.note').textContent = r.error || 'Could not start.';
+        };
+        el.querySelector('[data-a=del]').onclick = async () => { await post('/api/content/delete', { id: sh.id }); close(); };
+        bg.classList.add('open');
+      }
+      function templateEditor(id) {
+        const C = (last && last.content) || { templates: [] };
+        const T = C.templates.find((x) => x.id === id) || C.templates[0] || { name: 'My template', slides: 6, write: '', look: '', text: 'middle' };
+        const fld = (k, label, rows, val) => `<h3 style="margin-top:14px">${label}</h3><textarea data-k="${k}" rows="${rows}" style="width:100%;box-sizing:border-box;resize:none;border:0;border-radius:12px;padding:10px;background:rgba(255,255,255,.14);color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;outline:none">${esc(val)}</textarea>`;
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>Templates</h2><p class="why">A template is your locked format. Every slideshow made with it looks the same, only the topic changes.</p></div><button class="x" aria-label="Close">✕</button></div>
+          <div class="btns" style="margin-top:12px">${C.templates.map((x) => `<button class="b ${x.id === T.id ? 'w' : 'g'}" data-t="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="b g" data-a="new">+ New</button></div>
+          ${fld('name', 'Name', 1, T.name)}${fld('slides', 'Number of slides', 1, String(T.slides))}
+          ${fld('write', 'How Gemini writes the slides', 4, T.write)}${fld('look', 'Picture look (every picture uses this)', 3, T.look)}
+          <h3 style="margin-top:14px">Where the text goes</h3><div class="btns" style="margin-top:0">${['top', 'middle', 'bottom'].map((p) => `<button class="b ${T.text === p ? 'w' : 'g'}" data-p="${p}">${p}</button>`).join('')}</div>
+          <div class="btns"><button class="b w" data-a="save">Save template</button><button class="b g" data-a="back">Back to new slideshow</button></div>`;
+        let pos = T.text || 'middle';
+        el.querySelector('.x').onclick = close;
+        el.querySelectorAll('textarea').forEach((t) => (t.onkeydown = (e) => e.stopPropagation()));
+        el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => templateEditor(b.dataset.t)));
+        el.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { pos = b.dataset.p; el.querySelectorAll('[data-p]').forEach((x) => (x.className = 'b ' + (x.dataset.p === pos ? 'w' : 'g'))); }));
+        el.querySelector('[data-a=new]').onclick = () => { T.id = ''; el.querySelector('[data-k=name]').value = 'New template'; };
+        const val = (k) => el.querySelector(`[data-k=${k}]`).value;
+        el.querySelector('[data-a=save]').onclick = async () => { await post('/api/content/template', { id: T.id, name: val('name'), slides: val('slides'), write: val('write'), look: val('look'), text: pos }); c.toast('Template saved', 'check'); };
+        el.querySelector('[data-a=back]').onclick = () => newShow();
+        bg.classList.add('open');
+      }
       function slides(sh) {
         const src = (x) => '/content/' + sh.id + '/' + (x.final || x.img) + '?t=' + Date.now();
         const caption = sh.title + '\n\n' + sh.slides.map((x) => x.text).join('\n');
@@ -684,7 +760,7 @@
         el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
-      return { open, close, info, output, keyBox, slides };
+      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     open();

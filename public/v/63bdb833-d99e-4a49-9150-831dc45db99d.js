@@ -158,7 +158,7 @@ function buildCity(scene) {
     { key: 'lab', name: 'Test Lab', icon: 'science', gx: -5, gz: -5, h: 9, col: 0x5fc8ff },
     { key: 'dock', name: 'Shipping Dock', icon: 'local_shipping', gx: 5, gz: -5, h: 9, col: 0x4cd98a },
     { key: 'factory', name: 'Factory', icon: 'precision_manufacturing', gx: 5, gz: 5, h: 11, col: 0xffa64a },
-    { key: 'vault', name: 'Idea Vault', icon: 'lightbulb', gx: -5, gz: 5, h: 7, col: 0xff7ab8 },
+    { key: 'vault', name: 'Content', icon: 'slideshow', gx: -5, gz: 5, h: 7, col: 0xff7ab8 },
   ];
   const lmGlass = new THREE.MeshPhysicalMaterial({ color: 0xeef3f8, roughness: 0.06, metalness: 0.4, clearcoat: 1, envMapIntensity: 1.6 });
   const GREY = new THREE.Color(0x8a929c);

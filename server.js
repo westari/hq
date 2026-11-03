@@ -784,7 +784,10 @@ const server = http.createServer(async (req, res) => {
   }
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
-  if (req.method === 'POST' && url === '/api/content/make') { const b = await readBody(req); content.clearError(); const r = await content.make(Math.max(1, Math.min(5, Number(b.count) || 3)), broadcast); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/draft') { const b = await readBody(req); content.clearError(); const r = await content.draft(String(b.topic || '').slice(0, 300), b.template); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/pictures') { const b = await readBody(req); const r = await content.makePictures(b.id, b.slides, broadcast); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/content/template') { const b = await readBody(req); const t = content.saveTemplate(b); broadcast(); return json(res, 200, { template: t }); }
+  if (req.method === 'POST' && url === '/api/content/delete') { const b = await readBody(req); content.remove(b.id); broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/content/final') { const b = await readBody(req); const ok = content.saveFinal(b.id, Number(b.i), b.png); broadcast(); return json(res, 200, { ok }); }
   if (req.method === 'POST' && url === '/api/content/open') {
     const b = await readBody(req); const dir = path.join(content.DIR, path.basename(String(b.id || '')));
