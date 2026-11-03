@@ -167,6 +167,9 @@
       else if (r.error === 'nogh') c.toast('Install GitHub CLI first (see HQ README)', 'error');
       else c.toast('Build didn\u2019t start: ' + r.error, 'error');
     }
+    // Test buttons: go straight into Test Lab (open it right away, the UFO still flies there).
+    const origOpenB = c.openBuilding.bind(c);
+    c.openBuilding = (k) => { origOpenB(k); if (k === 'lab') setTimeout(() => { if (c.state.bld === 'lab') c.setState({ bldOpen: true }); }, 1200); };
     // ── Pulse: swap the design's sample numbers for real ones ──
     const origVals = c.renderVals.bind(c);
     const fmtT = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -290,6 +293,8 @@
           return { ...out, hasBtn: false, btn: '' };
         });
       }
+      if (v.nx && /^Test /.test(v.nx.title || '')) v.nx.go = () => c.openBuilding('lab');
+      if (v.fs && v.focusOn && v.fs.isTesting) v.fs.goTest = () => c.openBuilding('lab');
       if (v.fs && v.focusOn) {
         const ss = (c.state.sessions || []).find((x) => x.name === v.fs.name);
         if (ss && (ss.status === 'done' || ss.status === 'idle' || ss.status === 'testing')) {
@@ -563,7 +568,7 @@
         const keyOf = (t) => { let h = 0; t = String(t || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return 'hqcp' + h; };
         const copiedAt = (k) => { try { return Number(localStorage.getItem(k)) || 0; } catch (e) { return 0; } };
         const when = (t) => { if (!t) return ''; const d = new Date(t), now = new Date(); const day = d.toDateString() === now.toDateString() ? 'Today' : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); return day + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
-        const copyBtns = (t) => { const ps = pieces(t); return '<div class="cp">' + ps.map((x, i) => { copies.push(x); const k = keyOf(x); const was = copiedAt(k); return `<button data-cp="${copies.length - 1}" data-k="${k}">${ps.length > 1 ? 'Copy part ' + (i + 1) + ' of ' + ps.length : 'Copy'}${was ? ' \u00b7 copied ' + when(was) : ''}</button>`; }).join('') + '</div>'; };
+        const copyBtns = (t, at) => { const ps = pieces(t); if (ps.length) ps[0] = win + '\u2019s report' + (at ? ' (' + when(at) + ')' : '') + ':\n\n' + ps[0]; return '<div class="cp">' + ps.map((x, i) => { copies.push(x); const k = keyOf(x); const was = copiedAt(k); return `<button data-cp="${copies.length - 1}" data-k="${k}">${ps.length > 1 ? 'Copy part ' + (i + 1) + ' of ' + ps.length : 'Copy'}${was ? ' \u00b7 copied ' + when(was) : ''}</button>`; }).join('') + '</div>'; };
         const render = (msgs) => {
           copies.length = 0;
           // Group tool steps between messages into one quiet line.
@@ -586,10 +591,10 @@
             <div class="grid">
               <div class="col">
                 <h3>Summary</h3>
-                <div class="panel" style="font-size:15px">${raw.lastEvent && (ses.status === 'done' || ses.status === 'testing') ? `<div class="tm">Finished ${when(raw.lastEvent)}</div>` : ''}${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply) : ''}</div>
+                <div class="panel" style="font-size:15px">${raw.lastEvent && (ses.status === 'done' || ses.status === 'testing') ? `<div class="tm">Finished ${when(raw.lastEvent)}</div>` : ''}${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply, raw.lastEvent) : ''}</div>
                 ${(raw.tests || []).length ? `<h3 style="margin-top:18px">Test on your phone</h3><div class="steps">${raw.tests.map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
                 <h3 style="margin-top:18px">Conversation</h3>
-                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.work ? `<details class="wk"><summary>${x.live ? `<span class="spin"></span><span class="verb">${VERBS[Math.floor(Date.now() / 3000) % VERBS.length]}\u2026</span> ${x.n} step${x.n === 1 ? '' : 's'}${(x.work.filter((w) => w.role === 'tool').pop() || {}).text ? ' \u00b7 ' + esc((x.work.filter((w) => w.role === 'tool').pop() || {}).text) : ''}` : 'Worked: ' + x.n + ' step' + (x.n === 1 ? '' : 's')} \u203a</summary>${x.work.filter((w) => w.role === 'tool' || String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim()).map((w) => w.role === 'tool' ? `<div class="wt">› ${esc(w.text)}</div>` : `<div class="wn">${esc(String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim().slice(0, 600))}</div>`).join('')}</details>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(cleanYou(x.text).slice(0, 600)) + (cleanYou(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
+                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.work ? `<details class="wk"><summary>${x.live ? `<span class="spin"></span><span class="verb">${VERBS[Math.floor(Date.now() / 3000) % VERBS.length]}\u2026</span> ${x.n} step${x.n === 1 ? '' : 's'}${(x.work.filter((w) => w.role === 'tool').pop() || {}).text ? ' \u00b7 ' + esc((x.work.filter((w) => w.role === 'tool').pop() || {}).text) : ''}` : 'Worked: ' + x.n + ' step' + (x.n === 1 ? '' : 's')} \u203a</summary>${x.work.filter((w) => w.role === 'tool' || String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim()).map((w) => w.role === 'tool' ? `<div class="wt">› ${esc(w.text)}</div>` : `<div class="wn">${esc(String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim().slice(0, 600))}</div>`).join('')}</details>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(cleanYou(x.text).slice(0, 600)) + (cleanYou(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text, x.at)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
               </div>
               <div class="col side">
                 <div class="panel">
