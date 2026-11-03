@@ -438,6 +438,7 @@
         #hqc .ask{display:flex;gap:8px}
         #hqc .ask input{flex:1;min-width:0;height:42px;border-radius:14px;border:0;padding:0 14px;background:rgba(255,255,255,.14);color:#fff;font:14px Geist,-apple-system,sans-serif;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
         #hqc .ask input::placeholder{color:rgba(255,255,255,.55)}
+        #hqc .tm{font-size:11.5px;opacity:.6;margin-bottom:4px}
         #hqc .cp{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
         #hqc .cp button{height:28px;padding:0 10px;border:0;border-radius:9px;cursor:pointer;background:rgba(255,255,255,.16);color:#fff;font:500 12px Geist,-apple-system,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
         #hqc .note{font-size:12px;color:rgba(255,255,255,.55);margin-top:8px}`;
@@ -536,7 +537,11 @@
         // about 3,860+ characters into a "pasted text" attachment, so each piece stays normal text.
         const LIMIT = 3500; const copies = [];
         const pieces = (t) => { t = String(t || '').trim(); const out = []; while (t.length > LIMIT) { let cut = t.lastIndexOf('\n\n', LIMIT); if (cut < LIMIT * 0.5) cut = t.lastIndexOf('\n', LIMIT); if (cut < LIMIT * 0.5) cut = t.lastIndexOf(' ', LIMIT); if (cut <= 0) cut = LIMIT; out.push(t.slice(0, cut).trim()); t = t.slice(cut).trim(); } if (t) out.push(t); return out; };
-        const copyBtns = (t) => { const ps = pieces(t); return '<div class="cp">' + ps.map((x, i) => { copies.push(x); return `<button data-cp="${copies.length - 1}">${ps.length > 1 ? 'Copy part ' + (i + 1) + ' of ' + ps.length : 'Copy'}</button>`; }).join('') + '</div>'; };
+        // Remember what you already copied (so you know what you sent to Claude), per message.
+        const keyOf = (t) => { let h = 0; t = String(t || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return 'hqcp' + h; };
+        const copiedAt = (k) => { try { return Number(localStorage.getItem(k)) || 0; } catch (e) { return 0; } };
+        const when = (t) => { if (!t) return ''; const d = new Date(t), now = new Date(); const day = d.toDateString() === now.toDateString() ? 'Today' : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); return day + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+        const copyBtns = (t) => { const ps = pieces(t); return '<div class="cp">' + ps.map((x, i) => { copies.push(x); const k = keyOf(x); const was = copiedAt(k); return `<button data-cp="${copies.length - 1}" data-k="${k}">${ps.length > 1 ? 'Copy part ' + (i + 1) + ' of ' + ps.length : 'Copy'}${was ? ' \u00b7 copied ' + when(was) : ''}</button>`; }).join('') + '</div>'; };
         const render = (msgs) => {
           copies.length = 0;
           // Group tool steps between messages into one quiet line.
@@ -549,10 +554,10 @@
             <div class="grid">
               <div class="col">
                 <h3>Summary</h3>
-                <div class="panel" style="font-size:15px">${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply) : ''}</div>
+                <div class="panel" style="font-size:15px">${raw.lastEvent && (ses.status === 'done' || ses.status === 'testing') ? `<div class="tm">Finished ${when(raw.lastEvent)}</div>` : ''}${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply) : ''}</div>
                 ${(raw.tests || []).length ? `<h3 style="margin-top:18px">Test on your phone</h3><div class="steps">${raw.tests.map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
                 <h3 style="margin-top:18px">Conversation</h3>
-                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.steps ? `<div style="align-self:center;font-size:12px;color:rgba(255,255,255,.55)">• ${x.steps} step${x.steps === 1 ? '' : 's'} •</div>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
+                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.steps ? `<div style="align-self:center;font-size:12px;color:rgba(255,255,255,.55)">• ${x.steps} step${x.steps === 1 ? '' : 's'} •</div>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
               </div>
               <div class="col side">
                 <div class="panel">
@@ -570,7 +575,7 @@
           ta.onkeydown = (e) => e.stopPropagation();
           sb.onclick = async () => { const t = ta.value.trim(); if (!t) return; const id = ses.id || (/window\s+([a-z])/i.exec(win) || [])[1]; await queue(id, t); ta.value = ''; close(); };
           const mb = el.querySelector('[data-a=merge]'); if (mb) mb.onclick = async () => { mb.textContent = (await copy(m.cmd)) ? 'Copied. Paste in PowerShell.' : 'Copy failed'; };
-          el.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => { const ok = await copy(copies[Number(b.dataset.cp)]); const was = b.textContent; b.textContent = ok ? 'Copied \u2713' : 'Copy failed'; setTimeout(() => (b.textContent = was), 1500); }));
+          el.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => { const ok = await copy(copies[Number(b.dataset.cp)]); if (ok) { try { localStorage.setItem(b.dataset.k, String(Date.now())); } catch (e) {} } const base = b.textContent.split(' \u00b7 ')[0]; b.textContent = ok ? 'Copied \u2713' : 'Copy failed'; setTimeout(() => (b.textContent = base + (ok ? ' \u00b7 copied ' + when(Date.now()) : '')), 1500); }));
           const chatEl = el.querySelector('.chat'); const col = chatEl && chatEl.parentElement; if (col) col.scrollTop = col.scrollHeight;
         };
         render([]); bg.classList.add('open');
