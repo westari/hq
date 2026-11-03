@@ -11,3 +11,5 @@ voice/
 watchdog-state.json
 watchdog-log.jsonl
 watchdog-heartbeat.json
+brain.md
+feedback-log.jsonl

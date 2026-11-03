@@ -365,23 +365,24 @@
             hasChip: e.kind === 'error' || e.kind === 'trip', chipT: 'Problem', chipC: '#ff9a8a', chipA: 'none' })), empty: !acts.length };
       }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
-      if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
-        const tests = c.state.tests || [];
-        v.bp.L.title = 'Test on your phone';
-        v.bp.L.hl = tests.length === 1 ? 'window to check' : 'windows to check';
-        v.bp.L.items = (v.bp.L.items || []).map((it, k) => {
-          const t0 = tests[k]; if (!t0) return it;
-          const m = (c.state.labMarks || {})[t0.id] || {};
-          const n = t0.checks.length, pass = t0.checks.filter((_, i) => m[i] === 'pass').length, fail = t0.checks.filter((_, i) => m[i] === 'fail').length;
-          const out = { ...it, t: t0.from + '’s new work', sub: 'Tap ✓ if it works, ✕ if it’s broken · ' + (pass + fail) + ' of ' + n + ' checked' + (fail ? ' · ' + fail + ' broken' : '') };
-          if (fail) {
-            const msg = 'I tested your last job on my phone.\n' + (pass ? 'Works:\n' + t0.checks.filter((_, i) => m[i] === 'pass').map((x) => '- ' + x).join('\n') + '\n' : '') +
-              'Broken:\n' + t0.checks.filter((_, i) => m[i] === 'fail').map((x) => '- ' + x).join('\n') + '\n\nCheck my latest test logs (attached), reproduce it, fix what is broken, keep what works. Prove it, commit and push. Give me ONE short list to test.';
-            return { ...out, hasBtn: true, btn: 'Send what’s broken to ' + t0.from, icon: 'send', go: () => { queue(t0.win, msg, null, 'Fix what I found testing'); c.setState({ labMarks: { ...c.state.labMarks, [t0.id]: {} } }); } };
-          }
-          if (pass === n) return { ...out, hasBtn: true, btn: 'Everything works', icon: 'thumb_up', go: () => c.passTest(t0.id) };
-          return { ...out, hasBtn: false, btn: '' };
+      // Test Lab: what each window just did (left) + your feedback box with Talk (right, drawn by HQ).
+      if (v.bp && v.bp.name === 'Test Lab') {
+        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '', hasBtn: false, btn: '', go: () => {} };
+        const W = last.watchdog || {}; const ph = W.phone || {};
+        const wins = (c.state.sessions || []).filter((x) => /^Window [A-Z]$/.test(x.name));
+        const items = wins.map((ss) => {
+          const raw = ss._raw || {}; const working = ss.status === 'working' || ss.status === 'needs';
+          const what = raw.jobLine || raw.title || (raw.prompt ? shortTitle(raw.prompt) : '');
+          return { ...base, t: ss.name + (what ? ': ' + what : ''), sub: working ? 'Still working: ' + (raw.doing || '') : raw.status === 'limit' ? 'Paused by the Claude limit' : (ss.job && ss.job.explain) || 'No finished job yet',
+            hasChip: true, chipT: working ? 'Working' : raw.status === 'limit' ? 'Paused' : raw.lastReply ? 'Done' : 'Free', chipC: working ? '#ffcf70' : raw.lastReply ? '#8fe3b4' : 'rgba(255,255,255,.6)', chipA: 'none' };
         });
+        const lm = (W.merge || {}).lastMerge;
+        items.push({ ...base, t: ph.ready ? 'Your phone: ready to test' : 'Your phone', sub: (ph.text || 'Checking…') + (lm ? ' Last merged ' + new Date(lm.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ': ' + lm.text + '.' : ''),
+          hasChip: true, chipT: ph.ready ? 'Ready' : ph.step === 'metro' ? 'App server off' : ph.step === 'install' ? 'Install build' : 'Wait', chipC: ph.ready ? '#8fe3b4' : '#ffcf70', chipA: 'none',
+          hasBtn: ph.step === 'install' || ph.step === 'build', btn: ph.step === 'install' ? 'I installed it' : 'Start the build', icon: ph.step === 'install' ? 'install_mobile' : 'rocket_launch',
+          go: ph.step === 'install' ? () => post('/api/watchdog', { name: 'installed' }) : startBuild });
+        v.bp.L = { title: 'What changed', icon: 'science', hv: String(wins.filter((x) => (x._raw || {}).lastReply).length), hl: 'windows finished', items, empty: false };
+        v.bp.hasR = false;
       }
       if (v.nx && /^Test /.test(v.nx.title || '')) v.nx.go = () => c.openBuilding('lab');
       if (v.nx) {
@@ -491,7 +492,7 @@
     function say(text) {
       // A Windows notification too, when HQ isn't the window you're looking at.
       try { if (document.hidden || !document.hasFocus()) new Notification('HQ', { body: text, silent: true }); } catch (e) {}
-      if (c.state.sound === false) return;
+      if (c.state.sound === false || window.__hqRecording) return;
       try { c.chime(); } catch (e) {}
       playing = playing.then(() => new Promise((r) => setTimeout(r, 700))).then(() => (c.state.sound === false ? null : playVoice(text))).catch(() => {});
     }
@@ -1092,7 +1093,144 @@ Try: git status
         A.querySelectorAll('[data-n]').forEach((n) => (n.onclick = () => card.open(all.find((x) => x.id === n.dataset.n))));
       }
       let addInp = null;
+
+      // ── Test Lab: tell HQ what you found (Talk or type) → one prompt per window → send → UFO flies home ──
+      const L = document.createElement('div'); L.id = 'hqlab'; document.body.appendChild(L);
+      const lcss = document.createElement('style');
+      lcss.textContent = `
+        #hqlab{position:fixed;right:98px;top:120px;bottom:28px;width:min(440px,calc(100vw - 560px));min-width:340px;z-index:8;color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;border-radius:30px;padding:20px;box-sizing:border-box;
+          background:rgba(40,48,58,.42);backdrop-filter:blur(26px) saturate(1.4);-webkit-backdrop-filter:blur(26px) saturate(1.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 20px 60px rgba(0,0,0,.18);
+          display:flex;flex-direction:column;gap:12px;overflow:auto;scrollbar-width:none;opacity:0;pointer-events:none;transform:translateX(30px);transition:opacity .35s,transform .35s}
+        #hqlab.on{opacity:1;pointer-events:auto;transform:none}
+        #hqlab h2{margin:0;font-size:22px;font-weight:500;letter-spacing:-.02em}
+        #hqlab .s{font-size:12.5px;opacity:.72}
+        #hqlab textarea{width:100%;box-sizing:border-box;border:0;border-radius:16px;padding:12px 14px;background:rgba(255,255,255,.13);color:#fff;font:14px/1.5 Geist,-apple-system,sans-serif;outline:none;resize:none}
+        #hqlab textarea::placeholder{color:rgba(255,255,255,.55)}
+        #hqlab .main{flex:1;min-height:140px}
+        #hqlab .row{display:flex;gap:8px;align-items:center}
+        #hqlab button{height:42px;padding:0 16px;border:0;border-radius:14px;cursor:pointer;font:500 14px Geist,-apple-system,sans-serif;background:#fff;color:#1d2128;display:inline-flex;align-items:center;gap:8px}
+        #hqlab button.g{background:rgba(255,255,255,.16);color:#fff}
+        #hqlab button:disabled{opacity:.5;cursor:default}
+        #hqlab .talk.rec{background:#e5484d;color:#fff;animation:hqpulse 1.2s ease-in-out infinite}
+        @keyframes hqpulse{50%{box-shadow:0 0 0 8px rgba(229,72,77,.25)}}
+        #hqlab .ms{font-family:'Material Symbols Rounded';font-size:20px;line-height:1}
+        #hqlab .win{border-radius:18px;padding:12px;background:rgba(255,255,255,.09);display:flex;flex-direction:column;gap:8px}
+        #hqlab .win textarea{min-height:150px;font-size:12.5px;line-height:1.45;background:rgba(0,0,0,.22)}
+        #hqlab .spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:hqspin .8s linear infinite;display:inline-block;vertical-align:-2px}`;
+      document.head.appendChild(lcss);
+      let lab = { stage: 'write', busy: '', error: '', result: null, draft: '' };
+      try { lab.draft = localStorage.getItem('hq-lab-draft') || ''; } catch (e) {}
+      const saveDraft = (t) => { lab.draft = t; try { localStorage.setItem('hq-lab-draft', t); } catch (e) {} };
+      // Recording: raw mic sound → 16 kHz mono WAV → Whisper on your PC → words.
+      const rec = { on: false };
+      async function recStart() {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const ctx = new AudioContext(); const src = ctx.createMediaStreamSource(stream);
+        const proc = ctx.createScriptProcessor(4096, 1, 1); const bufs = [];
+        proc.onaudioprocess = (e) => bufs.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+        src.connect(proc); proc.connect(ctx.destination);
+        Object.assign(rec, { on: true, stream, ctx, src, proc, bufs, rate: ctx.sampleRate, started: Date.now() });
+        window.__hqRecording = true;
+        rec.timer = setTimeout(() => rec.on && recStop(), 5 * 60 * 1000); // 5 minutes max
+      }
+      function toWav(bufs, rate) {
+        let n = 0; for (const b of bufs) n += b.length;
+        const all = new Float32Array(n); let o = 0; for (const b of bufs) { all.set(b, o); o += b.length; }
+        const ratio = rate / 16000; const len = Math.floor(n / ratio); const pcm = new Int16Array(len);
+        for (let i = 0; i < len; i++) { // average the samples that fall into each 16 kHz step
+          const a = Math.floor(i * ratio), z = Math.min(n, Math.floor((i + 1) * ratio)); let sum = 0; for (let j = a; j < z; j++) sum += all[j];
+          const v = Math.max(-1, Math.min(1, sum / Math.max(1, z - a))); pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+        }
+        const buf = new ArrayBuffer(44 + pcm.length * 2); const d = new DataView(buf);
+        const str = (p, t) => { for (let i = 0; i < t.length; i++) d.setUint8(p + i, t.charCodeAt(i)); };
+        str(0, 'RIFF'); d.setUint32(4, 36 + pcm.length * 2, true); str(8, 'WAVE'); str(12, 'fmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
+        d.setUint32(24, 16000, true); d.setUint32(28, 32000, true); d.setUint16(32, 2, true); d.setUint16(34, 16, true); str(36, 'data'); d.setUint32(40, pcm.length * 2, true);
+        new Int16Array(buf, 44).set(pcm); return new Blob([buf], { type: 'audio/wav' });
+      }
+      window.__hqToWav = toWav; // (for tests)
+      async function recStop() {
+        clearTimeout(rec.timer); rec.on = false; window.__hqRecording = false;
+        try { rec.src.disconnect(); rec.proc.disconnect(); } catch (e) {}
+        rec.stream.getTracks().forEach((t) => t.stop()); rec.ctx.close().catch(() => {});
+        if (Date.now() - rec.started < 600) { lab.busy = ''; drawLab(); return; }
+        lab.busy = 'Writing down what you said…'; lab.error = ''; drawLab();
+        try {
+          const r = await fetch('/api/listen', { method: 'POST', headers: { 'Content-Type': 'audio/wav', 'x-hq-token': window.__hqToken || '' }, body: toWav(rec.bufs, rec.rate) });
+          const j = await r.json();
+          if (j.busy) lab.error = j.busy + '. Try again in a minute (your recording is safe to redo).';
+          else if (j.error) lab.error = j.error;
+          else if (!j.text) lab.error = 'I didn’t hear anything. Check your microphone and try again.';
+          else saveDraft((lab.draft ? lab.draft.replace(/\s*$/, '') + ' ' : '') + j.text);
+        } catch (e) { lab.error = 'The Talk button had a problem: ' + e.message; }
+        lab.busy = ''; drawLab();
+      }
+      async function talk() {
+        if (rec.on) return recStop();
+        lab.error = '';
+        try { await recStart(); drawLab(); } catch (e) { lab.error = 'HQ can’t use your microphone: ' + (e.message || e.name) + '. Check Windows Settings → Privacy → Microphone.'; drawLab(); }
+      }
+      async function split() {
+        const ta = L.querySelector('.main'); if (ta) saveDraft(ta.value);
+        if (!lab.draft.trim()) { lab.error = 'Press Talk and say what you found first.'; return drawLab(); }
+        lab.busy = 'Claude is turning that into prompts for Window A and B… (about a minute)'; lab.error = ''; drawLab();
+        const r = await post('/api/feedback', { text: lab.draft });
+        lab.busy = '';
+        if (r.error) lab.error = r.error; else { lab.result = r; lab.stage = 'review'; }
+        drawLab();
+      }
+      async function sendAll() {
+        const pick = (k) => { const t = L.querySelector('[data-p=' + k + ']'); return lab.result[k] && t && t.value.trim() ? { title: lab.result[k].title, prompt: t.value } : null; };
+        const body = { A: pick('A'), B: pick('B') };
+        if (!body.A && !body.B) { lab.error = 'Both prompts are empty.'; return drawLab(); }
+        lab.busy = 'Sending…'; drawLab();
+        const r = await post('/api/feedback/send', body);
+        const res = Object.values(r.sent || {});
+        if (!res.length || res.every((v) => v !== 'started' && v !== 'queued')) { lab.busy = ''; lab.error = 'Couldn\u2019t send: ' + (res.join(' ') || r.error || 'unknown problem') + ' Your prompts are still here.'; return drawLab(true); }
+        const said = Object.entries(r.sent || {}).map(([k, v]) => 'Window ' + k + (v === 'started' ? ' started' : v === 'queued' ? ' will start when it’s free' : ': ' + v)).join(', ');
+        c.toast('Sent. ' + said + '.', 'send');
+        lab = { stage: 'write', busy: '', error: '', result: null, draft: '' }; saveDraft('');
+        setTimeout(() => c.closeBuilding(), 600); // the UFO flies home
+      }
+      let labKey = '';
+      function drawLab(force) {
+        const k = JSON.stringify([lab.stage, lab.busy, lab.error, !!lab.result, rec.on]);
+        if (!force && k === labKey) return; labKey = k;
+        if (lab.stage === 'review' && lab.result) {
+          const R2 = lab.result;
+          L.innerHTML = `<h2>Check the prompts</h2><div class="s">HQ heard: ${esc(R2.heard)}</div>
+            ${['A', 'B'].filter((x) => R2[x]).map((x) => `<div class="win"><b>Window ${x} · ${esc(R2[x].title)}</b><textarea data-p="${x}">${esc(R2[x].prompt)}</textarea></div>`).join('')}
+            ${['A', 'B'].filter((x) => !R2[x]).map((x) => `<div class="s">Window ${x}: nothing to fix from this.</div>`).join('')}
+            ${(R2.unsure || []).length ? `<div class="win"><b>Not sure about</b>${R2.unsure.map((u) => `<div class="s">• ${esc(u)}</div>`).join('')}<div class="s">Fix the prompt above if HQ got it wrong.</div></div>` : ''}
+            ${lab.error ? `<div class="s" style="color:#ffb4a6;opacity:1">${esc(lab.error)}</div>` : ''}
+            <div class="row"><button data-a="send" ${lab.busy ? 'disabled' : ''}><span class="ms">send</span>${lab.busy ? esc(lab.busy) : 'Send to the windows'}</button><button class="g" data-a="back">Back</button></div>`;
+          L.querySelector('[data-a=send]').onclick = sendAll;
+          L.querySelector('[data-a=back]').onclick = () => { lab.stage = 'write'; drawLab(true); };
+          return;
+        }
+        L.innerHTML = `<h2>What did you find?</h2>
+          <div class="s">Test the app, then press Talk and say everything: what’s broken, what looks wrong, what you want changed. HQ splits it into prompts for Window A and B and adds your test logs.</div>
+          <textarea class="main" placeholder="Press Talk, or type here…">${esc(lab.draft)}</textarea>
+          ${lab.busy ? `<div class="s" style="opacity:1"><span class="spin"></span> ${esc(lab.busy)}</div>` : ''}
+          ${lab.error ? `<div class="s" style="color:#ffb4a6;opacity:1">${esc(lab.error)}</div>` : ''}
+          <div class="row"><button class="talk ${rec.on ? 'rec' : 'g'}" data-a="talk" ${lab.busy ? 'disabled' : ''}><span class="ms">${rec.on ? 'stop' : 'mic'}</span>${rec.on ? 'Stop' : 'Talk'}</button>
+            <button data-a="split" ${lab.busy || rec.on ? 'disabled' : ''} style="flex:1;justify-content:center"><span class="ms">auto_awesome</span>Make the prompts</button></div>
+          <div class="s">${rec.on ? 'Listening… press Stop when you’re done.' : 'Uses a little of your Claude limit (one short Sonnet message). Talking is free and stays on your PC.'}</div>`;
+        const ta = L.querySelector('.main');
+        ta.oninput = () => saveDraft(ta.value);
+        ta.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) split(); };
+        L.querySelector('[data-a=talk]').onclick = talk;
+        L.querySelector('[data-a=split]').onclick = split;
+      }
+      L.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
+      L.addEventListener('keydown', (e) => e.stopPropagation());
+      function syncLab() {
+        const on = c.state.bld === 'lab' && c.state.bldOpen && !c.state.focus;
+        if (on && !L.classList.contains('on')) { drawLab(true); L.classList.add('on'); }
+        if (!on && L.classList.contains('on')) { L.classList.remove('on'); if (rec.on) recStop(); }
+      }
+
       function sync() {
+        try { syncLab(); } catch (e) { console.error('HQ Test Lab:', e); }
         const on = c.state.layer === 4 && !c.state.focus && !c.state.bld;
         P.classList.toggle('on', on);
         if (on && last && last !== drawnSnap) { drawnSnap = last; drawPulse(last); }

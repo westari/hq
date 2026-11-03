@@ -68,6 +68,19 @@ gh auth login
 
 Then Factory > Start build (or Pulse > New build) starts your iOS build.
 
+## Claude inside HQ (✦ button or Ctrl+J)
+
+Opens claude.ai on the right side of HQ: your same chats and the ATHLT project. Sign in once with **Continue with email** (Google sign-in is blocked inside apps by Google). The microphone button works there too. It uses your normal Claude plan, nothing extra. HQ never reads what's in it.
+
+## Test Lab (talk, then send)
+
+1. Test the app on your phone.
+2. In Test Lab press **Talk** and say everything you found. (Whisper turns it into words on your PC: free, offline. First use downloads it, about 65 MB.)
+3. Press **Make the prompts**. Claude (Sonnet, one short message from your plan) splits it into a Window A prompt and a Window B prompt, using what each window built and your test log.
+4. Check them, fix anything, press **Send to the windows**. The UFO flies home.
+
+HQ's rules for Claude live in `brain.md` (made from `brain.default.md`; change it any time).
+
 ## The Watchdog (the shield tower)
 
 Plain code on your PC. No AI, no API key, no money. Every 20 seconds it checks everything and fixes what it safely can:

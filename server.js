@@ -20,6 +20,7 @@ const content = require('./content.js');
 const R = require('./watchdog-rules.js');
 const { createWatchdog } = require('./watchdog.js');
 const voice = require('./voice.js');
+const listen = require('./listen.js');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 function loadConfig() {
@@ -922,6 +923,9 @@ function stopShell(id) {
 
 // ─── HTTP ───────────────────────────────────────────────────────────────────
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.jpg': 'image/jpeg' };
+function readRaw(req, max) {
+  return new Promise((resolve) => { const parts = []; let n = 0; req.on('data', (c) => { n += c.length; if (n > max) { req.destroy(); return resolve(null); } parts.push(c); }); req.on('end', () => resolve(Buffer.concat(parts))); req.on('error', () => resolve(null)); });
+}
 function readBody(req) {
   return new Promise((resolve) => { let b = ''; req.on('data', (c) => { b += c; if (b.length > 2e6) req.destroy(); }); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
 }
@@ -993,6 +997,16 @@ const server = http.createServer(async (req, res) => {
   }
   // Ask a question about a task. Runs Claude Code in read-only "plan" mode in your main
   // app folder (it can read your code but can't change anything). Uses your Claude usage.
+  // Talk button: a short recording (16 kHz WAV) → words. Only from the HQ window on this PC.
+  if (req.method === 'POST' && url === '/api/listen') {
+    if (!isLocal(req) || req.headers['x-hq-token'] !== SHELL_TOKEN) return json(res, 403, { error: 'Only from the HQ window on this PC.' });
+    const wav = await readRaw(req, 20 * 1024 * 1024); if (!wav) return json(res, 400, { error: 'That recording was too long. Keep it under 5 minutes.' });
+    const r = await listen.transcribe(wav);
+    return json(res, r.busy ? 202 : 200, r);
+  }
+  if (url === '/api/listen/status') return json(res, 200, listen.status());
+  if (req.method === 'POST' && url === '/api/feedback') { const b = await readBody(req); const t = String(b.text || '').trim().slice(0, 8000); if (!t) return json(res, 400, { error: 'Say or type what you found first.' }); return json(res, 200, await splitFeedback(t)); }
+  if (req.method === 'POST' && url === '/api/feedback/send') { const b = await readBody(req); return json(res, 200, { sent: sendFeedback(b) }); }
   if (req.method === 'POST' && url === '/api/replan') { const b = await readBody(req); return json(res, 200, replan(String(b.note || '').slice(0, 1000))); }
   if (req.method === 'POST' && url === '/api/ask') {
     const b = await readBody(req);
@@ -1081,6 +1095,92 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.on('error', (e) => { if (e.code === 'EADDRINUSE') console.log('[HQ] Already running on port ' + PORT + '. Using that one.'); else console.error('[HQ]', e.message); });
+// ─── HQ brain + Test Lab: your spoken feedback becomes one prompt per window ─
+const BRAIN = path.join(__dirname, 'brain.md');
+function brain() {
+  try { if (!fs.existsSync(BRAIN)) fs.copyFileSync(path.join(__dirname, 'brain.default.md'), BRAIN); } catch {}
+  try { return fs.readFileSync(BRAIN, 'utf8'); } catch { return ''; }
+}
+function gitOut(args) {
+  return new Promise((resolve) => { if (!config.git || !config.git.mainRepo) return resolve('');
+    execFile('git', ['-C', config.git.mainRepo, ...args], { timeout: 15000, windowsHide: true }, (e, o) => resolve(e ? '' : String(o).trim())); });
+}
+// Runs Claude Code (your plan, read-only, Sonnet to save usage) and returns its JSON answer.
+function claudeJSON(prompt, o) {
+  return new Promise((resolve) => {
+    const exe = findClaude(); if (!exe) return resolve({ error: 'Could not find Claude Code on this PC.' });
+    const args = ['-p', '--output-format', 'json', '--permission-mode', 'plan', '--max-turns', String(o.maxTurns || 12), '--add-dir', ARCHIVE_DIR];
+    if (o.model) args.push('--model', o.model);
+    let out = '', err = '';
+    let child; try { child = spawn(exe, args, { cwd: o.cwd || os.homedir(), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
+    catch (e) { return resolve({ error: 'Could not start Claude Code: ' + e.message }); }
+    const t = setTimeout(() => { try { child.kill(); } catch {} }, (o.timeoutMin || 5) * 60 * 1000);
+    child.stdout.on('data', (c) => { out += c; }); child.stderr.on('data', (c) => { err += c; });
+    child.on('error', (e) => { clearTimeout(t); resolve({ error: e.message }); });
+    child.on('exit', () => {
+      clearTimeout(t);
+      let res = null; try { res = JSON.parse(out.slice(out.indexOf('{'))); } catch {}
+      const text = res ? String(res.result || '') : out;
+      if (R.parseLimit(text + '\n' + err)) return resolve({ error: 'You hit the Claude limit. Try again after it resets.', limit: true });
+      if (!res) return resolve({ error: firstLine(err) || 'Claude didn’t answer. Try again.' });
+      if (res.is_error) return resolve({ error: 'Claude had a problem: ' + (firstLine(text) || res.subtype || 'error').slice(0, 160) });
+      let j = null; try { j = JSON.parse(/\{[\s\S]*\}/.exec(text)[0]); } catch {}
+      resolve(j ? { json: j } : { error: 'Claude’s answer wasn’t in the right shape. Try again.' });
+    });
+    child.stdin.end(prompt);
+  });
+}
+let feedbackBusy = false;
+async function splitFeedback(text) {
+  if (feedbackBusy) return { error: 'Already working on your last feedback.' };
+  if (usage.hit) return { error: 'You hit the Claude limit. HQ can split your feedback after it resets at ' + new Date(usage.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.', limit: true };
+  feedbackBusy = true;
+  try {
+    const wins = [];
+    for (const [win, br] of Object.entries((config.git && config.git.branches) || {})) {
+      const s = sessionByWindow(win);
+      const ref = (await gitOut(['rev-parse', '--verify', '--quiet', 'origin/' + br])) ? 'origin/' + br : br;
+      const commits = await gitOut(['log', '-8', '--date=format:%a %I:%M%p', '--format=%ad %s', ref]);
+      const files = await gitOut(['diff', '--stat=120', '--stat-count=25', ((config.git && config.git.mainBranch) || 'main') + '~15...' + ref]).catch(() => '');
+      wins.push(`### ${win} (branch ${br}${s ? ', now: ' + s.status : ''})\nLast job: ${s ? (s.title || firstLine(s.prompt)).slice(0, 200) : '(none seen)'}\nIts last reply:\n${s ? String(s.lastReply || '').slice(0, 2500) : ''}\nRecent commits on its branch:\n${commits || '(none)'}${files ? '\nFiles it changed lately:\n' + files : ''}`);
+    }
+    const wd = watchdog ? watchdog.view() : {};
+    const prompt = [
+      brain(), '', '---', `Today: ${new Date().toLocaleString()}`,
+      '', 'ARI JUST TESTED THE APP ON HIS PHONE. HIS FEEDBACK (spoken, so speech-to-text may have mistakes; fix obvious ones):', '<<<', text, '>>>',
+      '', 'WHAT EACH WINDOW WORKED ON:', ...wins,
+      '', 'APP STATE: ' + JSON.stringify({ phone: wd.phone && wd.phone.text, lastMerge: wd.merge && wd.merge.lastMerge && wd.merge.lastMerge.text }),
+      logState.latestArchive ? `\nLATEST TEST LOG (on Ari's PC): ${logState.latestArchive}\nErrors HQ saw in it:\n${(logState.errors || []).slice(0, 15).join('\n') || '(none)'}` : '\n(No test log found.)',
+      '', 'YOUR JOB: turn Ari\'s feedback into one prompt for Window A and one for Window B.',
+      '- Give each problem to the window that built that part (look at the commits, replies and files above; read the code if you must). Keep the two windows on different files so they don\'t clash. If it\'s unclear, balance the work.',
+      '- EVERY problem or request Ari mentioned must be in exactly one prompt. Don\'t drop any. Don\'t invent any.',
+      '- Each prompt: a numbered list. For each item: what Ari saw (his meaning, cleaned up) and what correct looks like. Then: "Check the test log for lines about each problem before fixing it." Then: prove each fix, commit and push your branch, end with ONE short test list for Ari and a last line starting with HQ:. Questions only at the END.',
+      '- Plain words. If a window has nothing to do, use null for it.',
+      '- If something Ari said is unclear, still include your best reading in the prompt and add it to "unsure".',
+      'Answer with ONLY this JSON, nothing else:',
+      '{"heard":"one plain sentence: what Ari said","A":{"title":"max 6 words","prompt":"..."},"B":{"title":"max 6 words","prompt":"..."},"unsure":["..."]}',
+    ].join('\n');
+    const r = await claudeJSON(prompt, { timeoutMin: 4, cwd: config.git && config.git.mainRepo, model: (config.watchdog && config.watchdog.feedbackModel) || 'sonnet', maxTurns: 15 });
+    if (r.error) return r;
+    const j = r.json; const fix = (x) => (x && typeof x.prompt === 'string' && x.prompt.trim() ? { title: String(x.title || 'Fix what Ari found').slice(0, 60), prompt: x.prompt.trim().slice(0, 12000) } : null);
+    const out = { heard: String(j.heard || '').slice(0, 400), A: fix(j.A), B: fix(j.B), unsure: Array.isArray(j.unsure) ? j.unsure.map(String).slice(0, 6) : [] };
+    if (!out.A && !out.B) return { error: 'Claude didn’t make any prompts from that. Try saying it again with more detail.' };
+    try { fs.appendFileSync(path.join(__dirname, 'feedback-log.jsonl'), JSON.stringify({ t: Date.now(), text, ...out }) + '\n'); } catch {}
+    return out;
+  } finally { feedbackBusy = false; }
+}
+function sendFeedback(b) {
+  const out = {};
+  for (const k of ['A', 'B']) {
+    const x = b[k]; if (!x || !String(x.prompt || '').trim()) continue;
+    const win = 'Window ' + k; const br = ((config.git && config.git.branches) || {})[win] || 'your branch';
+    const r = sendJob(win, String(x.prompt).trim() + logsNote() + R.jobRules(br), String(x.title || 'Fix what Ari found').slice(0, 60));
+    out[k] = r.started ? 'started' : r.queued ? 'queued' : (r.error || 'error');
+    const s = sessionByWindow(win); if (s) { s.tests = []; s.testsDone = true; }
+  }
+  broadcast(); return out;
+}
+
 // ─── The Watchdog (watchdog.js) ─────────────────────────────────────────────
 function wdMergeState() {
   const m = watchdog ? watchdog.view().merge : null; if (!m) return { list: [] };
@@ -1150,4 +1250,6 @@ pollRuns(); setInterval(pollRuns, 90000);
 pollYesterday(); setInterval(pollYesterday, 10 * 60 * 1000);
 scanUsage(); setInterval(scanUsage, 20000);
 setTimeout(() => voice.ensure('ryan'), 5000);
+if (process.platform === 'win32') setTimeout(() => listen.ensure(), 25000); // get the Talk button ready in the background
+brain();
 setInterval(broadcast, 15000);

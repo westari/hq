@@ -62,4 +62,4 @@ async function speak(text, voiceId) {
   const buf = fs.readFileSync(out); fs.unlink(out, () => {}); return buf;
 }
 
-module.exports = { VOICES, speak, ensure, status: () => ({ ...status, voices: VOICES.map((v) => ({ id: v.id, name: v.name, have: fs.existsSync(modelFile(v)) })) }) };
+module.exports = { download, VOICES, speak, ensure, status: () => ({ ...status, voices: VOICES.map((v) => ({ id: v.id, name: v.name, have: fs.existsSync(modelFile(v)) })) }) };
