@@ -437,6 +437,10 @@
         #hqc .ask{display:flex;gap:8px}
         #hqc .ask input{flex:1;min-width:0;height:42px;border-radius:14px;border:0;padding:0 14px;background:rgba(255,255,255,.14);color:#fff;font:14px Geist,-apple-system,sans-serif;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
         #hqc .ask input::placeholder{color:rgba(255,255,255,.55)}
+        #hqc .wk{align-self:stretch;border-radius:14px;background:rgba(255,255,255,.06);padding:8px 12px}
+        #hqc .wk summary{cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.7);list-style:none}
+        #hqc .wt{font:12px/1.5 'Geist Mono',monospace;opacity:.6;padding:2px 0}
+        #hqc .wn{font-size:13px;opacity:.8;padding:4px 0}
         #hqc .tm{font-size:11.5px;opacity:.6;margin-bottom:4px}
         #hqc .cp{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
         #hqc .cp button{height:28px;padding:0 10px;border:0;border-radius:9px;cursor:pointer;background:rgba(255,255,255,.16);color:#fff;font:500 12px Geist,-apple-system,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
@@ -544,9 +548,19 @@
         const render = (msgs) => {
           copies.length = 0;
           // Group tool steps between messages into one quiet line.
-          const rows = []; let steps = 0;
-          for (const x of msgs) { if (x.role === 'tool') { steps++; continue; } if (steps) { rows.push({ steps }); steps = 0; } rows.push(x); }
-          if (steps) rows.push({ steps });
+          // Like VS Code: your message, then ONE "Worked: N steps" line (click to open), then Claude's final answer.
+          const rows = []; let turn = null;
+          const flush = () => { if (!turn) return; const texts = turn.items.filter((x) => x.role === 'claude');
+            const final = turn.done ? texts[texts.length - 1] : null; const work = turn.items.filter((x) => x !== final);
+            if (work.length) rows.push({ work, n: turn.items.filter((x) => x.role === 'tool').length, live: !turn.done });
+            if (final) rows.push(final); turn = null; };
+          msgs.forEach((x) => {
+            if (x.role === 'you') { flush(); rows.push(x); turn = { items: [], done: true }; return; }
+            if (!turn) turn = { items: [], done: true };
+            turn.items.push(x);
+          });
+          if (turn) { const lastIsText = turn.items.length && turn.items[turn.items.length - 1].role === 'claude'; turn.done = !!lastIsText && !(ses.status === 'working' || ses.status === 'needs'); }
+          flush();
           el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(win)}</h2>
               <div class="tags"><span class="tag">${label}</span>${ses.job && ses.job.title ? `<span class="tag">${esc(ses.job.title)}</span>` : ''}</div></div>
               <button class="x" aria-label="Close">✕</button></div>
@@ -556,7 +570,7 @@
                 <div class="panel" style="font-size:15px">${raw.lastEvent && (ses.status === 'done' || ses.status === 'testing') ? `<div class="tm">Finished ${when(raw.lastEvent)}</div>` : ''}${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply) : ''}</div>
                 ${(raw.tests || []).length ? `<h3 style="margin-top:18px">Test on your phone</h3><div class="steps">${raw.tests.map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
                 <h3 style="margin-top:18px">Conversation</h3>
-                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.steps ? `<div style="align-self:center;font-size:12px;color:rgba(255,255,255,.55)">• ${x.steps} step${x.steps === 1 ? '' : 's'} •</div>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
+                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.work ? `<details class="wk"><summary>${x.live ? 'Working… ' : 'Worked: '}${x.n} step${x.n === 1 ? '' : 's'} ›</summary>${x.work.filter((w) => w.role === 'tool' || String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim()).map((w) => w.role === 'tool' ? `<div class="wt">› ${esc(w.text)}</div>` : `<div class="wn">${esc(String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim().slice(0, 600))}</div>`).join('')}</details>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
               </div>
               <div class="col side">
                 <div class="panel">
