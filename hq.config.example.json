@@ -17,5 +17,12 @@
     "mainBranch": "overnight-build",
     "branches": { "Window A": "work-a", "Window B": "work-b" }
   },
-  "allowPhone": false
+  "allowPhone": false,
+  "watchdog": {
+    "mode": "act",
+    "maxAutoBuildsPerDay": 6,
+    "autoApprove": true,
+    "guards": true,
+    "stuckMinutes": 10
+  }
 }

@@ -68,6 +68,20 @@ gh auth login
 
 Then Factory > Start build (or Pulse > New build) starts your iOS build.
 
+## The Watchdog (the shield tower)
+
+Plain code on your PC. No AI, no API key, no money. Every 20 seconds it checks everything and fixes what it safely can:
+
+- **Merges** each window's finished work in a temporary copy first. Your app folder only changes if there are no conflicts, no `<<<<<<<` lines and no NEW TypeScript errors. Then it pushes.
+- **Conflicts / broken lines / new code errors**: your app is never touched. The window that caused it gets one fix job (twice max), then it tells you.
+- **Builds** start by themselves only when the native part changed (Expo fingerprint). Max 1 automatic build per commit, 6 per day. Apple signing and GitHub secret problems are never retried: it tells you exactly what to do.
+- **Windows**: continues after the usage limit resets, retries Claude hiccups (1, 4, 15 min), tells you when a window waits for your OK or looks stuck. Weekly limit, login or billing problems pause everything.
+- **Money**: HQ never lets Claude Code use an API key. If one is found on your PC, the Watchdog warns you. If a job tries to use one, it's stopped right away.
+- **Safety rules** are added to each window folder (no force-push, no reset --hard, no starting builds) plus a Git check that blocks committing `<<<<<<<` lines.
+- New version ready → the UFO flies to Test Lab.
+
+Everything it does is in `watchdog-log.jsonl`. Set `"watchdog": { "mode": "watch" }` in hq.config.json to make it only say what it WOULD do. Tests: `npm test`.
+
 ## Not connected yet
 
 Social follower counts (TikTok, Instagram, X, YouTube).

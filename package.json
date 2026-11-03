@@ -8,7 +8,8 @@
     "app": "electron .",
     "start": "node server.js",
     "install-hooks": "node install-hooks.js",
-    "remove-hooks": "node install-hooks.js --remove"
+    "remove-hooks": "node install-hooks.js --remove",
+    "test": "node --test tests/"
   },
   "devDependencies": {
     "electron": "33.2.1"

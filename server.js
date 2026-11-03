@@ -17,6 +17,8 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const CONFIG_PATH = path.join(__dirname, 'hq.config.json');
 const ARCHIVE_DIR = path.join(__dirname, 'logs-archive');
 const content = require('./content.js');
+const R = require('./watchdog-rules.js');
+const { createWatchdog } = require('./watchdog.js');
 const voice = require('./voice.js');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -46,6 +48,7 @@ const firstLine = (t) => String(t || '').trim().split('\n').find((l) => l.trim()
 // ─── Sessions ───────────────────────────────────────────────────────────────
 // status: working | needs-you | done | idle | ended
 const sessions = new Map();
+let watchdog = null; // created at the bottom
 const activity = [];
 
 function getSession(id, cwd) {
@@ -190,26 +193,48 @@ function handleEvent(ev) {
   if (name === 'SessionStart') {
     s.status = 'idle'; logActivity(s, 'Chat opened');
   } else if (name === 'UserPromptSubmit') {
+    s.lastPromptAt = Date.now(); s.limitHit = null; s.errorAt = 0; s.errorType = ''; s.errorRetries = 0; s.crashedAt = 0; s.permAt = 0;
     s.status = 'working'; s.prompt = String(ev.prompt || '').trim(); s.jobStart = Date.now();
     s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Reading your prompt'; s.title = s.nextTitle || ''; s.nextTitle = ''; s.jobLine = '';
     pushChat(s, 'you', s.prompt); logActivity(s, 'Started a new job');
   } else if (name === 'PreToolUse') {
-    s.status = 'working'; s.inTool = Date.now(); s.doing = describeTool(ev.tool_name, ev.tool_input);
+    s.status = 'working'; s.inTool = Date.now(); s.inToolName = ev.tool_name || ''; s.permAt = 0; s.doing = describeTool(ev.tool_name, ev.tool_input);
     s.actions.unshift({ t: Date.now(), text: s.doing }); if (s.actions.length > 100) s.actions.length = 100;
     if (ev.tool_name === 'TodoWrite') applyTodos(s, ev.tool_input && ev.tool_input.todos);
     if (ev.tool_name === 'TaskCreate' || ev.tool_name === 'TaskUpdate') applyTaskTool(s, ev.tool_name, ev.tool_input || {});
-  } else if (name === 'PostToolUse') {
-    s.inTool = 0;
-    if (s.status !== 'done') s.status = 'working';
+  } else if (name === 'PostToolUse' || name === 'PostToolUseFailure') {
+    s.inTool = 0; s.permAt = 0;
+    if (s.status !== 'done' && s.status !== 'limit') s.status = 'working';
+  } else if (name === 'PermissionRequest') {
+    // The Watchdog may approve a tiny safe command by itself. Otherwise it's waiting for you.
+    const ok = watchdog ? watchdog.permission(ev) : null;
+    if (ok) reply = { permission: ok };
+    else { s.status = 'needs-you'; s.permAt = Date.now(); s.doing = 'Wants to: ' + describeTool(ev.tool_name, ev.tool_input); logActivity(s, 'Needs your OK'); }
   } else if (name === 'Notification') {
-    if (s.status === 'working') { s.status = 'needs-you'; s.doing = String(ev.message || 'Waiting for you'); logActivity(s, 'Needs you'); }
+    const type = String(ev.notification_type || '');
+    if (/quota_auto_resume_fired/.test(type)) { s.autoResumedAt = Date.now(); s.limitHit = null; if (s.status === 'limit') s.status = 'working'; }
+    else if (/idle_prompt/.test(type)) { /* finished a while ago and nobody typed: nothing to change */ }
+    else if (s.status === 'working') { s.status = 'needs-you'; s.permAt = s.permAt || Date.now(); s.doing = String(ev.message || 'Waiting for you'); logActivity(s, 'Needs you'); }
+  } else if (name === 'StopFailure') {
+    // The turn ended because of an API error (this is how "stopped by the limit" shows up).
+    s.inTool = 0;
+    const type = String(ev.error_type || ev.error || ev.reason || ev.matcher || '').toLowerCase();
+    const text = String(ev.message || ev.error_message || '') + '\n' + (s.transcriptPath ? lastReplyFrom(s.transcriptPath) : '');
+    const lim = R.parseLimit(text);
+    if (/rate_limit|limit/.test(type) || lim) {
+      const at = (lim && lim.resetAt) || limitFrom(text) || (usage.resetAt || Date.now() + 5 * 3600 * 1000);
+      s.limitHit = { at: Date.now(), resumeAt: at, weekly: !!(lim && lim.weekly) }; s.status = 'limit';
+      s.doing = 'Hit the Claude limit. Keeps going at ' + new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      logActivity(s, 'Hit the usage limit');
+    } else { s.status = 'error'; s.errorType = type || 'error'; s.errorAt = Date.now(); s.doing = 'Stopped by a Claude error (' + (type || 'error') + ')'; logActivity(s, 'Stopped by a Claude error'); }
   } else if (name === 'Stop') {
     s.inTool = 0;
     const finalText = ev.last_assistant_message || (s.transcriptPath ? lastReplyFrom(s.transcriptPath) : '');
-    const hit = limitFrom(finalText);
+    const lim = R.parseLimit(finalText);
+    const hit = lim ? (lim.resetAt || limitFrom(finalText)) : 0;
     if (hit) {
       // Claude's usage limit stopped this job. Keep its last real reply; continue by itself after the reset.
-      s.limitHit = { at: Date.now(), resumeAt: hit };
+      s.limitHit = { at: Date.now(), resumeAt: hit, weekly: !!lim.weekly };
       s.status = 'limit'; s.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hit).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       logActivity(s, 'Hit the usage limit');
     } else if (finalText) { s.lastReply = finalText; s.tests = extractTests(finalText); pushChat(s, 'bot', finalText); }
@@ -269,6 +294,7 @@ function readChunk(fp, start, end, fallbackId) {
     if (!s.transcriptPath) s.transcriptPath = fp;
     const t = o.timestamp ? Date.parse(o.timestamp) : Date.now();
     if (t > s.lastEvent) s.lastEvent = t;
+    s.lastFileAt = Date.now();
     const content = o.message && Array.isArray(o.message.content) ? o.message.content : [];
     for (const c of content) if (c.type === 'tool_use') {
       if (c.name === 'TodoWrite') applyTodos(s, c.input && c.input.todos);
@@ -352,7 +378,7 @@ function pollLogs() {
 let runs = [];
 function pollRuns() {
   const repo = config.githubRepo; if (!repo) return;
-  const req = https.get({ host: 'api.github.com', path: `/repos/${repo}/actions/runs?per_page=6`, headers: { 'User-Agent': 'hq-dashboard', Accept: 'application/vnd.github+json' }, timeout: 10000 }, (res) => {
+  const req = https.get({ host: 'api.github.com', path: `/repos/${repo}/actions/runs?per_page=8`, headers: { 'User-Agent': 'hq-dashboard', Accept: 'application/vnd.github+json' }, timeout: 10000 }, (res) => {
     let body = ''; res.on('data', (c) => { body += c; });
     res.on('end', () => {
       try {
@@ -361,8 +387,8 @@ function pollRuns() {
           const st = r.status !== 'completed' ? 'running' : r.conclusion === 'success' ? 'done' : 'failed';
           const why = failWhy[r.id];
           if (st === 'failed' && (!why || why.retry)) fetchFailure(r.id);
-          return { id: 'r' + r.id, wf: r.name, br: r.head_branch, st, at: Date.parse(r.updated_at), url: r.html_url,
-            note: st === 'failed' ? (why ? why.short : 'Finding out why it failed\u2026') : '', fail: why ? why.lines : [] };
+          return { id: 'r' + r.id, wf: r.name, br: r.head_branch, sha: r.head_sha, event: r.event, st, at: Date.parse(r.updated_at), url: r.html_url,
+            note: st === 'failed' ? (why ? why.short : 'Finding out why it failed\u2026') : '', fail: why && !why.retry ? why.lines : [], raw: why && !why.retry ? why.raw : '' };
         });
         broadcast();
       } catch {}
@@ -400,114 +426,14 @@ async function fetchFailure(id) {
   const tail = all.filter((l) => !generic(l)).slice(-40);
   const lines = [...new Set(real.length ? real.slice(-25) : tail)];
   const best = real.find((l) => /error:|❌|fatal/i.test(l)) || real[0] || tail[tail.length - 1] || 'Failed (no details)';
-  failWhy[id] = { short: best.slice(0, 180), lines };
+  failWhy[id] = { short: best.slice(0, 180), lines, raw: all.filter((l) => !generic(l)).slice(-400).join('\n') };
   pollRuns();
 }
-// ─── Shipping Dock: finished work waiting to be merged ─────────────────────
-let merges = [];
+// ─── Git (read-only helper). Merging is done by the Watchdog (safe copy first). ──
 function git(args) {
   return new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, ...args], { timeout: 8000, windowsHide: true }, (err, out) => resolve(err ? null : String(out).trim())));
 }
-async function pollMerges() {
-  if (!config.git || !config.git.mainRepo) return;
-  const main = config.git.mainBranch || 'master';
-  const out = [];
-  for (const [win, br] of Object.entries(config.git.branches || {})) {
-    const ahead = await git(['rev-list', '--count', `${main}..${br}`]);
-    if (ahead === null) continue;
-    const last = await git(['log', '-1', '--format=%s', br]);
-    const stat = await git(['diff', '--shortstat', `${main}...${br}`]) || '';
-    const num = (re) => { const m = re.exec(stat); return m ? Number(m[1]) : 0; };
-    out.push({ window: win, branch: br, ahead: Number(ahead), last: last || '', files: num(/(\d+) files? changed/), add: num(/(\d+) insertion/), del: num(/(\d+) deletion/),
-      cmd: `cd "${config.git.mainRepo}"\ngit merge ${br} --no-edit\ngit push` });
-  }
-  // A merge that started but never finished (Git waiting in an editor, or a conflict).
-  const stuck = fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'));
-  const conflicts = stuck ? String(await git(['diff', '--name-only', '--diff-filter=U']) || '').split('\n').filter(Boolean) : [];
-  const leftovers = Date.now() - lastLeftCheck > 30000 ? (lastLeft = await leftoverFiles(), lastLeftCheck = Date.now(), lastLeft) : lastLeft;
-  const next = { list: out, stuck, conflicts, leftovers, fixPrompt: leftovers.length ? fixPrompt('leftover', leftovers) : stuck && conflicts.length ? fixPrompt('conflict', conflicts) : '' };
-  if (JSON.stringify(next) !== JSON.stringify(mergeState)) { mergeState = next; merges = out; broadcast(); }
-  // Auto-merge: new finished work goes straight into your app folder (turn off with "autoMerge": false).
-  if (config.autoMerge !== false && !merging && (out.some((m) => m.ahead > 0) || (stuck && !conflicts.length)) && Date.now() - lastAuto > 60000
-      && !(autoBlockedSig && autoBlockedSig === await mergeSig())) {
-    lastAuto = Date.now(); autoBlockedSig = '';
-    const r = await mergeAll();
-    lastAutoInfo = mergeInfo(r);
-    if (!r.ok) autoBlockedSig = await mergeSig(); // don't retry until something changes
-    broadcast();
-  }
-}
-let lastAuto = 0; let lastAutoInfo = null; let autoBlockedSig = '';
-// What the repo looks like right now. Auto-merge only retries a failed merge after this changes.
-async function mergeSig() {
-  const heads = []; for (const br of Object.values(config.git.branches || {})) heads.push(await git(['rev-parse', br]));
-  return [await git(['rev-parse', 'HEAD']), ...heads, await git(['status', '--porcelain'])].join('|');
-}
-function mergeInfo(r) {
-  const short = (f) => f.replace(/^.*[\\/]/, '');
-  if (r.ok) return { at: Date.now(), ok: true, text: r.steps.join(' \u00b7 ') };
-  const files = r.files || [];
-  const text = r.error === 'leftover' ? 'Broken merge leftovers in ' + files.map(short).join(', ') + '. Your app won\'t open until they\'re fixed.'
-    : r.error === 'conflict' ? 'Window A and Window B changed the same lines in ' + files.map(short).join(', ') + '. A window has to combine them.'
-    : r.error === 'dirty' ? 'Your app folder has changes that were never saved to Git (' + files.map(short).join(', ') + ').'
-    : r.error === 'Already merging' ? 'Already merging' : 'Git said: ' + r.error;
-  return { at: Date.now(), ok: false, kind: r.error, files, text, prompt: fixPrompt(r.error, files) };
-}
-// Hand waiting "next free window" jobs to any window that's free (checks every 15 seconds).
-setInterval(() => {
-  if (!anyQueue.length || usage.hit) return; // limit hit: wait for the reset
-  const free = freeWindowName(); if (!free) return;
-  const j = anyQueue.shift(); const r = startJob(free, j.text, sessionByWindow(free), j.title);
-  if (!r.started) { anyQueue.unshift(j); anyError = r.error || 'Could not start'; broadcast(); } else { anyError = ''; }
-}, 15000);
 let anyError = '';
-let mergeState = {};
-
-// One click: finish a stuck merge, merge both windows, push. Never throws work away:
-// if there's a conflict it stops and tells you which files.
-let merging = false; let lastLeft = []; let lastLeftCheck = 0;
-// Files that still have "<<<<<<<" conflict leftovers in them (these break the app).
-async function leftoverFiles() {
-  const out = await new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, 'grep', '-l', '-E', '^(<<<<<<< |>>>>>>> )', '--', '.', ':!node_modules'], { timeout: 15000, windowsHide: true }, (err, o) => resolve(String(o || ''))));
-  return out.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 20);
-}
-function fixPrompt(kind, files) {
-  const list = files.join(', ');
-  if (kind === 'leftover') return `In C:\\Users\\arize\\gym app (branch overnight-build) these files still have merge conflict leftovers (lines starting with <<<<<<<, ======= and >>>>>>>): ${list}. They break the app. For each one, combine BOTH sides correctly so no one's work is lost (don't just pick one side). Then check the app builds with npx tsc --noEmit. Commit "Fix leftover merge conflicts" and push overnight-build. Then merge overnight-build into work-a and work-b so they're clean too. Never reset, never force push, never discard work. Tell me in one line when it's done.`;
-  if (kind === 'conflict') return `In C:\\Users\\arize\\gym app (branch overnight-build) a merge is stuck on a conflict in: ${list}. Finish it: for each file, combine BOTH sides correctly so no one's work is lost. Remove every <<<<<<<, ======= and >>>>>>> line. Check the app builds with npx tsc --noEmit. Then commit the merge and push overnight-build. Never reset, never force push, never discard work. Tell me in one line when it's done.`;
-  if (kind === 'dirty') return `In C:\\Users\\arize\\gym app there are changes that were never committed (${list}), so HQ can't merge. Look at them and tell me in plain words what they are. Don't delete or reset anything. If they're real work, commit them with a clear message and push. If they look like junk, ask me first.`;
-  return '';
-}
-async function mergeAll() {
-  if (!config.git || !config.git.mainRepo) return { error: 'No main folder set in hq.config.json' };
-  if (merging) return { error: 'Already merging' };
-  merging = true;
-  const run = (args) => new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, '-c', 'core.editor=true', ...args], { timeout: 60000, windowsHide: true, env: { ...process.env, GIT_MERGE_AUTOEDIT: 'no', GIT_EDITOR: 'true' } }, (err, out, errOut) => resolve({ ok: !err, text: String(out || '') + String(errOut || '') })));
-  const steps = [];
-  try {
-    const left = await leftoverFiles();
-    if (left.length) return { error: 'leftover', files: left };
-    if (fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'))) {
-      const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim();
-      if (un) return { error: 'conflict', files: un.split('\n') };
-      const r = await run(['commit', '--no-edit']); steps.push('Finished the stuck merge'); if (!r.ok) return { error: r.text.trim().split('\n').pop(), steps };
-    }
-    for (const br of Object.values(config.git.branches || {})) {
-      const r = await run(['merge', br, '--no-edit']);
-      if (!r.ok) {
-        const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim();
-        if (un) return { error: 'conflict', files: un.split('\n'), steps };
-        // "Your local changes would be overwritten": list the files.
-        const dirty = /would be overwritten/i.test(r.text) ? r.text.split('\n').filter((l) => /^\s+\S/.test(l) && !/Please|Aborting|commit your/i.test(l)).map((l) => l.trim()) : [];
-        if (dirty.length) return { error: 'dirty', files: dirty, steps };
-        return { error: r.text.trim().split('\n').filter(Boolean).pop() || 'Git said no', files: [], steps };
-      }
-      steps.push(/Already up to date/i.test(r.text) ? br + ' was already in' : 'Merged ' + br);
-    }
-    const p = await run(['push']); steps.push(p.ok ? 'Pushed' : 'Push failed: ' + p.text.trim().split('\n').pop());
-    return { ok: true, steps };
-  } finally { merging = false; pollMerges(); }
-}
 
 // ─── Claude usage: tokens in your current 5-hour window (read from transcripts, free) ──
 // Claude's limit resets 5 hours after the first message of a window. We can't see your
@@ -610,14 +536,14 @@ function replan(why) {
       '', 'PLAN TASKS (id | who | title | done?):',
       ...plan.tasks.map((t) => `${t.id} | ${t.who} | ${t.t}${t.sub ? ' (' + t.sub + ')' : ''} | ${st.done[t.id] ? 'done ' + st.done[t.id] : 'open'}`),
       '', 'CODE CHANGES IN THE LAST 4 DAYS (all branches):', String(gitLog || '(none)').split('\n').slice(0, 60).join('\n'),
-      '', 'MERGE STATE: ' + JSON.stringify({ ...mergeState, lastAuto: lastAutoInfo && lastAutoInfo.text }),
+      '', 'MERGE STATE: ' + JSON.stringify(watchdog ? watchdog.view().merge : {}),
       '', 'BUILDS: ' + runs.slice(0, 4).map((r) => `${r.wf} ${r.st} ${r.note || ''}`).join('; '),
       '', 'WHAT HAPPENED (newest first):', ...activity.slice(0, 30).map((a) => `${new Date(a.t).toLocaleString()} ${a.session}: ${a.text} ${a.job || ''}`),
       '', 'WINDOWS:', wins || '(none)',
       why ? '\nARI SAYS: ' + why : '',
     ].join('\n');
     let out = '', err = '';
-    let child; try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
+    let child; try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
     catch (er) { replanState = { running: false, at: Date.now(), error: er.message }; return broadcast(); }
     const timer = setTimeout(() => { try { child.kill(); } catch {} }, 6 * 60 * 1000);
     child.stdout.on('data', (c) => { out += c; }); child.stderr.on('data', (c) => { err += c; });
@@ -732,40 +658,92 @@ function folderForWindow(win) {
   for (const [folder, name] of Object.entries(config.windows || {})) if (name === win) return path.join(os.homedir(), folder);
   return null;
 }
-function startJob(win, text, s, title) {
+// Never let Claude Code use an API key from HQ (that costs money per use). Your plan login is used instead.
+function claudeEnv() { const e = { ...process.env }; delete e.ANTHROPIC_API_KEY; delete e.ANTHROPIC_AUTH_TOKEN; return e; }
+const PAID_KEY_SOURCES = /ANTHROPIC_API_KEY|apiKeyHelper|ANTHROPIC_AUTH_TOKEN/i;
+
+// Permission mode for jobs HQ starts. "dontAsk" = only the allowlist runs, everything else is refused
+// (no prompts nobody would answer). Falls back to acceptEdits if this Claude Code is too old for dontAsk.
+let jobModeFallback = false;
+function jobPermissionArgs() {
+  const w = config.watchdog || {};
+  const mode = jobModeFallback ? 'acceptEdits' : (w.jobMode || 'dontAsk');
+  const allow = R.JOB_ALLOW.concat(w.jobAllow || []); const deny = R.JOB_DENY.concat(w.jobDeny || []);
+  return ['--permission-mode', mode, '--allowedTools', ...allow, '--disallowedTools', ...deny];
+}
+
+function startJob(win, text, s, title, opts) {
   if (config.startJobs === false) return { error: 'Starting jobs from HQ is turned off.' };
   const exe = findClaude(); const cwd = folderForWindow(win);
   if (!exe) return { error: 'Could not find Claude Code on this PC.' };
   if (!cwd || !fs.existsSync(cwd)) return { error: 'Could not find the folder for ' + win + '.' };
-  const args = ['-p', '--permission-mode', 'acceptEdits', '--add-dir', ARCHIVE_DIR]; // so it can read your test logs
+  if (runners.has(win)) return { error: win + ' is already running a job.' };
+  const o = opts || {};
+  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--max-turns', String(o.maxTurns || (config.watchdog && config.watchdog.maxTurns) || 150), '--add-dir', ARCHIVE_DIR];
   if (s && s.id && !String(s.id).startsWith('hooktest')) args.push('--resume', s.id);
+  args.push(...jobPermissionArgs());
   let child;
-  try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
+  try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
   catch (e) { return { error: 'Could not start Claude Code: ' + e.message }; }
   runners.set(win, child);
-  let err = '';
-  child.stderr.on('data', (c) => { err += c; if (err.length > 4000) err = err.slice(-4000); });
-  let said = ''; child.stdout.on('data', (c) => { said += c; if (said.length > 4000) said = said.slice(-4000); });
+  const started = Date.now();
+  let err = '', buf = '', resultText = '', isError = false, apiErr = '', paid = false;
+  child.stderr.on('data', (c) => { err += c; if (err.length > 6000) err = err.slice(-6000); });
+  child.stdout.on('data', (c) => {
+    buf += c; let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line) continue;
+      let ev; try { ev = JSON.parse(line); } catch { continue; }
+      if (ev.type === 'system' && ev.subtype === 'init' && PAID_KEY_SOURCES.test(String(ev.apiKeySource || ''))) {
+        // An API key would be charged. Stop right away.
+        paid = true; try { child.kill(); } catch {}
+      }
+      if (ev.type === 'system' && ev.subtype === 'api_retry' && ev.error) apiErr = String(ev.error);
+      if (ev.type === 'result') { resultText = String(ev.result || ''); isError = !!ev.is_error || /error/.test(String(ev.subtype || '')); }
+      const ss = sessionByWindow(win); if (ss) { ss.lastEvent = Date.now(); }
+    }
+  });
   child.on('error', (e) => { runners.delete(win); activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Could not start: ' + e.message, job: '' }); broadcast(); });
   child.on('exit', (code) => {
     runners.delete(win);
-    // The job ended. If the window still looks "working" (no Stop hook came, e.g. the usage limit
-    // stopped it before it began), fix the status so HQ never shows a fake working window.
-    const ss = sessionByWindow(win); const hitAt = limitFrom(said + '\n' + err);
-    if (ss && ss.status === 'working') {
-      ss.inTool = 0; ss.lastEvent = Date.now();
-      if (hitAt) { ss.limitHit = { at: Date.now(), resumeAt: hitAt }; ss.status = 'limit'; ss.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hitAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); logActivity(ss, 'Hit the usage limit'); }
-      else { ss.status = 'done'; ss.doing = code ? 'Stopped: ' + (firstLine(err || said) || 'error').slice(0, 120) : 'Finished'; }
+    // Too-old Claude Code that doesn't know "dontAsk": switch to acceptEdits once and try again.
+    if (!jobModeFallback && code && Date.now() - started < 15000 && /permission-mode|dontAsk|invalid (choice|value)|allowed choices/i.test(err)) {
+      jobModeFallback = true; activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'This Claude Code is older, so HQ jobs use acceptEdits mode', job: '' });
+      startJob(win, text, s, title, opts); return;
     }
-    if (hitAt) { broadcast(); return; } // don't hand it more work until the limit resets
-    setTimeout(() => { if (!runners.has(win) && anyQueue.length && !isBusy(sessionByWindow(win))) { const j = anyQueue.shift(); startJob(win, j.text, sessionByWindow(win), j.title); } }, 3000);
-    if (code) activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Stopped with an error', job: firstLine(err).slice(0, 120) });
+    const ss = sessionByWindow(win) || s;
+    if (paid) {
+      if (watchdog) watchdog.action('pausefor', 'paid');
+      activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Stopped: Claude Code tried to use a paid API key', job: '' });
+      if (ss) { ss.status = 'error'; ss.errorType = 'billing_error'; ss.errorAt = Date.now(); ss.doing = 'Stopped: it would have used a paid API key'; }
+      broadcast(); return;
+    }
+    // Never trust the exit code alone: a usage-limit stop can still exit 0 (with is_error).
+    const all = resultText + '\n' + err;
+    const lim = R.parseLimit(all) || (/rate_limit/.test(apiErr) ? { resetAt: 0 } : null);
+    const hitAt = lim ? (lim.resetAt || limitFrom(all) || (usage.resetAt || Date.now() + 5 * 3600 * 1000)) : 0;
+    if (ss && (ss.status === 'working' || ss.status === 'needs-you')) {
+      ss.inTool = 0; ss.lastEvent = Date.now();
+      if (hitAt) { ss.limitHit = { at: Date.now(), resumeAt: hitAt, weekly: !!(lim && lim.weekly) }; ss.status = 'limit'; ss.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hitAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); logActivity(ss, 'Hit the usage limit'); }
+      else if (/billing|authentication/.test(apiErr)) { ss.status = 'error'; ss.errorType = apiErr; ss.errorAt = Date.now(); ss.doing = 'Stopped by a Claude ' + apiErr; }
+      else if (code || isError) { ss.status = 'done'; ss.crashedAt = Date.now(); ss.crashHandled = false; ss.crashWhy = firstLine(resultText || err).slice(0, 200); ss.doing = 'Stopped: ' + (ss.crashWhy || 'error').slice(0, 120); }
+      else { ss.status = 'done'; ss.doing = 'Finished'; if (resultText) { ss.lastReply = resultText; ss.tests = extractTests(resultText); } }
+    }
+    if (hitAt) { broadcast(); return; } // no more work until the limit resets
+    // Something waiting in this window's own line? Start it. Otherwise hand it a shared job.
+    setTimeout(() => {
+      const s2 = sessionByWindow(win);
+      if (runners.has(win) || (s2 && isBusy(s2))) return;
+      if (s2 && s2.queue && s2.queue.length) { const next = s2.queue.shift(); const t2 = (s2.queueTitles || []).shift() || ''; startJob(win, next, s2, t2); return; }
+      dispatchQueue();
+    }, 3000);
+    if (code && !hitAt) activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Stopped with an error', job: firstLine(err || resultText).slice(0, 120) });
     broadcast();
   });
   child.stdin.end(text);
   if (s) {
-    s.status = 'working'; s.prompt = text; s.jobStart = Date.now(); s.lastEvent = Date.now();
-    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Starting your job';
+    s.status = 'working'; s.prompt = text; s.jobStart = Date.now(); s.lastEvent = Date.now(); s.lastPromptAt = Date.now();
+    s.todos = []; s.actions = []; s.tests = []; s.testsDone = false; s.doing = 'Starting your job'; s.crashedAt = 0;
     s.title = String(title || ''); s.nextTitle = s.title;
     pushChat(s, 'you', text); logActivity(s, 'Started from HQ', s.title || firstLine(text));
   }
@@ -818,14 +796,7 @@ function limitFrom(text, base) {
   if (base) return base + 5 * 3600 * 1000;
   return (usage && usage.resetAt ? usage.resetAt : Date.now() + 5 * 3600 * 1000) + 90 * 1000;
 }
-setInterval(() => {
-  if (config.autoResume === false) return;
-  for (const s of sessions.values()) {
-    if (!s.limitHit || Date.now() < s.limitHit.resumeAt || runners.has(windowName(s.cwd))) continue;
-    s.limitHit = null;
-    startJob(windowName(s.cwd), 'Claude’s usage limit has reset. Continue exactly where you stopped and finish the job from my last message. Same rules as before.', s, s.title || 'Continue after the limit');
-  }
-}, 30 * 1000);
+// (Continuing after the usage limit is done by the Watchdog, see watchdog.js.)
 
 // ─── "First free window" queue: a job for whichever window frees up first ────
 const anyQueue = []; // [{ text, title }]
@@ -836,6 +807,24 @@ function freeWindowName() {
     if (!s || !isBusy(s)) return name;
   }
   return null;
+}
+// Hand waiting shared jobs to a free window (the Watchdog calls this every tick).
+function dispatchQueue() {
+  if (!anyQueue.length || usage.hit || config.startJobs === false) return;
+  const free = freeWindowName(); if (!free) return;
+  const j = anyQueue.shift(); const r = startJob(free, j.text, sessionByWindow(free), j.title);
+  if (!r.started) { anyQueue.unshift(j); anyError = r.error || 'Could not start'; } else anyError = '';
+  broadcast();
+}
+// Send a job to one specific window: start it now if that window is free, otherwise it waits in that window's line.
+function sendJob(win, text, title) {
+  const s = sessionByWindow(win);
+  if (!runners.has(win) && !isBusy(s) && !usage.hit) {
+    const r = startJob(win, text, s, title); if (r.started) return { started: win }; if (!s) return { error: r.error };
+  }
+  if (!s) { anyQueue.push({ text, title }); return { queued: 'the next free window' }; }
+  s.queue.push(text); s.queueTitles = s.queueTitles || []; s.queueTitles[s.queue.length - 1] = title || '';
+  broadcast(); return { queued: win };
 }
 function takeAny(s) { // called when a window finishes; returns the job text to deliver, if any
   if (!anyQueue.length) return null;
@@ -865,7 +854,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState: { ...mergeState, lastAuto: lastAutoInfo }, anyQueue, anyError, usage, plan: buildPlan(), yesterday, content: content.state(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges: wdMergeState().list, mergeState: wdMergeState(), watchdog: watchdog ? watchdog.view() : null, anyQueue, anyError, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -1021,7 +1010,7 @@ const server = http.createServer(async (req, res) => {
     ].filter(Boolean).join('\n');
     let out = '', err = '', done = false;
     let child;
-    try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
+    try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
     catch (e) { return json(res, 200, { error: 'Could not start Claude Code: ' + e.message }); }
     const finish = (obj) => { if (done) return; done = true; json(res, 200, obj); };
     const timer = setTimeout(() => { try { child.kill(); } catch {} finish({ error: 'That took too long. Try a shorter question.' }); }, 4 * 60 * 1000);
@@ -1034,19 +1023,9 @@ const server = http.createServer(async (req, res) => {
   }
   // Start the iOS build on GitHub. Uses the GitHub CLI ("gh"), logged in as you.
   if (req.method === 'POST' && url === '/api/build') {
-    const repo = config.githubRepo; const wf = config.buildWorkflow || 'ios-dev-build.yml';
-    const ref = (config.git && config.git.mainBranch) || 'main';
-    const cands = ['gh', 'C:\\Program Files\\GitHub CLI\\gh.exe', path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'GitHub CLI', 'gh.exe')];
-    const tryRun = (i) => {
-      if (i >= cands.length) return json(res, 200, { error: 'nogh' });
-      execFile(cands[i], ['workflow', 'run', wf, '-R', repo, '--ref', ref], { timeout: 30000, windowsHide: true }, (err, out, errOut) => {
-        if (err && err.code === 'ENOENT') return tryRun(i + 1);
-        if (err) return json(res, 200, { error: String(errOut || err.message).split('\n')[0] });
-        setTimeout(pollRuns, 4000);
-        json(res, 200, { started: true, ref });
-      });
-    };
-    return tryRun(0);
+    // Through the Watchdog, so it remembers which code this build is (to know later if another is needed).
+    const r = watchdog ? await watchdog.action('build') : { error: 'Watchdog not running' };
+    return json(res, 200, r.ok ? { started: true, ref: (config.git && config.git.mainBranch) || 'main' } : { error: /not found/.test(r.error || '') ? 'nogh' : r.error });
   }
   // Real voice (Piper, on your PC). GET /api/say?voice=ryan&text=...
   if (url === '/api/say') {
@@ -1063,7 +1042,8 @@ const server = http.createServer(async (req, res) => {
     anyQueue.push({ text: full, title: String(b.title || '') }); broadcast(); return json(res, 200, { queued: anyQueue.length });
   }
   if (req.method === 'POST' && url === '/api/queue-any/clear') { anyQueue.length = 0; broadcast(); return json(res, 200, { ok: true }); }
-  if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); lastAutoInfo = mergeInfo(r); lastAutoInfo.manual = true; if (r.ok) autoBlockedSig = ''; broadcast(); return json(res, 200, { ...r, info: lastAutoInfo }); }
+  if (req.method === 'POST' && url === '/api/merge') { const r = watchdog ? await watchdog.mergeNow() : { error: 'Watchdog not running' }; broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/watchdog') { const b = await readBody(req); const r = watchdog ? await watchdog.action(String(b.name || ''), b.arg) : { error: 'Watchdog not running' }; broadcast(); return json(res, 200, r); }
   if (url.startsWith('/api/shell')) {
     if (!isLocal(req) || req.headers['x-hq-token'] !== SHELL_TOKEN) return json(res, 403, { error: 'Only from the HQ window on this PC.' });
     if (req.method === 'POST' && url === '/api/shell') { const b = await readBody(req); const cmd = String(b.cmd || '').trim(); if (!cmd) return json(res, 400, { error: 'Empty' }); const j = runShell(cmd, b.folder); return json(res, 200, { id: j.id }); }
@@ -1101,6 +1081,60 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.on('error', (e) => { if (e.code === 'EADDRINUSE') console.log('[HQ] Already running on port ' + PORT + '. Using that one.'); else console.error('[HQ]', e.message); });
+// ─── The Watchdog (watchdog.js) ─────────────────────────────────────────────
+function wdMergeState() {
+  const m = watchdog ? watchdog.view().merge : null; if (!m) return { list: [] };
+  return { list: m.list || [], stuck: !!m.stuck, conflicts: m.conflicts || [], leftovers: m.leftovers || [], lastMerge: m.lastMerge || null };
+}
+function setWatchdogMode(mode) {
+  try { const c = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); c.watchdog = Object.assign({}, c.watchdog, { mode }); fs.writeFileSync(CONFIG_PATH, JSON.stringify(c, null, 2)); config = c; } catch {}
+}
+// Ask Claude (your plan, read-only plan mode) a question and get JSON back. Used rarely, for unknown errors.
+function askClaudeJSON(prompt, o) {
+  return new Promise((resolve) => {
+    const exe = findClaude(); if (!exe) return resolve({ ok: false, error: 'no claude' });
+    let out = '', err = '';
+    let child; try { child = spawn(exe, ['-p', '--output-format', 'json', '--permission-mode', 'plan', '--max-turns', String((o && o.maxTurns) || 12)], { cwd: (o && o.cwd) || os.homedir(), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
+    catch (e) { return resolve({ ok: false, error: e.message }); }
+    const t = setTimeout(() => { try { child.kill(); } catch {} }, 6 * 60 * 1000);
+    child.stdout.on('data', (c) => { out += c; }); child.stderr.on('data', (c) => { err += c; });
+    child.on('error', (e) => { clearTimeout(t); resolve({ ok: false, error: e.message }); });
+    child.on('exit', () => {
+      clearTimeout(t);
+      let res = null; try { res = JSON.parse(out); } catch {}
+      if (!res || res.is_error) return resolve({ ok: false, error: (res && res.result) || firstLine(err) || 'no answer' });
+      let j = null; try { j = JSON.parse(/\{[\s\S]*\}/.exec(String(res.result))[0]); } catch {}
+      resolve({ ok: !!j, json: j, text: res.result });
+    });
+    child.stdin.end(prompt);
+  });
+}
+watchdog = createWatchdog({
+  dir: __dirname, home: os.homedir(), claudeDir: CLAUDE_DIR,
+  config: () => config, changed: () => broadcast(),
+  sessions: () => [...sessions.values()].filter((x) => x.status !== 'ended'),
+  sessionByWindow, windowName, isRunner: (w) => runners.has(w),
+  stopRunner: (w) => new Promise((res) => { const ch = runners.get(w); if (!ch) return res(); ch.once('exit', () => res()); try { if (process.platform === 'win32') execFile('taskkill', ['/pid', String(ch.pid), '/t', '/f'], { windowsHide: true }, () => {}); else ch.kill(); } catch { res(); } setTimeout(res, 15000); }),
+  startJob: (w, text, s, title, o) => startJob(w, text, s, title, o),
+  sendJob, dispatchQueue, freeWindow: freeWindowName,
+  clearLimit: (s) => { s.limitHit = null; if (s.status === 'limit') { s.status = 'done'; s.doing = 'Finished'; } },
+  usage: () => usage, runs: () => runs,
+  startBuild: () => new Promise((resolve) => {
+    const cands = ['gh', 'C:\\Program Files\\GitHub CLI\\gh.exe', path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'GitHub CLI', 'gh.exe')];
+    const tryRun = (i) => { if (i >= cands.length) return resolve({ error: 'GitHub CLI (gh) not found' });
+      execFile(cands[i], ['workflow', 'run', config.buildWorkflow || 'ios-dev-build.yml', '-R', config.githubRepo, '--ref', (config.git && config.git.mainBranch) || 'main'], { timeout: 30000, windowsHide: true }, (e, o2, eo) => {
+        if (e && e.code === 'ENOENT') return tryRun(i + 1);
+        if (e) return resolve({ error: String(eo || e.message).split('\n')[0] });
+        setTimeout(pollRuns, 5000); resolve({ started: true });
+      }); };
+    tryRun(0);
+  }),
+  canAskClaude: () => !usage.hit && !!findClaude(),
+  askClaudeJSON, setWatchdogMode,
+});
+try { const r = require('./install-hooks.js').install({ onlyIfMissing: true, quiet: true, claudeDir: CLAUDE_DIR }); if (r === 'installed') console.log('[HQ] Added the new hooks to your Claude Code settings (backup saved).'); } catch {}
+if (config.watchdog === undefined || config.watchdog.enabled !== false) watchdog.start();
+
 server.listen(PORT, config.allowPhone ? '0.0.0.0' : '127.0.0.1', () => {
   console.log(`\n  HQ is running →  http://localhost:${PORT}`);
   if (config.allowPhone) {
@@ -1113,7 +1147,6 @@ server.listen(PORT, config.allowPhone ? '0.0.0.0' : '127.0.0.1', () => {
 scanTranscripts(); setInterval(scanTranscripts, 3000);
 pollLogs(); setInterval(pollLogs, 3000);
 pollRuns(); setInterval(pollRuns, 90000);
-pollMerges(); setInterval(pollMerges, 20000);
 pollYesterday(); setInterval(pollYesterday, 10 * 60 * 1000);
 scanUsage(); setInterval(scanUsage, 20000);
 setTimeout(() => voice.ensure('ryan'), 5000);

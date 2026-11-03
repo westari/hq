@@ -174,7 +174,7 @@ function buildCity(scene) {
   const LM = [
     { key: 'formpal', name: 'FormPal', icon: 'hub', gx: 0, gz: 0, h: 16, w: 11, col: 0x8b7bff },
     { key: 'lab', name: 'Test Lab', icon: 'science', gx: -5, gz: -5, h: 9, col: 0x5fc8ff },
-    { key: 'dock', name: 'Shipping Dock', icon: 'local_shipping', gx: 5, gz: -5, h: 9, col: 0x4cd98a },
+    { key: 'dock', name: 'Watchdog', icon: 'shield', gx: 5, gz: -5, h: 9, col: 0x4cd98a },
     { key: 'factory', name: 'Factory', icon: 'precision_manufacturing', gx: 5, gz: 5, h: 11, col: 0xffa64a },
     { key: 'vault', name: 'Content', icon: 'slideshow', gx: -5, gz: 5, h: 7, col: 0xff7ab8 },
   ];

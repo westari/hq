@@ -23,6 +23,11 @@ process.stdin.on('end', () => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => {
+        // The Watchdog may approve a tiny, exactly-known safe command (like "git status").
+        if (event === 'PermissionRequest') {
+          try { const r = JSON.parse(text || '{}'); if (r.permission && r.permission.behavior === 'allow') return done(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: { behavior: 'allow' } } })); } catch {}
+          return done();
+        }
         if (event !== 'Stop') return done();
         try {
           const reply = JSON.parse(text || '{}');

@@ -166,9 +166,9 @@
     async function mergeNow() {
       c.toast('Merging…', 'merge');
       const r = await post('/api/merge', {});
-      if (r.ok) { c.toast((r.steps || []).join(' · ') + '. Restart npm run dev.', 'done_all'); say('Merge done. Restart the app to test the new code.'); }
-      else if (r.info && r.info.prompt) { await copy(r.info.prompt); c.toast(r.info.text + ' Fix prompt copied: paste it into Window A.', 'warning'); }
-      else c.toast((r.info && r.info.text) || ('Merge stopped: ' + r.error), 'error');
+      const plain = { conflict: 'Both windows changed the same lines. The Watchdog asked the window to combine them.', markers: 'That branch has broken merge lines. The Watchdog asked the window to fix them.', types: 'That work would add code errors. The Watchdog sent them to the window.', dirty: 'Your app folder has unsaved changes, so HQ didn’t touch it. See the Watchdog.', wrongbranch: r.text };
+      if (r.ok) c.toast((r.steps || []).join(' · ') + '.', 'done_all');
+      else c.toast(plain[r.error] || ('Merge stopped: ' + (r.text || r.error)), 'warning');
     }
     // Start the iOS build on GitHub from HQ.
     async function startBuild() {
@@ -274,8 +274,7 @@
       // Merge: always visible in Do now when your phone would run old code.
       if (v.ari && v.ariOn && last.mergeState) {
         const M = last.mergeState; const behind = (M.list || []).filter((m) => m.ahead > 0);
-        const LA = M.lastAuto;
-        const autoErr = LA && !LA.ok ? { icon: 'warning', t: 'Auto-merge stopped', sub: LA.text, hasBtn: true, btn: 'Copy fix prompt', go: () => copyFix(LA.prompt || LA.text) } : null;
+        const autoErr = null;
         const mergeRow = autoErr ? autoErr : M.stuck ? { icon: 'warning', t: 'Your merge is stuck', sub: M.conflicts && M.conflicts.length ? 'Conflict in ' + M.conflicts.join(', ') + '. Paste this to Claude.' : 'Your phone runs old code until it’s finished.', hasBtn: !(M.conflicts && M.conflicts.length), btn: 'Fix and merge', go: mergeNow }
           : behind.length ? { icon: 'merge', t: 'Merge ' + behind.map((m) => m.window).join(' and '), sub: 'Your phone runs old code until you merge.', hasBtn: true, btn: 'Merge now', go: mergeNow } : null;
         if (mergeRow) { v.ari.doNow = [{ ...mergeRow, toggleOpen: () => {} }, ...(v.ari.doNow || []).filter((d) => !/^Merge /.test(d.t))]; v.ari.doN = String(v.ari.doNow.length); v.ari.noDo = false; }
@@ -336,6 +335,34 @@
         }
         v.bp.name = 'Content'; v.bp.icon = 'slideshow';
         v.bp.L = { title: 'Slideshows', icon: 'slideshow', hv: String((C.shows || []).filter((x) => x.status === 'ready').length), hl: 'ready to post', items, empty: false };
+      }
+      // Watchdog building (was the Shipping Dock): what needs you, and everything it did by itself.
+      if (v.mapTowers) v.mapTowers = v.mapTowers.map((t) => (t.short === 'Dock' ? { ...t, short: 'Watchdog', name: 'Watchdog' } : t));
+      if (v.bp && v.bp.name === 'Shipping Dock') {
+        const W = (last && last.watchdog) || { needs: [], log: [] };
+        const base = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128', icon: '', hasBtn: false, btn: '', go: () => {} };
+        const wd = (name, arg) => () => post('/api/watchdog', { name, arg }).then((r) => c.toast(r.ok ? 'Done' : (r.error || 'Didn’t work'), r.ok ? 'done' : 'error'));
+        const L = [];
+        const sinceTick = W.lastTick ? Math.round((Date.now() - W.lastTick) / 1000) : null;
+        L.push({ ...base, t: W.paused ? 'Paused' : W.acting ? 'Watching and fixing' : 'Watch only', sub: W.paused ? W.paused.why : (W.acting ? 'Checks your windows, merges and builds every 20 seconds, and fixes what it safely can.' : 'It only writes down what it WOULD do. Nothing is changed.') + (sinceTick !== null ? ' Last check: ' + (sinceTick < 60 ? sinceTick + ' s ago' : Math.round(sinceTick / 60) + ' min ago') + '.' : ''),
+          hasChip: true, chipT: W.paused ? 'Paused' : W.acting ? 'On' : 'Watching', chipC: W.paused ? '#ffcf70' : W.acting ? '#8fe3b4' : 'rgba(255,255,255,.6)', chipA: 'none',
+          hasBtn: true, btn: W.paused ? 'Turn back on' : W.acting ? 'Switch to watch only' : 'Let it fix things', icon: W.paused ? 'play_arrow' : W.acting ? 'visibility' : 'build', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: W.paused ? wd('unpause') : wd('mode', W.acting ? 'watch' : 'act') });
+        for (const n of W.needs || []) L.push({ ...base, t: n.title, sub: n.text, hasChip: true, chipT: n.level === 'urgent' ? 'Important' : 'Needs you', chipC: n.level === 'urgent' ? '#ff9a8a' : '#ffcf70', chipA: 'none',
+          hasBtn: true, btn: n.button && !(n.steps || n.code) ? n.button.label : 'Show me how', icon: n.button && !(n.steps || n.code) ? 'bolt' : 'help', go: n.button && !(n.steps || n.code) ? wd(n.button.action, n.button.arg) : () => card.need(n) });
+        const ph = W.phone || {};
+        L.push({ ...base, t: 'Your phone', sub: ph.text || 'Checking…', hasChip: true, chipT: ph.ready ? 'Ready to test' : ph.metro ? 'App server on' : 'App server off', chipC: ph.ready ? '#8fe3b4' : 'rgba(255,255,255,.6)', chipA: 'none',
+          hasBtn: ph.step === 'install', btn: 'I installed it', icon: 'install_mobile', go: wd('installed') });
+        const Bd = W.build || {};
+        L.push({ ...base, t: 'Builds', sub: (Bd.needBuild ? 'The native part changed since your last build. ' : 'No new build needed: changes reach your phone with a reload. ') + `Automatic builds today: ${Bd.autoToday || 0} of ${Bd.max || 6}.` + (Bd.resting ? ' Resting after 3 failures.' : ''),
+          hasBtn: !!Bd.resting, btn: 'Start trying again', icon: 'restart_alt', bg: 'rgba(255,255,255,0.14)', fg: '#ffffff', go: wd('resetbreakers') });
+        v.bp.name = 'Watchdog'; v.bp.icon = 'shield';
+        v.bp.L = { title: 'Needs you', icon: 'shield', hv: String((W.needs || []).length), hl: (W.needs || []).length ? ((W.needs || []).length === 1 ? 'thing needs you' : 'things need you') : 'all good', items: L, empty: false };
+        const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+        const acts = (W.log || []).filter((e) => e.kind !== 'see');
+        v.bp.hasR = true;
+        v.bp.R = { title: 'What I did', icon: 'history', hv: String(acts.filter((e) => e.t >= dayStart.getTime() && e.kind === 'act').length), hl: 'things today',
+          items: acts.slice(0, 12).map((e) => ({ ...base, t: e.text, sub: new Date(e.t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ' · ' + ({ merge: 'Merging', build: 'Builds', windows: 'Windows', safety: 'Safety', guards: 'Safety setup' }[e.area] || e.area) + (e.kind === 'would' ? ' · would do (watch only)' : e.kind === 'error' ? ' · problem' : ''),
+            hasChip: e.kind === 'error' || e.kind === 'trip', chipT: 'Problem', chipC: '#ff9a8a', chipA: 'none' })), empty: !acts.length };
       }
       // Test Lab: plain words. ✓ = works, ✗ = broken. Sends what's broken straight to the window.
       if (v.bp && v.bp.name === 'Test Lab' && v.bp.L) {
@@ -421,14 +448,18 @@
         im.src = '/content/' + sh.id + '/' + x.img;
       });
     }
-    let lastAutoSeen = 0; const mergeSaid = new Set();
-    function announceMerge(M) {
-      const a = M && M.lastAuto; if (!a || a.at === lastAutoSeen) return; const first = !lastAutoSeen; lastAutoSeen = a.at;
-      if (a.ok) { mergeSaid.clear(); if (!first && !a.manual && /Merged/.test(a.text)) { c.toast('Auto-merged: ' + a.text, 'merge'); say('New work merged into your app.'); } return; }
-      // A problem is announced ONE time. It stays on the Pulse slide until it's fixed.
-      if (a.manual || mergeSaid.has(a.kind + (a.files || []).join())) return; mergeSaid.add(a.kind + (a.files || []).join());
-      c.toast(a.text, 'warning');
-      say(a.kind === 'leftover' ? 'Your app has broken merge leftovers. Open Pulse and copy the fix prompt.' : a.kind === 'conflict' ? 'Merge conflict. Open Pulse and copy the fix prompt.' : 'Auto merge stopped. Open Pulse to see why.');
+    // Watchdog alerts: each one once. "ready" = new version to test → the UFO flies to Test Lab.
+    let wdSeen = -1;
+    function announceWatchdog(W) {
+      if (!W || !W.alerts) return;
+      const fresh = W.alerts.filter((a) => a.id > wdSeen).reverse();
+      const first = wdSeen < 0; wdSeen = Math.max(wdSeen, ...W.alerts.map((a) => a.id), 0);
+      if (first) return; // don't replay old alerts after a reload
+      for (const a of fresh) {
+        c.toast(a.text, a.level === 'urgent' ? 'warning' : a.kind === 'ready' ? 'science' : a.kind === 'built' ? 'install_mobile' : 'shield');
+        if (a.level !== 'info') say(a.text);
+        if (a.kind === 'ready' && !c.state.focus && !c.state.bld) setTimeout(() => c.openBuilding('lab'), 1500);
+      }
     }
     const showSeen = {}; let firstShows = true;
     function announceContent(C) {
@@ -467,12 +498,8 @@
 
     const runSeen = {}; let firstRuns = true;
     let lastFailSaid = 0;
-    function announceRuns(runs) {
-      for (const r of runs || []) { const was = runSeen[r.id]; runSeen[r.id] = r.st;
-        if (!firstRuns && was === 'running' && r.st === 'done') say('Your ' + r.wf + ' is done. Install it on your phone.');
-        // Failed builds: one quiet toast, voice at most once every 30 minutes.
-        if (!firstRuns && was === 'running' && r.st === 'failed') { c.toast(r.wf + ' failed: ' + (r.note || ''), 'error'); if (Date.now() - lastFailSaid > 30 * 60000) { lastFailSaid = Date.now(); say('A build failed. The Factory says why.'); } } }
-      firstRuns = false;
+    function announceRuns(runs) { // build done/failed alerts now come from the Watchdog (no duplicates)
+      for (const r of runs || []) runSeen[r.id] = r.st; firstRuns = false; void lastFailSaid;
     }
     const saidDone = new Set();
     function announce(sessions) {
@@ -514,7 +541,7 @@
       }
       const merged = {};
       for (const m of snap.merges || []) { const id = letter(m.window); merged[id] = m.ahead === 0; }
-      announce(sessions); announceRuns(snap.runs); finishSlides(snap.content); announceContent(snap.content); announceMerge(snap.mergeState);
+      announce(sessions); announceRuns(snap.runs); finishSlides(snap.content); announceContent(snap.content); announceWatchdog(snap.watchdog);
       fixSamples(snap.plan);
       const u = snap.usage || {};
       c.setState({ sessions, tests, chat, jobQ, merged, events: mapEvents(snap.activity), projects: withPlan(mapProjects(snap.projects, knownProjects), snap.plan), runs: snap.runs || [], usage: u.pct || 0, resetAt: u.resetAt || Date.now() + 5 * 3600000 });
@@ -830,7 +857,7 @@
           ${lines.length ? `<h3 style="margin-top:16px">The error lines</h3><pre style="max-height:300px">${esc(lines.join('\n'))}</pre>` : ''}
           <div class="btns"><button class="b w" data-a="fix">Send to the next free window</button><button class="b g" data-a="copy">Copy</button></div>`;
         el.querySelector('.x').onclick = close;
-        const prompt = 'The iOS build "' + r.wf + '" on ' + r.br + ' failed. The error lines:\n\n' + lines.join('\n') + '\n\nFind the cause, fix it, start a new build (gh workflow run), and keep going until a build is GREEN. Report what it was in plain words. Questions at the END only.';
+        const prompt = 'The iOS build "' + r.wf + '" on ' + r.br + ' failed. The error lines:\n\n' + lines.join('\n') + '\n\nFind the cause and fix it in the code on your branch. Run npx tsc --noEmit, commit and push your branch. Do NOT start a build yourself (no gh workflow run, no eas build): HQ starts builds. If the fix is NOT in the code (Apple website, GitHub secrets), change nothing and tell me exactly what to do in plain words. End with one line that starts with HQ:';
         el.querySelector('[data-a=fix]').onclick = async () => { const res = await post('/api/queue-any', { text: prompt, title: 'Fix the failed build' }); close(); c.toast(res.started ? res.started + ' is fixing the build.' : 'Waiting for a free window.', 'build'); };
         el.querySelector('[data-a=copy]').onclick = async (e) => { e.target.textContent = (await copy(prompt)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
@@ -876,7 +903,20 @@ Try: git status
         el.querySelector('[data-a=cap]').onclick = async (e) => { e.target.textContent = (await copy(caption)) ? 'Copied' : 'Copy failed'; };
         bg.classList.add('open');
       }
-      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail, terminal };
+      // A Watchdog "needs you" item: what's wrong, exactly what to do, and one button.
+      function need(n) {
+        el.innerHTML = `<div class="top"><div style="flex:1"><h2>${esc(n.title)}</h2><div class="tags"><span class="tag">Watchdog</span><span class="tag">${n.level === 'urgent' ? 'Important' : 'Needs you'}</span></div></div><button class="x" aria-label="Close">\u2715</button></div>
+          <div class="panel" style="margin-top:16px;font-size:15px">${esc(n.text)}</div>
+          ${(n.steps || []).length ? `<h3 style="margin-top:16px">What to do</h3><div class="steps">${n.steps.map((x, i) => `<div class="step"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
+          ${n.code ? `<h3 style="margin-top:16px">Paste this in PowerShell</h3><pre>${esc(n.code)}</pre>` : ''}
+          ${(n.lines || []).length ? `<h3 style="margin-top:16px">The error</h3><pre style="max-height:220px">${esc(n.lines.join('\n'))}</pre>` : ''}
+          <div class="btns">${n.button ? `<button class="b w" data-a="act">${esc(n.button.label)}</button>` : ''}${n.code ? '<button class="b g" data-a="copy">Copy</button>' : ''}<button class="b g" data-a="close">Close</button></div>`;
+        el.querySelector('.x').onclick = close; el.querySelector('[data-a=close]').onclick = close;
+        const a = el.querySelector('[data-a=act]'); if (a) a.onclick = async () => { a.textContent = 'Working\u2026'; const r = await post('/api/watchdog', { name: n.button.action, arg: n.button.arg }); close(); c.toast(r.ok ? 'Done' : (r.error || 'Didn\u2019t work'), r.ok ? 'done' : 'error'); };
+        const cp = el.querySelector('[data-a=copy]'); if (cp) cp.onclick = async () => { cp.textContent = (await copy(n.code)) ? 'Copied' : 'Copy failed'; };
+        bg.classList.add('open');
+      }
+      return { open, close, info, output, keyBox, slides, newShow, draftEditor, templateEditor, anyJob, buildFail, terminal, need };
     })();
     const drawer = { open: (w) => card.output(w), refresh() {}, setOffline() {} };
     window.addEventListener('hq-terminal', () => card.terminal());
@@ -935,21 +975,19 @@ Try: git status
       }
       function drawPulse(snap) {
         if (!built) buildPulse();
-        const M = snap.mergeState || {}; const list = M.list || [];
-        const LA = M.lastAuto;
-        const rows = list.map((m) => `<div class="row"><div class="t">${esc(m.window)}<div class="s ${m.ahead ? 'warn' : 'ok'}">${m.ahead ? m.ahead + ' new change' + (m.ahead === 1 ? '' : 's') + ' not in your app yet' : '✓ In your app'}</div></div></div>`).join('');
+        const M = snap.mergeState || {}; const list = M.list || []; const W = snap.watchdog || {};
+        const rows = list.map((m) => `<div class="row"><div class="t">${esc(m.window)}<div class="s ${m.ahead ? 'warn' : 'ok'}">${m.ahead ? m.ahead + ' new change' + (m.ahead === 1 ? '' : 's') + ' waiting' : '\u2713 In your app'}</div></div></div>`).join('');
         const allIn = !M.stuck && list.every((m) => !m.ahead) && !(M.leftovers || []).length;
-        const prob = (M.leftovers || []).length ? { t: 'Your app is broken', s: 'Merge leftovers (<<<<<<<) in ' + M.leftovers.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Copy the fix prompt and paste it into Window A.', p: M.fixPrompt }
-          : M.stuck && (M.conflicts || []).length ? { t: 'Merge stuck on a conflict', s: 'Both windows changed ' + M.conflicts.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Copy the fix prompt and paste it into Window A.', p: M.fixPrompt }
-          : LA && !LA.ok ? { t: 'Auto-merge is paused', s: LA.text, p: LA.prompt } : null;
+        const mergeNeeds = (W.needs || []).filter((n) => /^(leftover|halfmerge|conflict|markers|types|dirty|wrongbranch|diverged|mergeerr|pull)/.test(n.key));
+        const lm = M.lastMerge;
+        const lastWd = (W.log || []).find((e) => e.area === 'merge');
         P.querySelector('#hqp-merge').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">merge</span>Your app</h4>
-          ${prob ? `<div class="row" style="background:rgba(255,140,120,.18);display:block"><b>${esc(prob.t)}</b><div class="s" style="opacity:.9;margin-top:3px">${esc(prob.s)}</div></div>`
-            : `<div class="row" style="background:${allIn ? 'rgba(143,227,180,.14)' : 'rgba(255,210,122,.14)'}"><div class="t"><b>${M.stuck ? 'A merge is half done' : allIn ? 'Everything is in your app' : 'New work to merge'}</b><div class="s">${M.stuck ? 'Click Merge now to finish it' : allIn ? 'Your phone runs the newest code (restart npm run dev after merges)' : 'Auto-merge does this within a minute'}</div></div></div>`}
+          ${mergeNeeds.length ? mergeNeeds.map((n) => `<div class="row" style="background:rgba(255,140,120,.18);display:block"><b>${esc(n.title)}</b><div class="s" style="opacity:.9;margin-top:3px">${esc(n.text)}</div></div>`).join('')
+            : `<div class="row" style="background:${allIn ? 'rgba(143,227,180,.14)' : 'rgba(255,210,122,.14)'}"><div class="t"><b>${allIn ? 'Everything is in your app' : 'New work is waiting'}</b><div class="s">${allIn ? 'The Watchdog merges new work by itself, safely' : 'The Watchdog merges it when that window is done'}</div></div></div>`}
           ${rows}
-          ${LA && LA.ok ? `<div class="s" style="font-size:12.5px;opacity:.7">Last merge ${ago(LA.at)}: ${esc(LA.text)}</div>` : ''}
-          <div style="margin-top:auto;display:flex;gap:8px">${prob && prob.p ? '<button id="hqp-fix">Copy fix prompt</button>' : ''}<button id="hqp-mergebtn" class="${allIn || prob ? 'g' : ''}">${prob ? 'Try merge again' : 'Merge now'}</button></div>`;
+          ${lastWd ? `<div class="s" style="font-size:12.5px;opacity:.75">Watchdog ${ago(lastWd.t)}: ${esc(lastWd.text)}</div>` : lm ? `<div class="s" style="font-size:12.5px;opacity:.75">Last merge ${ago(lm.at)}: ${esc(lm.text)}</div>` : ''}
+          <div style="margin-top:auto;display:flex;gap:8px"><button id="hqp-mergebtn" class="${allIn ? 'g' : ''}">Merge now</button></div>`;
         P.querySelector('#hqp-mergebtn').onclick = mergeNow;
-        const fx = P.querySelector('#hqp-fix'); if (fx) fx.onclick = () => copyFix(prob.p);
         const runs = snap.runs || []; const r0 = runs[0]; const u = snap.usage || {};
         P.querySelector('#hqp-builds').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">deployed_code</span>iOS builds</h4>
           ${r0 ? `<div class="row"><div class="t">${esc(r0.wf)} · ${esc(r0.br)}<div class="s ${r0.st === 'failed' ? 'bad' : r0.st === 'done' ? 'ok' : 'warn'}">${r0.st === 'running' ? 'Building… ' + ago(r0.at) : r0.st === 'done' ? '✓ Built ' + ago(r0.at) + '. Install it on your phone.' : 'Failed: ' + esc(r0.note || '')}</div></div>${r0.st === 'failed' ? '<button class="g" id="hqp-why">Why</button>' : ''}</div>` : '<div class="row"><div class="t s">No builds yet</div></div>'}
@@ -998,15 +1036,11 @@ Try: git status
       const tm = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       let ariKey = '';
       function inbox(snap) {
-        const M = snap.mergeState || {}; const LA = M.lastAuto; const out = [];
-        if ((M.leftovers || []).length) out.push({ c: 'red', i: 'error', t: 'Your app won’t open', s: 'A merge left broken lines in ' + M.leftovers.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Window A can fix it.', b: 'Copy fix prompt for Window A', go: () => copyFix(M.fixPrompt) });
-        else if (M.stuck && (M.conflicts || []).length) out.push({ c: 'red', i: 'merge', t: 'Merge stuck on a conflict', s: 'Both windows changed ' + M.conflicts.map((f) => f.replace(/^.*\//, '')).join(', ') + '.', b: 'Copy fix prompt for Window A', go: () => copyFix(M.fixPrompt) });
-        else if (LA && !LA.ok) out.push({ c: 'yel', i: 'merge', t: 'Auto-merge is paused', s: LA.text, b: LA.prompt ? 'Copy fix prompt for Window A' : 'Try again', go: () => (LA.prompt ? copyFix(LA.prompt) : mergeNow()) });
-        for (const s of snap.sessions || []) {
-          if (s.status === 'needs-you') out.push({ c: 'yel', i: 'front_hand', t: s.window + ' is asking you something', s: String(s.doing || '').slice(0, 140), b: '', go: null });
-        }
-        for (const t of c.state.tests || []) out.push({ c: '', i: 'phone_iphone', t: 'Test ' + t.from + '’s work on your phone', s: t.checks.length + ' things to check' + (t.title ? ': ' + t.title : ''), b: 'Open the test list', go: () => { c.setState({ focus: null }); c.openBuilding('lab'); } });
-        const f = (snap.runs || [])[0]; if (f && f.st === 'failed') out.push({ c: '', i: 'deployed_code', t: 'Your iOS build failed', s: f.note || '', b: 'See why', go: () => card.buildFail(f) });
+        const W = snap.watchdog || {}; const out = [];
+        for (const n of W.needs || []) out.push({ c: n.level === 'urgent' ? 'red' : n.level === 'warn' ? 'yel' : '', i: n.level === 'urgent' ? 'error' : 'shield', t: n.title, s: n.text, b: n.button ? n.button.label : (n.steps || n.code || n.lines) ? 'Show me how' : '', go: () => (n.button && !(n.steps || n.code) ? post('/api/watchdog', { name: n.button.action, arg: n.button.arg }) : card.need(n)) });
+        for (const t of c.state.tests || []) out.push({ c: '', i: 'phone_iphone', t: 'Test ' + t.from + '\u2019s work on your phone', s: t.checks.length + ' things to check' + (t.title ? ': ' + t.title : ''), b: 'Open the test list', go: () => { c.setState({ focus: null }); c.openBuilding('lab'); } });
+        const ph = W.phone || {};
+        if (ph.step === 'install') out.push({ c: 'yel', i: 'install_mobile', t: 'Install the new build', s: ph.text, b: 'I installed it', go: () => post('/api/watchdog', { name: 'installed' }) });
         const u = snap.usage || {}; if (u.hit) out.push({ c: '', i: 'hourglass', t: 'Claude limit hit', s: 'Windows wait and keep going by themselves at ' + tm(u.resetAt) + '.', b: '', go: null });
         return out;
       }
@@ -1022,8 +1056,9 @@ Try: git status
         const snap = last; if (!snap) return;
         const plan = snap.plan || {}; const today = plan.todayTasks || []; const dn = today.filter((t) => t.done).length;
         const items = inbox(snap); const rp = plan.replan || {};
+        const did = ((snap.watchdog || {}).log || []).filter((e) => e.kind !== 'see').slice(0, 5);
         const wins = (c.state.sessions || []).filter((x) => /^Window [A-Z]$/.test(x.name));
-        const key = JSON.stringify([today, items.map((x) => x.t + x.s), wins.map((w) => [w.status, w._raw && w._raw.status, w._raw && w._raw.doing, w.title]), rp, plan.planned, (plan.next || []).map((x) => x.id)]);
+        const key = JSON.stringify([today, did.map((e) => e.t + e.text), items.map((x) => x.t + x.s), wins.map((w) => [w.status, w._raw && w._raw.status, w._raw && w._raw.doing, w.title]), rp, plan.planned, (plan.next || []).map((x) => x.id)]);
         if (!force && key === ariKey) return; ariKey = key;
         const hr = new Date().getHours();
         A.innerHTML = `
@@ -1033,6 +1068,7 @@ Try: git status
           <h3>Needs you${items.length ? ' · ' + items.length : ''}</h3>
           ${items.length ? items.map((x, i) => `<div class="card ${x.c}"><span class="ms">${x.i}</span><div class="t"><div>${esc(x.t)}</div><div class="s">${esc(x.s)}</div>${x.b ? `<button class="b" data-i="${i}">${esc(x.b)}</button>` : ''}</div></div>`).join('')
             : '<div class="card"><span class="ms">check_circle</span><div class="t">Nothing needs you right now<div class="s">Work on today’s goals below</div></div></div>'}
+          ${did.length ? `<h3>What HQ did by itself</h3>${did.map((e) => `<div class="win"><span class="dot" style="background:${e.kind === 'error' || e.kind === 'trip' ? '#ff9a8a' : e.kind === 'would' ? 'rgba(255,255,255,.45)' : '#8fe3b4'}"></span><div style="flex:1;min-width:0">${esc(e.text)}<div class="who">${tm(e.t)}</div></div></div>`).join('')}` : ''}
           <h3>Today’s goals · ${dn} of ${today.length}</h3>
           <div class="bar"><i style="width:${today.length ? Math.round(dn / today.length * 100) : 0}%"></i></div>
           ${plan.planned && plan.planned.why ? `<div style="font-size:12.5px;opacity:.75">${esc(plan.planned.why)}</div>` : ''}

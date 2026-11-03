@@ -63,6 +63,7 @@ module.exports.js = function customizeJs(js) {
     js = js.replace(/makeRobot\(s\.id, s\.palette \|\| 0\)/, 'makeRobot(s.id, (s.palette || 0) + 1)');
     js = js.replace("makeRobot('pilot', 1)", "makeRobot('pilot', 0)");
     js = js.replace("{ key: 'vault', name: 'Idea Vault', icon: 'lightbulb'", "{ key: 'vault', name: 'Content', icon: 'slideshow'");
+    js = js.replace("{ key: 'dock', name: 'Shipping Dock', icon: 'local_shipping'", "{ key: 'dock', name: 'Watchdog', icon: 'shield'");
     js = js.replace("r.label.lastChild.style.background = '#9fe6ff'; r.label.lastChild.style.boxShadow = '0 0 8px #9fe6ff';", "r.label.lastChild.style.background = '#7ff0b0'; r.label.lastChild.style.boxShadow = '0 0 8px #7ff0b0';");
   }
   // The TV on the UFO plays a live "space show" with a news ticker of your real windows.
