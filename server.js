@@ -360,7 +360,7 @@ function pollRuns() {
         runs = j.workflow_runs.map((r) => {
           const st = r.status !== 'completed' ? 'running' : r.conclusion === 'success' ? 'done' : 'failed';
           const why = failWhy[r.id];
-          if (st === 'failed' && !why) fetchFailure(r.id);
+          if (st === 'failed' && (!why || why.retry)) fetchFailure(r.id);
           return { id: 'r' + r.id, wf: r.name, br: r.head_branch, st, at: Date.parse(r.updated_at), url: r.html_url,
             note: st === 'failed' ? (why ? why.short : 'Finding out why it failed\u2026') : '', fail: why ? why.lines : [] };
         });
@@ -387,9 +387,11 @@ function gh(args) {
 }
 const failWhy = {}; const failAsked = {};
 async function fetchFailure(id) {
-  if (failAsked[id]) return; failAsked[id] = true;
+  if (failAsked[id] && Date.now() - failAsked[id] < 120000) return; failAsked[id] = Date.now();
   const r = await gh(['run', 'view', String(id), '-R', config.githubRepo, '--log-failed']);
-  if (r.text === 'nogh') { failWhy[id] = { short: 'Install and log in to GitHub CLI to see why (see README)', lines: [] }; return broadcast(); }
+  // Couldn't read it (gh missing, not logged in, network): say exactly what gh said, and try again in 2 minutes.
+  if (r.text === 'nogh') { failWhy[id] = { short: 'HQ can\'t find the GitHub CLI (gh). Install it, then restart HQ.', lines: [], retry: true }; return broadcast(); }
+  if (!r.ok || !r.text.trim()) { failWhy[id] = { short: 'HQ couldn\'t read the build log yet: ' + (r.text.trim().split('\n').pop() || 'no answer from GitHub').slice(0, 140), lines: r.text.trim().split('\n').slice(-10), retry: true }; return broadcast(); }
   // Lines look like "job<TAB>step<TAB>2026-...Z message". Keep just the message.
   const all = r.text.split('\n').map((l) => l.split('\t').pop().replace(/^\S+Z\s/, '').replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(Boolean);
   // Skip GitHub's generic "Process completed with exit code N" and find the REAL errors.
@@ -422,17 +424,35 @@ async function pollMerges() {
   // A merge that started but never finished (Git waiting in an editor, or a conflict).
   const stuck = fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'));
   const conflicts = stuck ? String(await git(['diff', '--name-only', '--diff-filter=U']) || '').split('\n').filter(Boolean) : [];
-  const next = { list: out, stuck, conflicts };
+  const leftovers = Date.now() - lastLeftCheck > 30000 ? (lastLeft = await leftoverFiles(), lastLeftCheck = Date.now(), lastLeft) : lastLeft;
+  const next = { list: out, stuck, conflicts, leftovers, fixPrompt: leftovers.length ? fixPrompt('leftover', leftovers) : stuck && conflicts.length ? fixPrompt('conflict', conflicts) : '' };
   if (JSON.stringify(next) !== JSON.stringify(mergeState)) { mergeState = next; merges = out; broadcast(); }
   // Auto-merge: new finished work goes straight into your app folder (turn off with "autoMerge": false).
-  if (config.autoMerge !== false && !merging && (out.some((m) => m.ahead > 0) || (stuck && !conflicts.length)) && Date.now() - lastAuto > 60000) {
-    lastAuto = Date.now();
+  if (config.autoMerge !== false && !merging && (out.some((m) => m.ahead > 0) || (stuck && !conflicts.length)) && Date.now() - lastAuto > 60000
+      && !(autoBlockedSig && autoBlockedSig === await mergeSig())) {
+    lastAuto = Date.now(); autoBlockedSig = '';
     const r = await mergeAll();
-    lastAutoInfo = { at: Date.now(), ok: !!r.ok, text: r.ok ? r.steps.join(' \u00b7 ') : (r.error === 'conflict' ? 'Conflict in ' + (r.files || []).join(', ') : r.error) };
+    lastAutoInfo = mergeInfo(r);
+    if (!r.ok) autoBlockedSig = await mergeSig(); // don't retry until something changes
     broadcast();
   }
 }
-let lastAuto = 0; let lastAutoInfo = null;
+let lastAuto = 0; let lastAutoInfo = null; let autoBlockedSig = '';
+// What the repo looks like right now. Auto-merge only retries a failed merge after this changes.
+async function mergeSig() {
+  const heads = []; for (const br of Object.values(config.git.branches || {})) heads.push(await git(['rev-parse', br]));
+  return [await git(['rev-parse', 'HEAD']), ...heads, await git(['status', '--porcelain'])].join('|');
+}
+function mergeInfo(r) {
+  const short = (f) => f.replace(/^.*[\\/]/, '');
+  if (r.ok) return { at: Date.now(), ok: true, text: r.steps.join(' \u00b7 ') };
+  const files = r.files || [];
+  const text = r.error === 'leftover' ? 'Broken merge leftovers in ' + files.map(short).join(', ') + '. Your app won\'t open until they\'re fixed.'
+    : r.error === 'conflict' ? 'Window A and Window B changed the same lines in ' + files.map(short).join(', ') + '. A window has to combine them.'
+    : r.error === 'dirty' ? 'Your app folder has changes that were never saved to Git (' + files.map(short).join(', ') + ').'
+    : r.error === 'Already merging' ? 'Already merging' : 'Git said: ' + r.error;
+  return { at: Date.now(), ok: false, kind: r.error, files, text, prompt: fixPrompt(r.error, files) };
+}
 // Hand waiting "next free window" jobs to any window that's free (checks every 15 seconds).
 setInterval(() => {
   if (!anyQueue.length) return;
@@ -445,7 +465,19 @@ let mergeState = {};
 
 // One click: finish a stuck merge, merge both windows, push. Never throws work away:
 // if there's a conflict it stops and tells you which files.
-let merging = false;
+let merging = false; let lastLeft = []; let lastLeftCheck = 0;
+// Files that still have "<<<<<<<" conflict leftovers in them (these break the app).
+async function leftoverFiles() {
+  const out = await new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, 'grep', '-l', '-E', '^(<<<<<<< |>>>>>>> )', '--', '.', ':!node_modules'], { timeout: 15000, windowsHide: true }, (err, o) => resolve(String(o || ''))));
+  return out.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 20);
+}
+function fixPrompt(kind, files) {
+  const list = files.join(', ');
+  if (kind === 'leftover') return `In C:\\Users\\arize\\gym app (branch overnight-build) these files still have merge conflict leftovers (lines starting with <<<<<<<, ======= and >>>>>>>): ${list}. They break the app. For each one, combine BOTH sides correctly so no one's work is lost (don't just pick one side). Then check the app builds with npx tsc --noEmit. Commit "Fix leftover merge conflicts" and push overnight-build. Then merge overnight-build into work-a and work-b so they're clean too. Never reset, never force push, never discard work. Tell me in one line when it's done.`;
+  if (kind === 'conflict') return `In C:\\Users\\arize\\gym app (branch overnight-build) a merge is stuck on a conflict in: ${list}. Finish it: for each file, combine BOTH sides correctly so no one's work is lost. Remove every <<<<<<<, ======= and >>>>>>> line. Check the app builds with npx tsc --noEmit. Then commit the merge and push overnight-build. Never reset, never force push, never discard work. Tell me in one line when it's done.`;
+  if (kind === 'dirty') return `In C:\\Users\\arize\\gym app there are changes that were never committed (${list}), so HQ can't merge. Look at them and tell me in plain words what they are. Don't delete or reset anything. If they're real work, commit them with a clear message and push. If they look like junk, ask me first.`;
+  return '';
+}
 async function mergeAll() {
   if (!config.git || !config.git.mainRepo) return { error: 'No main folder set in hq.config.json' };
   if (merging) return { error: 'Already merging' };
@@ -453,6 +485,8 @@ async function mergeAll() {
   const run = (args) => new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, '-c', 'core.editor=true', ...args], { timeout: 60000, windowsHide: true, env: { ...process.env, GIT_MERGE_AUTOEDIT: 'no', GIT_EDITOR: 'true' } }, (err, out, errOut) => resolve({ ok: !err, text: String(out || '') + String(errOut || '') })));
   const steps = [];
   try {
+    const left = await leftoverFiles();
+    if (left.length) return { error: 'leftover', files: left };
     if (fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'))) {
       const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim();
       if (un) return { error: 'conflict', files: un.split('\n') };
@@ -460,7 +494,14 @@ async function mergeAll() {
     }
     for (const br of Object.values(config.git.branches || {})) {
       const r = await run(['merge', br, '--no-edit']);
-      if (!r.ok) { const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim(); return { error: un ? 'conflict' : r.text.trim().split('\n').pop(), files: un ? un.split('\n') : [], steps }; }
+      if (!r.ok) {
+        const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim();
+        if (un) return { error: 'conflict', files: un.split('\n'), steps };
+        // "Your local changes would be overwritten": list the files.
+        const dirty = /would be overwritten/i.test(r.text) ? r.text.split('\n').filter((l) => /^\s+\S/.test(l) && !/Please|Aborting|commit your/i.test(l)).map((l) => l.trim()) : [];
+        if (dirty.length) return { error: 'dirty', files: dirty, steps };
+        return { error: r.text.trim().split('\n').filter(Boolean).pop() || 'Git said no', files: [], steps };
+      }
       steps.push(/Already up to date/i.test(r.text) ? br + ' was already in' : 'Merged ' + br);
     }
     const p = await run(['push']); steps.push(p.ok ? 'Pushed' : 'Push failed: ' + p.text.trim().split('\n').pop());
@@ -492,7 +533,12 @@ function scanUsage() {
       const cut = text.lastIndexOf('\n'); if (cut < 0) continue;
       rec.size += Buffer.byteLength(text.slice(0, cut + 1));
       for (const line of text.slice(0, cut).split('\n')) {
-        if (/"isApiErrorMessage":true/.test(line) && /limit/i.test(line)) { try { const j = JSON.parse(line); rec.hits = rec.hits || []; rec.hits.push(Date.parse(j.timestamp) || st.mtimeMs); } catch {} continue; }
+        // The "You've hit your limit · resets 3pm" message. Any assistant line with it counts.
+        if (/limit/i.test(line) && /"type":"assistant"/.test(line) && /hit your [^"]{0,40}limit|usage limit|limit reached/i.test(line)) {
+          try { const j = JSON.parse(line); const txt = ((j.message && j.message.content) || []).map((x) => x.text || '').join(' ');
+            if (limitFrom(txt) || /isApiErrorMessage":true/.test(line)) { rec.hits = rec.hits || []; const t = Date.parse(j.timestamp) || st.mtimeMs; rec.hits.push(t); rec.resets = rec.resets || []; rec.resets.push({ t, reset: limitFrom(txt, t) }); } } catch {}
+          continue;
+        }
         if (!line.includes('"usage"')) continue;
         try {
           const j = JSON.parse(line); const u = j.message && j.message.usage; if (!u || j.type !== 'assistant') continue;
@@ -504,8 +550,8 @@ function scanUsage() {
       usageSeen.set(fp, rec);
     }
   }
-  const all = []; const hits = [];
-  for (const r of usageSeen.values()) { for (const m of r.msgs.values()) all.push(m); for (const h of r.hits || []) hits.push(h); }
+  const all = []; const hits = []; let lastReset = 0;
+  for (const r of usageSeen.values()) { for (const m of r.msgs.values()) all.push(m); for (const h of r.hits || []) hits.push(h); for (const x of r.resets || []) if (x.reset > lastReset) lastReset = x.reset; }
   all.sort((a, b) => a.t - b.t); hits.sort((a, b) => a - b);
   // Split into 5-hour windows the same way Claude does: a window starts at your first message after the last one ended.
   // If you ever hit the real limit, the tokens used at that moment ARE your limit.
@@ -525,7 +571,9 @@ function scanUsage() {
   const byWindow = {};
   if (active) for (const m of cur) { const w = windowName(m.cwd); byWindow[w] = (byWindow[w] || 0) + m.tok; }
   const recent = active ? cur.filter((m) => now - m.t < 15 * 60000).reduce((a, m) => a + m.tok, 0) / 15 : 0;
-  const next = { tokens, limit, pct: Math.min(known ? 100 : 99, Math.round((tokens / limit) * 100)), blockStart: active ? start : 0, resetAt: active ? start + BLOCK : 0, byWindow, perMin: Math.round(recent), guessed: !known };
+  // Hit the limit and it hasn't reset yet: that's 100%, no matter what the token math says.
+  const hitNow = lastReset > now;
+  const next = { tokens, limit, pct: hitNow ? 100 : Math.min(known ? 100 : 99, Math.round((tokens / limit) * 100)), hit: hitNow, blockStart: active ? start : 0, resetAt: hitNow ? lastReset : active ? start + BLOCK : 0, byWindow, perMin: Math.round(recent), guessed: !known };
   if (JSON.stringify(next) !== JSON.stringify(usage)) { usage = next; broadcast(); }
 }
 
@@ -676,11 +724,11 @@ async function pollYesterday() {
 
 // ─── Auto-continue after Claude's usage limit ──────────────────────────────
 // Claude Code says e.g. "You've hit your session limit · resets 3:45pm" (or "resets Mon 12:00am").
-function limitFrom(text) {
+function limitFrom(text, base) {
   const t = String(text || '');
   if (!/hit your .*limit|usage limit|limit reached/i.test(t)) return 0;
   const m = /resets\s+(?:(sun|mon|tue|wed|thu|fri|sat)\w*\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(t);
-  const now = new Date();
+  const now = base ? new Date(base) : new Date();
   if (m) {
     let h = Number(m[2]) % 12; if (/pm/i.test(m[4])) h += 12;
     const d = new Date(now); d.setHours(h, Number(m[3] || 0), 0, 0);
@@ -688,6 +736,7 @@ function limitFrom(text) {
     else if (d <= now) d.setDate(d.getDate() + 1);
     return d.getTime() + 90 * 1000; // a minute and a half after the reset, to be safe
   }
+  if (base) return base + 5 * 3600 * 1000;
   return (usage && usage.resetAt ? usage.resetAt : Date.now() + 5 * 3600 * 1000) + 90 * 1000;
 }
 setInterval(() => {
@@ -783,10 +832,13 @@ function runShell(cmd, folderName) {
   const cwd = shellFolders()[folderName] || os.homedir();
   const id = ++shellSeq;
   const child = process.platform === 'win32'
-    ? spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], { cwd, windowsHide: true, env: { ...process.env, GIT_EDITOR: 'notepad', GIT_MERGE_AUTOEDIT: 'no' } })
+    ? spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cmd], { cwd, windowsHide: true,
+        // No hidden editor or pager that waits forever (that's what made merges "stop" here).
+        env: { ...process.env, GIT_EDITOR: 'true', GIT_MERGE_AUTOEDIT: 'no', GIT_PAGER: 'cat', PAGER: 'cat', GIT_TERMINAL_PROMPT: '0' } })
     : spawn('bash', ['-lc', cmd], { cwd });
   const job = { id, cmd, folder: folderName, cwd, out: '', done: false, code: null, at: Date.now(), child };
   const add = (c) => { job.out += String(c); if (job.out.length > 300000) job.out = job.out.slice(-200000); };
+  try { child.stdin.end(); } catch {}
   child.stdout.on('data', add); child.stderr.on('data', add);
   child.on('error', (e) => { add('\n' + e.message + '\n'); job.done = true; job.code = -1; });
   child.on('exit', (code) => { job.done = true; job.code = code; });
@@ -931,7 +983,7 @@ const server = http.createServer(async (req, res) => {
     anyQueue.push({ text: full, title: String(b.title || '') }); broadcast(); return json(res, 200, { queued: anyQueue.length });
   }
   if (req.method === 'POST' && url === '/api/queue-any/clear') { anyQueue.length = 0; broadcast(); return json(res, 200, { ok: true }); }
-  if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); broadcast(); return json(res, 200, r); }
+  if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); lastAutoInfo = mergeInfo(r); lastAutoInfo.manual = true; if (r.ok) autoBlockedSig = ''; broadcast(); return json(res, 200, { ...r, info: lastAutoInfo }); }
   if (url.startsWith('/api/shell')) {
     if (!isLocal(req) || req.headers['x-hq-token'] !== SHELL_TOKEN) return json(res, 403, { error: 'Only from the HQ window on this PC.' });
     if (req.method === 'POST' && url === '/api/shell') { const b = await readBody(req); const cmd = String(b.cmd || '').trim(); if (!cmd) return json(res, 400, { error: 'Empty' }); const j = runShell(cmd, b.folder); return json(res, 200, { id: j.id }); }

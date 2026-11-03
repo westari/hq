@@ -125,8 +125,11 @@
     let last = null;
     const knownProjects = Object.keys(c.state.projects || {});
     // Mute button in the top bar (preload.js) talks to us through a data attribute.
-    const syncSound = () => { document.documentElement.dataset.hqSound = c.state.sound === false ? '0' : '1'; };
-    window.addEventListener('hq-toggle-sound', () => { c.setState({ sound: c.state.sound === false }, syncSound); });
+    // Mute = no talking and no chimes at all (remembered after restarts). Windows pop-ups still show, silently.
+    const isMuted = () => c.state.sound === false;
+    const syncSound = () => { document.documentElement.dataset.hqSound = isMuted() ? '0' : '1'; try { localStorage.setItem('hq-muted', isMuted() ? '1' : '0'); } catch (e) {} if (isMuted() && window.__hqAudio) { try { window.__hqAudio.pause(); } catch (e) {} } };
+    try { if (localStorage.getItem('hq-muted') === '1') c.setState({ sound: false }); } catch (e) {}
+    window.addEventListener('hq-toggle-sound', () => { c.setState({ sound: isMuted() }, () => { syncSound(); c.toast(isMuted() ? 'Muted. HQ won\u2019t talk.' : 'Sound on', isMuted() ? 'volume_off' : 'volume_up'); }); });
     setInterval(syncSound, 1000);
     c.setState({ live: true, runs: [], events: [], tests: [], chat: {}, jobQ: {}, usage: 0, resetAt: Date.now() });
 
@@ -159,12 +162,13 @@
       queue(t.win, msg, 'Feedback queued for ');
     };
 
+    async function copyFix(prompt) { if (await copy(prompt)) c.toast('Fix prompt copied. Paste it into Window A in VS Code.', 'content_copy'); }
     async function mergeNow() {
       c.toast('Merging…', 'merge');
       const r = await post('/api/merge', {});
       if (r.ok) { c.toast((r.steps || []).join(' · ') + '. Restart npm run dev.', 'done_all'); say('Merge done. Restart the app to test the new code.'); }
-      else if (r.error === 'conflict') c.toast('Conflict in ' + (r.files || []).join(', ') + '. Send this to Claude.', 'warning');
-      else c.toast('Merge stopped: ' + r.error, 'error');
+      else if (r.info && r.info.prompt) { await copy(r.info.prompt); c.toast(r.info.text + ' Fix prompt copied: paste it into Window A.', 'warning'); }
+      else c.toast((r.info && r.info.text) || ('Merge stopped: ' + r.error), 'error');
     }
     // Start the iOS build on GitHub from HQ.
     async function startBuild() {
@@ -271,7 +275,7 @@
       if (v.ari && v.ariOn && last.mergeState) {
         const M = last.mergeState; const behind = (M.list || []).filter((m) => m.ahead > 0);
         const LA = M.lastAuto;
-        const autoErr = LA && !LA.ok ? { icon: 'warning', t: 'Auto-merge stopped', sub: LA.text, hasBtn: true, btn: 'Ask a window to fix it', go: () => post('/api/queue-any', { text: 'HQ tried to merge work-a and work-b into my app folder (C:\\Users\\arize\\gym app) and it stopped with: ' + LA.text + '\n\nFix it without losing ANY work (no reset, no discard, no force). If there are uncommitted changes in that folder, tell me exactly what they are first. Then finish the merge and push.', title: 'Fix the stuck merge' }).then(() => c.toast('Sent to the next free window', 'send')) } : null;
+        const autoErr = LA && !LA.ok ? { icon: 'warning', t: 'Auto-merge stopped', sub: LA.text, hasBtn: true, btn: 'Copy fix prompt', go: () => copyFix(LA.prompt || LA.text) } : null;
         const mergeRow = autoErr ? autoErr : M.stuck ? { icon: 'warning', t: 'Your merge is stuck', sub: M.conflicts && M.conflicts.length ? 'Conflict in ' + M.conflicts.join(', ') + '. Paste this to Claude.' : 'Your phone runs old code until it’s finished.', hasBtn: !(M.conflicts && M.conflicts.length), btn: 'Fix and merge', go: mergeNow }
           : behind.length ? { icon: 'merge', t: 'Merge ' + behind.map((m) => m.window).join(' and '), sub: 'Your phone runs old code until you merge.', hasBtn: true, btn: 'Merge now', go: mergeNow } : null;
         if (mergeRow) { v.ari.doNow = [{ ...mergeRow, toggleOpen: () => {} }, ...(v.ari.doNow || []).filter((d) => !/^Merge /.test(d.t))]; v.ari.doN = String(v.ari.doNow.length); v.ari.noDo = false; }
@@ -417,11 +421,14 @@
         im.src = '/content/' + sh.id + '/' + x.img;
       });
     }
-    let lastAutoSeen = 0;
+    let lastAutoSeen = 0; const mergeSaid = new Set();
     function announceMerge(M) {
-      const a = M && M.lastAuto; if (!a || a.at === lastAutoSeen) return; const first = !lastAutoSeen; lastAutoSeen = a.at; if (first) return;
-      if (a.ok && /Merged/.test(a.text)) { c.toast('Auto-merged: ' + a.text, 'merge'); say('New work merged into your app.'); }
-      else if (!a.ok) { c.toast('Auto-merge stopped: ' + a.text, 'warning'); say(/local changes|overwritten/i.test(a.text) ? 'Auto merge stopped. Your app folder has unsaved changes. Open Ari to fix it.' : /conflict/i.test(a.text) ? 'Auto merge stopped on a conflict. Open Ari.' : 'Auto merge stopped. Open Ari to see why.'); }
+      const a = M && M.lastAuto; if (!a || a.at === lastAutoSeen) return; const first = !lastAutoSeen; lastAutoSeen = a.at;
+      if (a.ok) { mergeSaid.clear(); if (!first && !a.manual && /Merged/.test(a.text)) { c.toast('Auto-merged: ' + a.text, 'merge'); say('New work merged into your app.'); } return; }
+      // A problem is announced ONE time. It stays on the Pulse slide until it's fixed.
+      if (a.manual || mergeSaid.has(a.kind + (a.files || []).join())) return; mergeSaid.add(a.kind + (a.files || []).join());
+      c.toast(a.text, 'warning');
+      say(a.kind === 'leftover' ? 'Your app has broken merge leftovers. Open Pulse and copy the fix prompt.' : a.kind === 'conflict' ? 'Merge conflict. Open Pulse and copy the fix prompt.' : 'Auto merge stopped. Open Pulse to see why.');
     }
     const showSeen = {}; let firstShows = true;
     function announceContent(C) {
@@ -440,7 +447,8 @@
       const r = await fetch('/api/say?voice=' + encodeURIComponent(vid || myVoice()) + '&text=' + encodeURIComponent(text));
       if (r.status === 202) { const st = await r.json(); c.toast(st.busy || 'Getting the voice ready', 'downloading'); return; }
       if (!r.ok) return;
-      const url = URL.createObjectURL(await r.blob()); const a = new Audio(url);
+      if (c.state.sound === false && !vid) return;
+      const url = URL.createObjectURL(await r.blob()); const a = new Audio(url); window.__hqAudio = a;
       await new Promise((res) => { a.onended = res; a.onerror = res; a.play().catch(res); }); URL.revokeObjectURL(url);
     }
     window.addEventListener('hq-next-voice', () => {
@@ -454,7 +462,7 @@
       try { if (document.hidden || !document.hasFocus()) new Notification('HQ', { body: text, silent: true }); } catch (e) {}
       if (c.state.sound === false) return;
       try { c.chime(); } catch (e) {}
-      playing = playing.then(() => new Promise((r) => setTimeout(r, 700))).then(() => playVoice(text)).catch(() => {});
+      playing = playing.then(() => new Promise((r) => setTimeout(r, 700))).then(() => (c.state.sound === false ? null : playVoice(text))).catch(() => {});
     }
 
     const runSeen = {}; let firstRuns = true;
@@ -930,13 +938,18 @@ Try: git status
         const M = snap.mergeState || {}; const list = M.list || [];
         const LA = M.lastAuto;
         const rows = list.map((m) => `<div class="row"><div class="t">${esc(m.window)}<div class="s ${m.ahead ? 'warn' : 'ok'}">${m.ahead ? m.ahead + ' new change' + (m.ahead === 1 ? '' : 's') + ' not in your app yet' : '✓ In your app'}</div></div></div>`).join('');
-        const allIn = !M.stuck && list.every((m) => !m.ahead);
+        const allIn = !M.stuck && list.every((m) => !m.ahead) && !(M.leftovers || []).length;
+        const prob = (M.leftovers || []).length ? { t: 'Your app is broken', s: 'Merge leftovers (<<<<<<<) in ' + M.leftovers.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Copy the fix prompt and paste it into Window A.', p: M.fixPrompt }
+          : M.stuck && (M.conflicts || []).length ? { t: 'Merge stuck on a conflict', s: 'Both windows changed ' + M.conflicts.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Copy the fix prompt and paste it into Window A.', p: M.fixPrompt }
+          : LA && !LA.ok ? { t: 'Auto-merge is paused', s: LA.text, p: LA.prompt } : null;
         P.querySelector('#hqp-merge').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">merge</span>Your app</h4>
-          <div class="row" style="background:${allIn ? 'rgba(143,227,180,.14)' : 'rgba(255,210,122,.14)'}"><div class="t"><b>${M.stuck ? 'A merge is stuck' : allIn ? 'Everything is in your app' : 'New work to merge'}</b><div class="s">${M.stuck ? (M.conflicts && M.conflicts.length ? 'Conflict in ' + esc(M.conflicts.join(', ')) : 'Click Merge now to finish it') : allIn ? 'Your phone runs the newest code (restart npm run dev after merges)' : 'Auto-merge does this within a minute'}</div></div></div>
+          ${prob ? `<div class="row" style="background:rgba(255,140,120,.18);display:block"><b>${esc(prob.t)}</b><div class="s" style="opacity:.9;margin-top:3px">${esc(prob.s)}</div></div>`
+            : `<div class="row" style="background:${allIn ? 'rgba(143,227,180,.14)' : 'rgba(255,210,122,.14)'}"><div class="t"><b>${M.stuck ? 'A merge is half done' : allIn ? 'Everything is in your app' : 'New work to merge'}</b><div class="s">${M.stuck ? 'Click Merge now to finish it' : allIn ? 'Your phone runs the newest code (restart npm run dev after merges)' : 'Auto-merge does this within a minute'}</div></div></div>`}
           ${rows}
-          ${LA ? `<div class="s ${LA.ok ? '' : 'bad'}" style="font-size:12.5px">${LA.ok ? 'Last auto-merge ' + ago(LA.at) + ': ' + esc(LA.text) : 'Auto-merge stopped ' + ago(LA.at) + ': ' + esc(LA.text)}</div>` : ''}
-          <div style="margin-top:auto"><button id="hqp-mergebtn" ${allIn ? 'class="g"' : ''}>Merge now</button></div>`;
+          ${LA && LA.ok ? `<div class="s" style="font-size:12.5px;opacity:.7">Last merge ${ago(LA.at)}: ${esc(LA.text)}</div>` : ''}
+          <div style="margin-top:auto;display:flex;gap:8px">${prob && prob.p ? '<button id="hqp-fix">Copy fix prompt</button>' : ''}<button id="hqp-mergebtn" class="${allIn || prob ? 'g' : ''}">${prob ? 'Try merge again' : 'Merge now'}</button></div>`;
         P.querySelector('#hqp-mergebtn').onclick = mergeNow;
+        const fx = P.querySelector('#hqp-fix'); if (fx) fx.onclick = () => copyFix(prob.p);
         const runs = snap.runs || []; const r0 = runs[0]; const u = snap.usage || {};
         P.querySelector('#hqp-builds').innerHTML = `<h4><span class="ms" style="font-family:'Material Symbols Rounded'">deployed_code</span>iOS builds</h4>
           ${r0 ? `<div class="row"><div class="t">${esc(r0.wf)} · ${esc(r0.br)}<div class="s ${r0.st === 'failed' ? 'bad' : r0.st === 'done' ? 'ok' : 'warn'}">${r0.st === 'running' ? 'Building… ' + ago(r0.at) : r0.st === 'done' ? '✓ Built ' + ago(r0.at) + '. Install it on your phone.' : 'Failed: ' + esc(r0.note || '')}</div></div>${r0.st === 'failed' ? '<button class="g" id="hqp-why">Why</button>' : ''}</div>` : '<div class="row"><div class="t s">No builds yet</div></div>'}
@@ -944,7 +957,8 @@ Try: git status
           <button id="hqp-build">Start a new build</button>
           <h4 style="margin-top:6px"><span class="ms" style="font-family:'Material Symbols Rounded'">data_usage</span>Claude usage ${u.pct || 0}%</h4>
           <div class="bar"><i style="width:${Math.min(100, u.pct || 0)}%"></i></div>
-          <div class="s" style="font-size:12.5px">${u.resetAt ? 'Resets ' + new Date(u.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'No use in the last 5 hours'}</div>`;
+          <div class="s" style="font-size:12.5px">${u.hit ? 'You hit the limit. ' : ''}${u.resetAt ? 'Resets ' + new Date(u.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'No use in the last 5 hours'}</div>
+          <div class="s" style="font-size:11.5px;opacity:.55">Counts Claude Code only. Chats on claude.ai use the same limit but HQ can't see them${u.guessed ? '. Gets exact after you hit the limit once' : ''}.</div>`;
         P.querySelector('#hqp-build').onclick = startBuild;
         const why = P.querySelector('#hqp-why'); if (why) why.onclick = () => card.buildFail(r0);
       }
@@ -965,7 +979,9 @@ Try: git status
         const tests = c.state.tests || []; const failed = (last.runs || []).filter((r) => r.st === 'failed').slice(0, 1);
         const needs = (c.state.sessions || []).filter((s) => s.status === 'needs');
         const doNow = [
-          ...(M.stuck || behind.length ? [{ i: 'merge', t: M.stuck ? 'Finish the stuck merge' : 'Merge ' + behind.map((m) => m.window).join(' and '), s: 'Your phone runs old code until you do', go: mergeNow }] : []),
+          ...((M.leftovers || []).length || (M.stuck && (M.conflicts || []).length) ? [{ i: 'warning', t: (M.leftovers || []).length ? 'Your app is broken: merge leftovers' : 'Merge stuck on a conflict', s: 'Click to copy the fix prompt, then paste it into Window A', go: () => copyFix(M.fixPrompt) }]
+            : (last.mergeState.lastAuto && !last.mergeState.lastAuto.ok) ? [{ i: 'warning', t: 'Auto-merge is paused', s: last.mergeState.lastAuto.text, go: () => last.mergeState.lastAuto.prompt ? copyFix(last.mergeState.lastAuto.prompt) : mergeNow() }]
+            : M.stuck || behind.length ? [{ i: 'merge', t: M.stuck ? 'Finish the half-done merge' : 'Merge ' + behind.map((m) => m.window).join(' and '), s: 'Your phone runs old code until you do', go: mergeNow }] : []),
           ...needs.map((s) => ({ i: 'front_hand', t: s.name + ' needs you', s: 'Answer it in VS Code', go: () => {} })),
           ...tests.map((t) => ({ i: 'phone_iphone', t: 'Test ' + t.from + '’s work', s: t.checks.length + ' things to check on your phone', go: () => { bg.classList.remove('open'); c.setState({ focus: null }); c.openBuilding('lab'); } })),
           ...failed.map((r) => ({ i: 'error', t: 'A build failed', s: r.note || r.br, go: () => card.buildFail(r) })),
