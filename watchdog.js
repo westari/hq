@@ -602,10 +602,11 @@ function createWatchdog(hq) {
     if (!B.init && runs.length) { for (const run of runs) if (run.st !== 'running') B.seenRuns[run.id] = now(); B.init = true; save(); }
     // Explain the newest failed build even if it happened before HQ started (explain only, no action).
     const newest = runs.find((x) => x.st !== 'running');
-    if (newest && newest.st === 'failed' && (newest.fail.length || newest.raw) && (!B.lastFail || B.lastFail.id !== newest.id)) {
+    const reCls = newest && newest.st === 'failed' && B.lastFail && B.lastFail.id === newest.id ? R.classifyBuild((newest.raw || '') + '\n' + newest.fail.join('\n') + '\n' + newest.note).id : null;
+    if (newest && newest.st === 'failed' && (newest.fail.length || newest.raw) && (!B.lastFail || B.lastFail.id !== newest.id || (reCls && reCls !== B.lastFail.cls))) {
       const cls = R.classifyBuild((newest.raw || '') + '\n' + newest.fail.join('\n') + '\n' + newest.note);
-      B.lastFail = { id: newest.id, cls: cls.id, at: newest.at, title: cls.title, plain: cls.plain, steps: cls.steps || [], lines: newest.fail.slice(0, 8), who: cls.human ? 'you' : 'window',
-        doing: cls.human ? 'Only you or Dad can fix this. HQ won\u2019t retry it (it would fail the same way).' : 'HQ sends the next failure like this to a window to fix by itself. For this older one, press \u201cSee the error\u201d.' }; save();
+      B.lastFail = { id: newest.id, cls: cls.id, at: newest.at, title: cls.title, plain: cls.plain, steps: cls.steps || [], lines: newest.fail.slice(0, 8), who: cls.human ? 'you' : cls.retry ? 'retry' : 'window',
+        doing: cls.human ? 'Only you or Dad can fix this. HQ won\u2019t retry it (it would fail the same way).' : cls.retry ? 'Press \u201cBuild anyway\u201d to try again. If it fails the same way twice, HQ asks a window to change the build setup.' : 'HQ sends the next failure like this to a window to fix by itself. For this older one, press \u201cSee the error\u201d.' }; save();
     }
     if (B.lastFail && B.lastFail.who === 'you') need('buildhuman:' + (B.lastFail.cls || B.lastFail.title), { level: 'urgent', title: B.lastFail.title, text: B.lastFail.plain, steps: B.lastFail.steps, lines: B.lastFail.lines });
     for (const run of runs) {
@@ -633,6 +634,10 @@ function createWatchdog(hq) {
       } else if (cls.retry) {
         if (run.sha && once('retry:' + run.sha) && budget('autobuild', cfg().maxAutoBuildsPerDay, 24 * HOUR) && !breakerOpen('build')) {
           await act('build', 'retry:' + run.sha, 'The build failed because of a GitHub/network hiccup. Trying once more.', async () => { spend('autobuild'); await startBuild('Retry after a hiccup'); });
+        } else if (cls.id === 'runner') {
+          // Same GitHub setup problem twice: ask a window to make the build setup (.github/workflows) skip or survive that step.
+          B.lastFail = { ...(B.lastFail || {}), who: 'window', doing: 'It failed the same way twice, so HQ asked a window to fix the build setup. It builds again by itself after the fix is merged.' }; save();
+          await fixBuild(run, { ...cls, title: 'the build setup step that prepares the iPhone simulator keeps failing on GitHub (fix .github/workflows so this step can\u2019t stop the build, for example skip it when iOS is already installed)' });
         } else need('buildfail', { level: 'warn', title: 'Build failed (hiccup) again', text: 'HQ already retried once. Press Build in the Factory to try again.' });
       } else {
         alert('buildfail:' + run.id, 'warn', 'The build failed: ' + cls.title + '. HQ is getting it fixed.');

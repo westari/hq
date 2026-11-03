@@ -65,3 +65,10 @@ test('a blocked command becomes a safe "allow this kind" rule, never for deletin
   assert.strictEqual(R.ruleFor('Bash', 'git status && rm -rf x'), null);
   assert.strictEqual(R.ruleFor('Bash', 'eas build -p ios'), null);
 });
+
+test('"EXPO_TOKEN: ***" in a log means the secret EXISTS; simulator setup trouble is a GitHub hiccup', () => {
+  const log = '##[group]Run sudo xcodebuild -downloadPlatform iOS\nenv:\n  EXPO_TOKEN: ***\nFinding content...\nUnable to connect to simulator.';
+  assert.strictEqual(R.classifyBuild(log).id, 'runner');
+  assert.strictEqual(R.classifyBuild(log).retry, true);
+  assert.strictEqual(R.classifyBuild('Error: Input required and not supplied: token').id, 'secret');
+});
