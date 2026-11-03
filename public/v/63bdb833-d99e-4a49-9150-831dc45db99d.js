@@ -78,6 +78,24 @@ function drawRingLabel(cv, name, pct) {
   c.textAlign = 'center'; c.font = F(500, 40); c.fillText(name, cv.width / 2, 262);
 }
 
+function drawShow(cv, t, sessions, tv) {
+  const c = cv.getContext('2d'); const w = cv.width, h = cv.height;
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b1030'); g.addColorStop(1, '#1a0f2e'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { const sp = 8 + (i % 5) * 9; const x = ((i * 137.5 + t * sp) % (w + 20)) - 10, y = (i * 61.7) % (h - 90); c.fillStyle = 'rgba(255,255,255,' + (0.25 + (i % 4) * 0.18) + ')'; c.fillRect(w - x, y, i % 7 === 0 ? 3 : 2, i % 7 === 0 ? 3 : 2); }
+  const px = w * 0.72, py = h * 0.42, pr = 92;
+  const pg = c.createRadialGradient(px - 30, py - 30, 10, px, py, pr); pg.addColorStop(0, '#ffd59a'); pg.addColorStop(1, '#c4683a'); c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+  c.save(); c.translate(px, py); c.rotate(-0.35); c.strokeStyle = 'rgba(255,225,180,0.75)'; c.lineWidth = 9; c.beginPath(); c.ellipse(0, 0, pr * 1.7, pr * 0.42, 0, Math.PI * 1.02, Math.PI * 1.98); c.stroke(); c.restore();
+  const ux = ((t * 70) % (w + 260)) - 130, uy = h * 0.3 + Math.sin(t * 2.2) * 18;
+  c.fillStyle = 'rgba(180,255,170,0.18)'; c.beginPath(); c.moveTo(ux - 26, uy + 10); c.lineTo(ux + 26, uy + 10); c.lineTo(ux + 52, uy + 120); c.lineTo(ux - 52, uy + 120); c.fill();
+  c.fillStyle = '#d8e2ec'; c.beginPath(); c.ellipse(ux, uy, 56, 15, 0, 0, 7); c.fill(); c.fillStyle = '#b6e07a'; c.beginPath(); c.ellipse(ux, uy - 12, 24, 20, 0, Math.PI, 0); c.fill();
+  c.fillStyle = '#ff4d4f'; c.beginPath(); c.arc(42, 44, 9, 0, 7); c.fill(); c.font = F(600, 24); c.fillStyle = '#ffffff'; c.fillText('LIVE', 60, 53);
+  c.font = F(500, 24); c.fillStyle = 'rgba(255,255,255,0.75)'; c.textAlign = 'right'; c.fillText('HQ TV', w - 36, 53); c.textAlign = 'left';
+  c.font = F(600, 40); c.fillStyle = '#ffffff'; c.fillText((tv.name || 'HQ') + ' \u00b7 ' + (tv.pct ?? 0) + '% to App Store', 42, h - 120);
+  c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(0, h - 72, w, 72);
+  const items = sessions.map((s) => s.name + ': ' + (s.status === 'working' ? 'working ' + s.pct + '%' : LABEL[s.status])).concat([(tv.name || 'HQ') + ' launch ' + (tv.pct ?? 0) + '%']);
+  const msg = items.join('   \u2022   ') + '   \u2022   '; c.font = F(500, 28); const mw = c.measureText(msg).width || 1; const off = (t * 90) % mw;
+  c.fillStyle = '#ffffff'; for (let x = -off; x < w; x += mw) c.fillText(msg, 24 + x, h - 26);
+}
 function drawTV(cv, sessions, tv) {
   const c = cv.getContext('2d'); const w = cv.width, h = cv.height;
   const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#1b2230'); g.addColorStop(1, '#0d1118');
@@ -824,7 +842,7 @@ export function mountRoom(container, opts = {}) {
       if (on) { d.edge.material.color.setHex(STATUS[s.status]); d.edge.material.emissive.setHex(STATUS[s.status]); }
     });
     const tk = JSON.stringify([data.tv, (data.sessions || []).map((s) => [s.name, s.status, s.pct])]);
-    if (tk !== tvKey) { tvKey = tk; drawTV(tvCv, data.sessions || [], data.tv || {}); tvTex.needsUpdate = true; }
+    tvKey = tk;
     setTheme(themeName);
   }
 
@@ -903,6 +921,7 @@ export function mountRoom(container, opts = {}) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, clock.getDelta()); const t = clock.elapsedTime;
     ENVS[loc].tick(dt, t);
+    if (!frame._tv || t - frame._tv > 1 / 15) { frame._tv = t; drawShow(tvCv, t, data.sessions || [], data.tv || {}); tvTex.needsUpdate = true; }
     { const ft = t * 0.045; const amp = Math.max(0, Math.min(1, (t - manualT - 4) / 8));
       let px = man.x + amp * (4 * Math.sin(ft) + 3 * Math.sin(ft * 1.6 + 0.8)), pz = man.z + amp * (4 * Math.sin(ft) - 3 * Math.sin(ft * 1.6 + 0.8)), py = 0;
       const kx = (keys.r ? 1 : 0) - (keys.l ? 1 : 0), ky = (keys.u ? 1 : 0) - (keys.d ? 1 : 0);

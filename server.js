@@ -17,6 +17,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const CONFIG_PATH = path.join(__dirname, 'hq.config.json');
 const ARCHIVE_DIR = path.join(__dirname, 'logs-archive');
 const content = require('./content.js');
+const voice = require('./voice.js');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 function loadConfig() {
@@ -782,6 +783,14 @@ const server = http.createServer(async (req, res) => {
     };
     return tryRun(0);
   }
+  // Real voice (Piper, on your PC). GET /api/say?voice=ryan&text=...
+  if (url === '/api/say') {
+    const q = new URL(req.url, 'http://x').searchParams;
+    try { const wav = await voice.speak(q.get('text') || '', q.get('voice') || 'ryan'); if (!wav) return json(res, 202, voice.status());
+      res.writeHead(200, { 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store' }); return res.end(wav); }
+    catch (e) { return json(res, 500, { error: e.message }); }
+  }
+  if (url === '/api/voice') return json(res, 200, voice.status());
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/content/draft') { const b = await readBody(req); content.clearError(); const r = await content.draft(String(b.topic || '').slice(0, 300), b.template); broadcast(); return json(res, 200, r); }
@@ -827,4 +836,5 @@ pollRuns(); setInterval(pollRuns, 90000);
 pollMerges(); setInterval(pollMerges, 20000);
 pollYesterday(); setInterval(pollYesterday, 10 * 60 * 1000);
 scanUsage(); setInterval(scanUsage, 20000);
+setTimeout(() => voice.ensure('ryan'), 5000);
 setInterval(broadcast, 15000);

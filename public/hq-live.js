@@ -386,32 +386,30 @@
     }
     // ── Voice alerts: so you hear it while gaming ──
     const prevStatus = {}; let firstSnap = true;
-    // Voice: uses your pick (top bar voice button), else the most natural one Windows has.
-    const PREFER = [/natural/i, /online/i, /aria|jenny|guy|ava|andrew|emma|brian/i, /mark/i, /zira/i];
-    function voices() { try { return window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); } catch (e) { return []; } }
-    function pickVoice() {
-      const vs = voices(); if (!vs.length) return null;
-      let saved = null; try { saved = localStorage.getItem('hq-voice'); } catch (e) {}
-      const mine = saved && vs.find((v) => v.name === saved); if (mine) return mine;
-      for (const re of PREFER) { const v = vs.find((x) => re.test(x.name)); if (v) return v; }
-      return vs[0];
+    // Voice: real neural voices made on your PC (Piper). No robotic Windows voices.
+    const VOICE_IDS = ['ryan', 'lessac', 'amy', 'alan'];
+    const VOICE_NAMES = { ryan: 'Ryan', lessac: 'Lessac', amy: 'Amy', alan: 'Alan (British)' };
+    const myVoice = () => { try { return localStorage.getItem('hq-piper') || 'ryan'; } catch (e) { return 'ryan'; } };
+    let playing = Promise.resolve();
+    async function playVoice(text, vid) {
+      const r = await fetch('/api/say?voice=' + encodeURIComponent(vid || myVoice()) + '&text=' + encodeURIComponent(text));
+      if (r.status === 202) { const st = await r.json(); c.toast(st.busy || 'Getting the voice ready', 'downloading'); return; }
+      if (!r.ok) return;
+      const url = URL.createObjectURL(await r.blob()); const a = new Audio(url);
+      await new Promise((res) => { a.onended = res; a.onerror = res; a.play().catch(res); }); URL.revokeObjectURL(url);
     }
     window.addEventListener('hq-next-voice', () => {
-      const vs = voices(); if (!vs.length) { c.toast('No voices found on this PC', 'record_voice_over'); return; }
-      const cur = pickVoice(); const next = vs[(vs.indexOf(cur) + 1) % vs.length];
-      try { localStorage.setItem('hq-voice', next.name); } catch (e) {}
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance('Window A is done. Test it on your phone.'); u.voice = next; window.speechSynthesis.speak(u);
-      c.toast('Voice: ' + next.name.replace(/^Microsoft /, '').replace(/ - .*$/, ''), 'record_voice_over');
+      const next = VOICE_IDS[(VOICE_IDS.indexOf(myVoice()) + 1) % VOICE_IDS.length];
+      try { localStorage.setItem('hq-piper', next); } catch (e) {}
+      c.toast('Voice: ' + VOICE_NAMES[next], 'record_voice_over');
+      playing = playing.then(() => playVoice('Window A is done. Test it on your phone.', next));
     });
     function say(text) {
       if (c.state.sound === false) return;
       try { c.chime(); } catch (e) {}
-      try {
-        const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.volume = 1; const vv = pickVoice(); if (vv) u.voice = vv;
-        setTimeout(() => window.speechSynthesis.speak(u), 900);
-      } catch (e) {}
+      playing = playing.then(() => new Promise((r) => setTimeout(r, 700))).then(() => playVoice(text)).catch(() => {});
     }
+
     const runSeen = {}; let firstRuns = true;
     function announceRuns(runs) {
       for (const r of runs || []) { const was = runSeen[r.id]; runSeen[r.id] = r.st;
