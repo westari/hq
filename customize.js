@@ -41,6 +41,11 @@ module.exports = function customize(tpl) {
     '<div style="font-size:15px; line-height:1.45;">{{ fs.explain }}</div>',
     '<div style="font-size:15px; line-height:1.45;">{{ fs.explain }}</div><button sc-camel-on-click="{{ fs.openOutput }}" style="align-self:flex-start; margin-top:10px; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:0; border-radius:10px; cursor:pointer; background:rgba(255,255,255,0.16); color:#ffffff; font-size:12.5px; font-weight:500; box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);"><span style="font-family:\'Material Symbols Rounded\'; font-size:16px; line-height:1;">article</span>Full output</button>');
 
+  // A spinning ring next to "Working" on the window cards and panel, so you can see it's alive.
+  swap('card working spinner',
+    '<span style="position:relative; width:7px; height:7px; border-radius:50%; background:{{ c.color }};"><span style="position:absolute; inset:0; border-radius:50%; background:{{ c.color }}; animation:{{ c.ping }};"></span></span>{{ c.label }}',
+    '<span style="position:relative; width:{{ c.dotSize }}px; height:{{ c.dotSize }}px; border-radius:50%; background:{{ c.dotBg }}; animation:{{ c.dotSpin }};"><span style="position:absolute; inset:{{ c.dotInset }}px; border-radius:50%; background:{{ c.dotHole }}; animation:{{ c.ping }};"></span></span>{{ c.label }}');
+
   return { tpl, skipped };
 };
 

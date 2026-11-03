@@ -274,6 +274,12 @@
           : behind.length ? { icon: 'merge', t: 'Merge ' + behind.map((m) => m.window).join(' and '), sub: 'Your phone runs old code until you merge.', hasBtn: true, btn: 'Merge now', go: mergeNow } : null;
         if (mergeRow) { v.ari.doNow = [{ ...mergeRow, toggleOpen: () => {} }, ...(v.ari.doNow || []).filter((d) => !/^Merge /.test(d.t))]; v.ari.doN = String(v.ari.doNow.length); v.ari.noDo = false; }
       }
+      // Working = spinning ring. Anything else = the normal dot.
+      if (v.cards) v.cards = v.cards.map((cd) => {
+        const working = cd.label === 'Working';
+        return { ...cd, dotSize: working ? 12 : 7, dotInset: working ? 2.5 : 0, dotBg: working ? `conic-gradient(${cd.color} 0 70%, rgba(255,255,255,0.18) 0)` : cd.color,
+          dotSpin: working ? 'hqspin .9s linear infinite' : 'none', dotHole: working ? 'rgba(22,26,30,0.75)' : cd.color, ping: working ? 'none' : cd.ping };
+      });
       // Design rows (merge, test...) open their own thing when clicked; buttons don't double-fire.
       if (v.ari && v.ariOn) {
         const wrap = (it) => { const go = it.go; return { ...it, go: (e) => { if (e && e.stopPropagation) e.stopPropagation(); go && go(e); }, toggleOpen: it.toggleOpen || (() => go && go()) }; };
