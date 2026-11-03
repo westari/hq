@@ -287,13 +287,6 @@
         v.ari.next = (v.ari.next || []).map(wrap);
         v.ari.important = (v.ari.important || []).map((it) => ({ ...it, toggleOpen: it.toggleOpen || (() => {}) }));
       }
-      // FormPal building: send a job to whichever window frees up first.
-      if (v.bp && plan && v.bp.name === plan.project && v.bp.L) {
-        const Q = last.anyQueue || [];
-        const row = { hasChip: false, chipT: '', chipC: '', chipA: 'none', hasChecks: false, checks: [], hasCmds: false, cmds: [], bg: '#ffffff', fg: '#1d2128',
-          t: 'Next free window', sub: Q.length ? Q.length + ' waiting: ' + Q.map((j) => j.title || 'job').join(', ') : 'Write a job. The first window that’s free picks it up.', hasBtn: true, btn: 'Write job', icon: 'edit_note', go: () => card.anyJob() };
-        v.bp.L = { ...v.bp.L, items: [row, ...(v.bp.L.items || [])], empty: false };
-      }
       // Factory: say exactly why a build failed. No GitHub website needed.
       if (v.bp && v.bp.name === 'Factory' && v.bp.R) {
         const failed = (last.runs || []).filter((r) => r.st === 'failed');
@@ -358,6 +351,13 @@
         });
       }
       if (v.nx && /^Test /.test(v.nx.title || '')) v.nx.go = () => c.openBuilding('lab');
+      if (v.nx) {
+        const sendAny = async () => { const el2 = c.nxInput && c.nxInput.current; const t = el2 && el2.value.trim(); if (!t) return; el2.value = '';
+          const r = await post('/api/queue-any', { text: t, title: shortTitle(t) }); c.toast(r.started ? r.started + ' started it.' : 'Waiting. The first window to finish picks it up.', r.started ? 'play_arrow' : 'playlist_add'); };
+        const Q = last.anyQueue || [];
+        v.nx.hasWin = true; v.nx.placeholder = Q.length ? 'Job for the next free window (' + Q.length + ' waiting)\u2026' : 'Job for the next free window\u2026';
+        v.nx.send = sendAny; v.nx.key = (e) => { if (e.key === 'Enter') sendAny(); };
+      }
       if (v.fs && v.focusOn && v.fs.isTesting) v.fs.goTest = () => c.openBuilding('lab');
       if (v.fs && v.focusOn) {
         const ss = (c.state.sessions || []).find((x) => x.name === v.fs.name);
@@ -413,6 +413,12 @@
         im.onerror = () => drawing.delete(k);
         im.src = '/content/' + sh.id + '/' + x.img;
       });
+    }
+    let lastAutoSeen = 0;
+    function announceMerge(M) {
+      const a = M && M.lastAuto; if (!a || a.at === lastAutoSeen) return; const first = !lastAutoSeen; lastAutoSeen = a.at; if (first) return;
+      if (a.ok && /Merged/.test(a.text)) { c.toast('Auto-merged: ' + a.text, 'merge'); say('New work merged into your app.'); }
+      else if (!a.ok) { c.toast('Auto-merge stopped: ' + a.text, 'warning'); say('Auto merge stopped. Check HQ.'); }
     }
     const showSeen = {}; let firstShows = true;
     function announceContent(C) {
@@ -488,7 +494,7 @@
       }
       const merged = {};
       for (const m of snap.merges || []) { const id = letter(m.window); merged[id] = m.ahead === 0; }
-      announce(sessions); announceRuns(snap.runs); finishSlides(snap.content); announceContent(snap.content);
+      announce(sessions); announceRuns(snap.runs); finishSlides(snap.content); announceContent(snap.content); announceMerge(snap.mergeState);
       fixSamples(snap.plan);
       const u = snap.usage || {};
       c.setState({ sessions, tests, chat, jobQ, merged, events: mapEvents(snap.activity), projects: withPlan(mapProjects(snap.projects, knownProjects), snap.plan), runs: snap.runs || [], usage: u.pct || 0, resetAt: u.resetAt || Date.now() + 5 * 3600000 });

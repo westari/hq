@@ -424,7 +424,15 @@ async function pollMerges() {
   const conflicts = stuck ? String(await git(['diff', '--name-only', '--diff-filter=U']) || '').split('\n').filter(Boolean) : [];
   const next = { list: out, stuck, conflicts };
   if (JSON.stringify(next) !== JSON.stringify(mergeState)) { mergeState = next; merges = out; broadcast(); }
+  // Auto-merge: new finished work goes straight into your app folder (turn off with "autoMerge": false).
+  if (config.autoMerge !== false && !merging && (out.some((m) => m.ahead > 0) || (stuck && !conflicts.length)) && Date.now() - lastAuto > 60000) {
+    lastAuto = Date.now();
+    const r = await mergeAll();
+    lastAutoInfo = { at: Date.now(), ok: !!r.ok, text: r.ok ? r.steps.join(' \u00b7 ') : (r.error === 'conflict' ? 'Conflict in ' + (r.files || []).join(', ') : r.error) };
+    broadcast();
+  }
 }
+let lastAuto = 0; let lastAutoInfo = null;
 let mergeState = {};
 
 // One click: finish a stuck merge, merge both windows, push. Never throws work away:
@@ -721,7 +729,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState, anyQueue, usage, plan: buildPlan(), yesterday, content: content.state(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState: { ...mergeState, lastAuto: lastAutoInfo }, anyQueue, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
