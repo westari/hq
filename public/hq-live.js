@@ -159,6 +159,13 @@
       queue(t.win, msg, 'Feedback queued for ');
     };
 
+    async function mergeNow() {
+      c.toast('Merging…', 'merge');
+      const r = await post('/api/merge', {});
+      if (r.ok) { c.toast((r.steps || []).join(' · ') + '. Restart npm run dev.', 'done_all'); say('Merge done. Restart the app to test the new code.'); }
+      else if (r.error === 'conflict') c.toast('Conflict in ' + (r.files || []).join(', ') + '. Send this to Claude.', 'warning');
+      else c.toast('Merge stopped: ' + r.error, 'error');
+    }
     // Start the iOS build on GitHub from HQ.
     async function startBuild() {
       c.toast('Starting your iOS build\u2026', 'rocket_launch');
@@ -207,9 +214,9 @@
         const ready = m.ahead > 0;
         return { ...b, branch: m.branch, add: m.add || 0, del: m.del || 0,
           meta: ready ? (m.files || 0) + ' files · ' + m.ahead + ' commits not merged' : 'All merged',
-          cta: ready ? 'Copy merge' : 'Merged', icon: ready ? 'merge' : 'done_all',
+          cta: ready ? 'Merge now' : 'Merged', icon: ready ? 'merge' : 'done_all',
           bg: ready ? '#ffffff' : 'rgba(255,255,255,0.14)', fg: ready ? '#1d2128' : '#ffffff',
-          go: async () => { if (!ready) return; const ok = await copy(m.cmd); c.toast(ok ? 'Merge commands copied. Paste in PowerShell.' : 'Open Output > Merge to copy', 'content_paste'); } };
+          go: () => { if (ready) mergeNow(); } };
       });
       // ── Ari: Do now, Next up, Good to know, Today's goals — from your plan ──
       const plan = last.plan;
@@ -259,6 +266,13 @@
       if (v.so) {
         v.so.accounts = (v.so.accounts || []).map((a) => ({ ...a, count: '–', delta: 'Not connected', spark: (a.spark || []).map(() => ({ h: 8, o: 0.3 })) }));
         v.so.total = '–'; v.so.top = 'No posts yet. Make your first slideshows from the ideas list.';
+      }
+      // Merge: always visible in Do now when your phone would run old code.
+      if (v.ari && v.ariOn && last.mergeState) {
+        const M = last.mergeState; const behind = (M.list || []).filter((m) => m.ahead > 0);
+        const mergeRow = M.stuck ? { icon: 'warning', t: 'Your merge is stuck', sub: M.conflicts && M.conflicts.length ? 'Conflict in ' + M.conflicts.join(', ') + '. Paste this to Claude.' : 'Your phone runs old code until it’s finished.', hasBtn: !(M.conflicts && M.conflicts.length), btn: 'Fix and merge', go: mergeNow }
+          : behind.length ? { icon: 'merge', t: 'Merge ' + behind.map((m) => m.window).join(' and '), sub: 'Your phone runs old code until you merge.', hasBtn: true, btn: 'Merge now', go: mergeNow } : null;
+        if (mergeRow) { v.ari.doNow = [{ ...mergeRow, toggleOpen: () => {} }, ...(v.ari.doNow || []).filter((d) => !/^Merge /.test(d.t))]; v.ari.doN = String(v.ari.doNow.length); v.ari.noDo = false; }
       }
       // Design rows (merge, test...) open their own thing when clicked; buttons don't double-fire.
       if (v.ari && v.ariOn) {

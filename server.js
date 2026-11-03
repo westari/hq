@@ -379,9 +379,39 @@ async function pollMerges() {
     const stat = await git(['diff', '--shortstat', `${main}...${br}`]) || '';
     const num = (re) => { const m = re.exec(stat); return m ? Number(m[1]) : 0; };
     out.push({ window: win, branch: br, ahead: Number(ahead), last: last || '', files: num(/(\d+) files? changed/), add: num(/(\d+) insertion/), del: num(/(\d+) deletion/),
-      cmd: `cd "${config.git.mainRepo}"\ngit merge ${br}\ngit push` });
+      cmd: `cd "${config.git.mainRepo}"\ngit merge ${br} --no-edit\ngit push` });
   }
-  if (JSON.stringify(out) !== JSON.stringify(merges)) { merges = out; broadcast(); }
+  // A merge that started but never finished (Git waiting in an editor, or a conflict).
+  const stuck = fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'));
+  const conflicts = stuck ? String(await git(['diff', '--name-only', '--diff-filter=U']) || '').split('\n').filter(Boolean) : [];
+  const next = { list: out, stuck, conflicts };
+  if (JSON.stringify(next) !== JSON.stringify(mergeState)) { mergeState = next; merges = out; broadcast(); }
+}
+let mergeState = {};
+
+// One click: finish a stuck merge, merge both windows, push. Never throws work away:
+// if there's a conflict it stops and tells you which files.
+let merging = false;
+async function mergeAll() {
+  if (!config.git || !config.git.mainRepo) return { error: 'No main folder set in hq.config.json' };
+  if (merging) return { error: 'Already merging' };
+  merging = true;
+  const run = (args) => new Promise((resolve) => execFile('git', ['-C', config.git.mainRepo, '-c', 'core.editor=true', ...args], { timeout: 60000, windowsHide: true, env: { ...process.env, GIT_MERGE_AUTOEDIT: 'no', GIT_EDITOR: 'true' } }, (err, out, errOut) => resolve({ ok: !err, text: String(out || '') + String(errOut || '') })));
+  const steps = [];
+  try {
+    if (fs.existsSync(path.join(config.git.mainRepo, '.git', 'MERGE_HEAD'))) {
+      const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim();
+      if (un) return { error: 'conflict', files: un.split('\n') };
+      const r = await run(['commit', '--no-edit']); steps.push('Finished the stuck merge'); if (!r.ok) return { error: r.text.trim().split('\n').pop(), steps };
+    }
+    for (const br of Object.values(config.git.branches || {})) {
+      const r = await run(['merge', br, '--no-edit']);
+      if (!r.ok) { const un = String((await run(['diff', '--name-only', '--diff-filter=U'])).text).trim(); return { error: un ? 'conflict' : r.text.trim().split('\n').pop(), files: un ? un.split('\n') : [], steps }; }
+      steps.push(/Already up to date/i.test(r.text) ? br + ' was already in' : 'Merged ' + br);
+    }
+    const p = await run(['push']); steps.push(p.ok ? 'Pushed' : 'Push failed: ' + p.text.trim().split('\n').pop());
+    return { ok: true, steps };
+  } finally { merging = false; pollMerges(); }
 }
 
 // ─── Claude usage: tokens in your current 5-hour window (read from transcripts, free) ──
@@ -637,7 +667,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, usage, plan: buildPlan(), yesterday, content: content.state(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -791,6 +821,7 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 500, { error: e.message }); }
   }
   if (url === '/api/voice') return json(res, 200, voice.status());
+  if (req.method === 'POST' && url === '/api/merge') { const r = await mergeAll(); broadcast(); return json(res, 200, r); }
   // ── Content bot ──
   if (req.method === 'POST' && url === '/api/content/key') { const b = await readBody(req); content.setKey(b.key); content.clearError(); broadcast(); return json(res, 200, { ok: true }); }
   if (req.method === 'POST' && url === '/api/content/draft') { const b = await readBody(req); content.clearError(); const r = await content.draft(String(b.topic || '').slice(0, 300), b.template); broadcast(); return json(res, 200, r); }
