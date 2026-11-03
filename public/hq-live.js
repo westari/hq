@@ -23,9 +23,22 @@
     const clean = String(prompt || '').replace(/\[(Pasted text|Image)[^\]]*\]/gi, ' ').replace(/[#*_>`~|{}\[\]<>]+/g, ' ');
     // First real sentence (3+ words). Skips things like "FormPal." or "Window A:".
     const sentences = plain(clean).replace(/(?:[A-Za-z]:)?(?:[\\/][\w .-]+)+[\\/]([\w.-]+)/g, '$1').split(/(?<=[.!?:])\s+|\n/).map((x) => x.replace(/[.!?:]+$/, '').replace(/^(please|ok|okay|hey|so|now|also)[, ]+/i, '').trim());
-    let t = sentences.find((x) => x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 2) || '';
+    // Prompts like "1. TRAIN TAB ... 2. PROGRESS ..." -> "Fix Train tab, Progress, Profile".
+    const labels = [...String(prompt || '').matchAll(/^\s*\d+[.)]\s+([A-Z][A-Z0-9 '&/-]{2,40}?)(?::|\s{2}|\s*$|\s+[a-z(])/gm)].map((m) => m[1].trim().toLowerCase().replace(/^\w/, (c) => c.toUpperCase()));
+    if (labels.length >= 2) { const t0 = 'Fix ' + labels.slice(0, 5).join(', '); return t0.length > 140 ? t0.slice(0, 138) + '\u2026' : t0; }
+    const BORING = /^(i (just )?tested|i'?m testing|fix all of this|read my|my latest logs|here('| i)s|update|continue|thanks|thank you)/i;
+    let t = sentences.find((x) => !BORING.test(x) && x.split(' ').filter((w) => /[a-z]{2}/i.test(w)).length >= 2) || sentences.find((x) => x.split(' ').length >= 2) || '';
     if (!t) return 'Your prompt';
     return t.length > 140 ? t.slice(0, 138).replace(/\s+\S*$/, '') + '…' : t;
+  }
+  // Your messages without "[Pasted text #1 +40 lines]", <pasted ...> tags, or long ID strings.
+  function cleanYou(t) {
+    return String(t || '')
+      .replace(/\[(Pasted (text|content)|Image)[^\]]*\]/gi, '')
+      .replace(/<\/?pasted[^>]*>/gi, '')
+      .replace(/^\s*pasted[ _-]?(text|content)\b.*$/gim, '')
+      .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '')
+      .replace(/\n{3,}/g, '\n\n').trim();
   }
   function summarize(reply, title) {
     const hq = /^\s*\**HQ:\**\s*(.+)$/im.exec(reply || '');
@@ -441,6 +454,9 @@
         #hqc .wk summary{cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.7);list-style:none}
         #hqc .wt{font:12px/1.5 'Geist Mono',monospace;opacity:.6;padding:2px 0}
         #hqc .wn{font-size:13px;opacity:.8;padding:4px 0}
+        #hqc .spin{display:inline-block;width:11px;height:11px;margin-right:7px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;animation:hqspin .8s linear infinite;vertical-align:-1px}
+        @keyframes hqspin{to{transform:rotate(360deg)}}
+        #hqc .verb{color:#fff;font-weight:500}
         #hqc .tm{font-size:11.5px;opacity:.6;margin-bottom:4px}
         #hqc .cp{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
         #hqc .cp button{height:28px;padding:0 10px;border:0;border-radius:9px;cursor:pointer;background:rgba(255,255,255,.16);color:#fff;font:500 12px Geist,-apple-system,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
@@ -529,7 +545,10 @@
         bg.classList.add('open');
       }
       // ── A window's full output, in the same glass card. Summary first, then the chat. ──
+      const VERBS = ['Working', 'Thinking', 'Cooking', 'Building', 'Tinkering', 'Wiring it up', 'Testing', 'Figuring it out', 'Crunching', 'Polishing'];
+      let liveTimer = null;
       async function output(win) {
+        clearInterval(liveTimer);
         const snap = last || { sessions: [] };
         const raw = snap.sessions.find((x) => x.window === win) || {};
         const ses = (c.state.sessions || []).find((x) => x.name === win) || {};
@@ -570,7 +589,7 @@
                 <div class="panel" style="font-size:15px">${raw.lastEvent && (ses.status === 'done' || ses.status === 'testing') ? `<div class="tm">Finished ${when(raw.lastEvent)}</div>` : ''}${esc((ses.job && ses.job.explain) || 'Nothing yet.')}${raw.lastReply ? '<div style="margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.6)">Its full last message:</div>' + copyBtns(raw.lastReply) : ''}</div>
                 ${(raw.tests || []).length ? `<h3 style="margin-top:18px">Test on your phone</h3><div class="steps">${raw.tests.map((x, i) => `<div class="step" style="cursor:default"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>` : ''}
                 <h3 style="margin-top:18px">Conversation</h3>
-                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.work ? `<details class="wk"><summary>${x.live ? 'Working… ' : 'Worked: '}${x.n} step${x.n === 1 ? '' : 's'} ›</summary>${x.work.filter((w) => w.role === 'tool' || String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim()).map((w) => w.role === 'tool' ? `<div class="wt">› ${esc(w.text)}</div>` : `<div class="wn">${esc(String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim().slice(0, 600))}</div>`).join('')}</details>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(String(x.text).slice(0, 600)) + (String(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
+                <div class="chat" style="max-height:none">${rows.length ? rows.slice(-40).map((x) => x.work ? `<details class="wk"><summary>${x.live ? `<span class="spin"></span><span class="verb">${VERBS[Math.floor(Date.now() / 3000) % VERBS.length]}\u2026</span> ${x.n} step${x.n === 1 ? '' : 's'}${(x.work.filter((w) => w.role === 'tool').pop() || {}).text ? ' \u00b7 ' + esc((x.work.filter((w) => w.role === 'tool').pop() || {}).text) : ''}` : 'Worked: ' + x.n + ' step' + (x.n === 1 ? '' : 's')} \u203a</summary>${x.work.filter((w) => w.role === 'tool' || String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim()).map((w) => w.role === 'tool' ? `<div class="wt">› ${esc(w.text)}</div>` : `<div class="wn">${esc(String(w.text).replace(/^\s*\**HQ-JOB:.*$/im, '').trim().slice(0, 600))}</div>`).join('')}</details>` : `<div class="${x.role === 'you' ? 'q' : 'a'}">${x.at ? `<div class="tm">${x.role === 'you' ? 'You' : 'Claude'} \u00b7 ${when(x.at)}</div>` : ''}${x.role === 'you' ? esc(cleanYou(x.text).slice(0, 600)) + (cleanYou(x.text).length > 600 ? '…' : '') : md(String(x.text).replace(/^\s*\**HQ:.*$/im, '')) + copyBtns(x.text)}</div>`).join('') : '<div class="panel">No messages yet.</div>'}</div>
               </div>
               <div class="col side">
                 <div class="panel">
@@ -592,7 +611,10 @@
           const chatEl = el.querySelector('.chat'); const col = chatEl && chatEl.parentElement; if (col) col.scrollTop = col.scrollHeight;
         };
         render([]); bg.classList.add('open');
-        try { const r = await (await fetch('/api/transcript?window=' + encodeURIComponent(win))).json(); if (bg.classList.contains('open')) render(r.messages || []); } catch (e) {}
+        const load = async () => { try { const r = await (await fetch('/api/transcript?window=' + encodeURIComponent(win))).json(); if (bg.classList.contains('open') && !(document.activeElement && document.activeElement.tagName === 'TEXTAREA')) { const keep = el.querySelector('.grid .col'); const y = keep ? keep.scrollTop : 0; const opened = [...el.querySelectorAll('details[open]')].length; render(r.messages || []); const k2 = el.querySelector('.grid .col'); if (k2 && y) k2.scrollTop = y; if (opened) el.querySelectorAll('details.wk').forEach((d, i, all) => { if (i === all.length - 1) d.open = true; }); } } catch (e) {} };
+        await load();
+        // While the window is working, keep this view live (like Claude Code's spinner).
+        liveTimer = setInterval(() => { if (!bg.classList.contains('open')) return clearInterval(liveTimer); const st = ((c.state.sessions || []).find((x) => x.name === win) || {}).status; if (st === 'working' || st === 'needs') load(); }, 3000);
       }
       return { open, close, info, output };
     })();
