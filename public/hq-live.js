@@ -1278,8 +1278,12 @@ Try: git status
       }
       L.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
       L.addEventListener('keydown', (e) => e.stopPropagation());
+      // The little "Downtown" map sits where the Test Lab panel goes: hide it while the panel is open.
+      let mmEl = null;
+      const miniMap = () => { if (!mmEl || !document.contains(mmEl)) mmEl = [...document.querySelectorAll('div')].find((d) => d.style && d.style.cursor === 'crosshair' && d.offsetWidth > 150 && d.offsetWidth < 320) || null; return mmEl; };
       function syncLab() {
         const on = c.state.bld === 'lab' && c.state.bldOpen && !c.state.focus;
+        const mm = (on || L.classList.contains('on')) && miniMap(); if (mm) { mm.style.transition = 'opacity .3s'; mm.style.opacity = on ? '0' : ''; mm.style.pointerEvents = on ? 'none' : ''; }
         if (on && !L.classList.contains('on')) { drawLab(true); L.classList.add('on'); }
         if (!on && L.classList.contains('on')) { L.classList.remove('on'); if (rec.on) recStop(); }
       }
