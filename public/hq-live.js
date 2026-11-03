@@ -357,6 +357,7 @@
         const sendAny = async () => { const el2 = c.nxInput && c.nxInput.current; const t = el2 && el2.value.trim(); if (!t) return; el2.value = '';
           const r = await post('/api/queue-any', { text: t, title: shortTitle(t) }); c.toast(r.started ? r.started + ' started it.' : 'Waiting. The first window to finish picks it up.', r.started ? 'play_arrow' : 'playlist_add'); };
         const Q = last.anyQueue || [];
+        if (last.anyError && Q.length) v.nx.sub = 'Waiting job can\u2019t start: ' + last.anyError;
         v.nx.hasWin = true; v.nx.placeholder = Q.length ? 'Job for the next free window (' + Q.length + ' waiting)\u2026' : 'Job for the next free window\u2026';
         v.nx.send = sendAny; v.nx.key = (e) => { if (e.key === 'Enter') sendAny(); };
       }
@@ -457,12 +458,15 @@
     }
 
     const runSeen = {}; let firstRuns = true;
+    let lastFailSaid = 0;
     function announceRuns(runs) {
       for (const r of runs || []) { const was = runSeen[r.id]; runSeen[r.id] = r.st;
         if (!firstRuns && was === 'running' && r.st === 'done') say('Your ' + r.wf + ' is done. Install it on your phone.');
-        if (!firstRuns && was === 'running' && r.st === 'failed') say('Your ' + r.wf + ' failed.'); }
+        // Failed builds: one quiet toast, voice at most once every 30 minutes.
+        if (!firstRuns && was === 'running' && r.st === 'failed') { c.toast(r.wf + ' failed: ' + (r.note || ''), 'error'); if (Date.now() - lastFailSaid > 30 * 60000) { lastFailSaid = Date.now(); say('A build failed. The Factory says why.'); } } }
       firstRuns = false;
     }
+    const saidDone = new Set();
     function announce(sessions) {
       for (const s of sessions) {
         const rawSt = s._raw && s._raw.status === 'limit' ? 'limit' : s.status;
@@ -470,6 +474,10 @@
         if (firstSnap || was === rawSt) continue;
         if (rawSt === 'limit') { say(s.name + ' hit the Claude limit. ' + String(s._raw.doing || '').replace('Hit the Claude limit. ', '') + '.'); continue; }
         const what = String((s.job && s.job.explain) || '').replace(/^Finished: /, '').replace(/[.]+$/, '');
+        // Only ONE "done" alert per finished job, even if the status flickers.
+        const jobKey = s.id + ':' + ((s._raw && s._raw.jobStart) || '') + ':' + String((s._raw && s._raw.lastReply) || '').length;
+        if ((s.status === 'testing' || s.status === 'done') && saidDone.has(jobKey)) continue;
+        if (s.status === 'testing' || s.status === 'done') saidDone.add(jobKey);
         if (s.status === 'testing') say(s.name + ' is done' + (what ? ': ' + what : '') + '. Test it on your phone.');
         else if (s.status === 'done') say(s.name + ' is done' + (what ? ': ' + what : '') + '.');
         else if (s.status === 'needs') say(s.name + ' needs you.');

@@ -433,6 +433,14 @@ async function pollMerges() {
   }
 }
 let lastAuto = 0; let lastAutoInfo = null;
+// Hand waiting "next free window" jobs to any window that's free (checks every 15 seconds).
+setInterval(() => {
+  if (!anyQueue.length) return;
+  const free = freeWindowName(); if (!free) return;
+  const j = anyQueue.shift(); const r = startJob(free, j.text, sessionByWindow(free), j.title);
+  if (!r.started) { anyQueue.unshift(j); anyError = r.error || 'Could not start'; broadcast(); } else { anyError = ''; }
+}, 15000);
+let anyError = '';
 let mergeState = {};
 
 // One click: finish a stuck merge, merge both windows, push. Never throws work away:
@@ -729,7 +737,7 @@ function snapshot() {
   }).sort((a, b) => a.window.localeCompare(b.window));
 
   const projects = (config.projects || []).map((p) => ({ name: p.name, target: p.target || '', checklist: readChecklist(p.launchFile) }));
-  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState: { ...mergeState, lastAuto: lastAutoInfo }, anyQueue, usage, plan: buildPlan(), yesterday, content: content.state(),
+  return { now, sessions: list, projects, activity: activity.slice(0, 40), runs, merges, mergeState: { ...mergeState, lastAuto: lastAutoInfo }, anyQueue, anyError, usage, plan: buildPlan(), yesterday, content: content.state(),
     logs: { file: logState.latestArchive, errors: logState.errors, errorCount: logState.errorCount, updated: logState.updated } };
 }
 
@@ -919,7 +927,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/queue-any') {
     const b = await readBody(req); const t = String(b.text || '').trim(); if (!t) return json(res, 400, { error: 'Empty message.' });
     const full = t + logsNote(); const free = freeWindowName();
-    if (free) { const r = startJob(free, full, sessionByWindow(free), b.title); if (r.started) return json(res, 200, { started: free }); }
+    if (free) { const r = startJob(free, full, sessionByWindow(free), b.title); if (r.started) return json(res, 200, { started: free }); anyError = r.error || ''; }
     anyQueue.push({ text: full, title: String(b.title || '') }); broadcast(); return json(res, 200, { queued: anyQueue.length });
   }
   if (req.method === 'POST' && url === '/api/queue-any/clear') { anyQueue.length = 0; broadcast(); return json(res, 200, { ok: true }); }
