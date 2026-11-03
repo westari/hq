@@ -309,7 +309,7 @@ function createWatchdog(hq) {
   // ─── Sending work to a window ─────────────────────────────────────────────
   // Free window → starts now (headless, safe allowlist). Busy → waits in that window's line.
   function sendJob(preferWin, text, title) {
-    const res = hq.sendJob(preferWin, text, title) || {};
+    const res = hq.sendJob(preferWin, text, title, { fresh: true }) || {};
     if (res.error || (!res.started && !res.queued)) throw new Error(res.error || 'could not send the job');
     record('see', 'windows', (res.started ? `Started in ${res.started}: ` : `Waiting for ${res.queued}: `) + title);
     return res;

@@ -681,7 +681,9 @@ function startJob(win, text, s, title, opts) {
   if (runners.has(win)) return { error: win + ' is already running a job.' };
   const o = opts || {};
   const args = ['-p', '--output-format', 'stream-json', '--verbose', '--max-turns', String(o.maxTurns || (config.watchdog && config.watchdog.maxTurns) || 150), '--add-dir', ARCHIVE_DIR];
-  if (s && s.id && !String(s.id).startsWith('hooktest')) args.push('--resume', s.id);
+  // Watchdog jobs start a fresh chat: continuing the VS Code chat in the background would make the open
+  // VS Code window show an old, out-of-date conversation.
+  if (s && s.id && !String(s.id).startsWith('hooktest') && !(opts && opts.fresh)) args.push('--resume', s.id);
   args.push(...jobPermissionArgs());
   let child;
   try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: claudeEnv() }); }
@@ -826,10 +828,10 @@ function dispatchQueue() {
   broadcast();
 }
 // Send a job to one specific window: start it now if that window is free, otherwise it waits in that window's line.
-function sendJob(win, text, title) {
+function sendJob(win, text, title, o) {
   const s = sessionByWindow(win);
   if (!runners.has(win) && !isBusy(s) && !usage.hit) {
-    const r = startJob(win, text, s, title); if (r.started) return { started: win }; if (!s) return { error: r.error };
+    const r = startJob(win, text, s, title, o); if (r.started) return { started: win }; if (!s) return { error: r.error };
   }
   if (!s) { anyQueue.push({ text, title }); return { queued: 'the next free window' }; }
   s.queue.push(text); s.queueTitles = s.queueTitles || []; s.queueTitles[s.queue.length - 1] = title || '';
@@ -1183,13 +1185,39 @@ async function splitFeedback(text) {
     return out;
   } finally { feedbackBusy = false; }
 }
+// ─── Send a job so you SEE it in VS Code ─────────────────────────────────────
+// Busy window: it waits in line and Claude Code picks it up the moment it finishes (inside the VS Code chat).
+// Free window: HQ saves the full job to hq\jobs\, brings that window's VS Code to the front and opens its
+// Claude chat with a short message already typed in. You press Enter there. (Claude Code can't send it
+// for you: its VS Code link only fills the box.)
+const JOBS_DIR = path.join(__dirname, 'jobs');
+function openInVSCode(win, text, title) {
+  const s = sessionByWindow(win); const folder = folderForWindow(win);
+  if (process.platform !== 'win32' || !folder) return null;
+  try { fs.mkdirSync(JOBS_DIR, { recursive: true }); } catch {}
+  const file = path.join(JOBS_DIR, win.replace(/\s+/g, '-').toLowerCase() + '-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.md');
+  fs.writeFileSync(file, '# ' + (title || 'Job from HQ') + '\n\n' + text + '\n');
+  const short = `New job from HQ (${title || 'Test Lab'}). Read ${file} and do everything in it.`;
+  const uri = 'vscode://anthropic.claude-code/open?' + (s && s.id && !String(s.id).startsWith('hooktest') ? 'session=' + encodeURIComponent(s.id) + '&' : '') + 'prompt=' + encodeURIComponent(short).replace(/'/g, '%27');
+  // 1) bring this window's VS Code (its folder) to the front, 2) open its Claude chat with the message typed in.
+  execFile('cmd', ['/c', 'code', folder], { windowsHide: true }, () => {
+    setTimeout(() => execFile('powershell', ['-NoProfile', '-Command', `Start-Process '${uri}'`], { windowsHide: true }, () => {}), 1500);
+  });
+  if (s) { s.nextTitle = String(title || ''); logActivity(s, 'Job opened in VS Code', title || ''); }
+  return { vscode: win, file };
+}
 function sendFeedback(b) {
   const out = {};
   for (const k of ['A', 'B']) {
     const x = b[k]; if (!x || !String(x.prompt || '').trim()) continue;
     const win = 'Window ' + k; const br = ((config.git && config.git.branches) || {})[win] || 'your branch';
-    const r = sendJob(win, String(x.prompt).trim() + logsNote() + R.jobRules(br), String(x.title || 'Fix what Ari found').slice(0, 60));
-    out[k] = r.started ? 'started' : r.queued ? 'queued' : (r.error || 'error');
+    const full = String(x.prompt).trim() + logsNote() + R.jobRules(br); const title = String(x.title || 'Fix what Ari found').slice(0, 60);
+    const s0 = sessionByWindow(win); let r;
+    if (s0 && isBusy(s0)) { s0.queue.push(full); s0.queueTitles = s0.queueTitles || []; s0.queueTitles[s0.queue.length - 1] = title; r = { queued: win }; }
+    else if (k === 'B' && out.A === 'vscode') { r = { vscode: win }; setTimeout(() => { const r2 = openInVSCode(win, full, title); if (!r2) sendJob(win, full, title); }, 6000); }
+    else r = openInVSCode(win, full, title) || sendJob(win, full, title);
+    // Two windows: open them one after the other so each VS Code gets its turn in front.
+    out[k] = r.vscode ? 'vscode' : r.started ? 'started' : r.queued ? 'queued' : (r.error || 'error');
     const s = sessionByWindow(win); if (s) { s.tests = []; s.testsDone = true; }
   }
   broadcast(); return out;

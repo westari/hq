@@ -1240,9 +1240,10 @@ Try: git status
         lab.busy = 'Sending…'; drawLab();
         const r = await post('/api/feedback/send', body);
         const res = Object.values(r.sent || {});
-        if (!res.length || res.every((v) => v !== 'started' && v !== 'queued')) { lab.busy = ''; lab.error = 'Couldn\u2019t send: ' + (res.join(' ') || r.error || 'unknown problem') + ' Your prompts are still here.'; return drawLab(true); }
-        const said = Object.entries(r.sent || {}).map(([k, v]) => 'Window ' + k + (v === 'started' ? ' started' : v === 'queued' ? ' will start when it’s free' : ': ' + v)).join(', ');
+        if (!res.length || res.every((v) => v !== 'started' && v !== 'queued' && v !== 'vscode')) { lab.busy = ''; lab.error = 'Couldn\u2019t send: ' + (res.join(' ') || r.error || 'unknown problem') + ' Your prompts are still here.'; return drawLab(true); }
+        const said = Object.entries(r.sent || {}).map(([k, v]) => 'Window ' + k + (v === 'vscode' ? ': opened in VS Code' : v === 'started' ? ' started' : v === 'queued' ? ' gets it the moment it finishes (you\u2019ll see it in VS Code)' : ': ' + v)).join(', ');
         c.toast('Sent. ' + said + '.', 'send');
+        if (Object.values(r.sent || {}).includes('vscode')) say('Go to VS Code and press Enter in each window to start.');
         lab = { stage: 'write', busy: '', error: '', result: null, draft: '' }; saveDraft('');
         setTimeout(() => c.closeBuilding(), 600); // the UFO flies home
       }
