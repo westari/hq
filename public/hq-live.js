@@ -962,56 +962,111 @@ Try: git status
         P.querySelector('#hqp-build').onclick = startBuild;
         const why = P.querySelector('#hqp-why'); if (why) why.onclick = () => card.buildFail(r0);
       }
+      // ── Ari: a side panel (the city stays visible and clickable) ──
+      // Built like an agent inbox: 1) what needs you, each with ONE button, 2) today's goals that
+      // Claude picks from what really happened, 3) one honest line per window.
+      const A = document.createElement('div'); A.id = 'hqari'; document.body.appendChild(A);
+      const acss = document.createElement('style');
+      acss.textContent = `
+        #hqari{position:fixed;left:110px;top:96px;bottom:28px;width:410px;z-index:8;color:#fff;font:14px/1.45 Geist,-apple-system,sans-serif;border-radius:30px;padding:20px;box-sizing:border-box;
+          background:rgba(40,48,58,.42);backdrop-filter:blur(26px) saturate(1.4);-webkit-backdrop-filter:blur(26px) saturate(1.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 20px 60px rgba(0,0,0,.18);
+          display:flex;flex-direction:column;gap:14px;overflow:auto;scrollbar-width:none;transform:translateX(-30px);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+        #hqari.on{opacity:1;transform:none;pointer-events:auto}
+        #hqari h2{margin:0;font-size:24px;font-weight:500;letter-spacing:-.02em}
+        #hqari h3{margin:4px 0 0;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.6;display:flex;align-items:center;gap:8px}
+        #hqari .x{margin-left:auto;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;font-size:14px}
+        #hqari .tag{height:24px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.14);display:inline-flex;align-items:center;font-size:12px;margin-right:6px}
+        #hqari .card{border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);display:flex;gap:12px;align-items:flex-start}
+        #hqari .card.red{background:rgba(255,120,100,.22)}#hqari .card.yel{background:rgba(255,205,110,.18)}
+        #hqari .card .t{flex:1;min-width:0}#hqari .card .s{font-size:12.5px;opacity:.75;margin-top:2px}
+        #hqari .ms{font-family:'Material Symbols Rounded';font-size:20px;line-height:1.2}
+        #hqari button.b{height:32px;padding:0 12px;border:0;border-radius:11px;background:#fff;color:#1d2128;font:500 13px Geist,-apple-system,sans-serif;cursor:pointer;margin-top:8px}
+        #hqari button.g{background:rgba(255,255,255,.16);color:#fff}
+        #hqari .goal{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08);cursor:pointer}
+        #hqari .goal.d{opacity:.45}#hqari .goal.d .gt{text-decoration:line-through}
+        #hqari .box{width:20px;height:20px;flex:none;border-radius:7px;border:1.5px solid rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px}
+        #hqari .goal.d .box{background:#fff;color:#1d2128;border:0}
+        #hqari .who{font-size:11.5px;opacity:.6}
+        #hqari .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}#hqari .bar i{display:block;height:100%;background:#fff}
+        #hqari .win{display:flex;gap:10px;align-items:center;font-size:13.5px}
+        #hqari .dot{width:9px;height:9px;border-radius:50%;flex:none}
+        #hqari .spin{width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:hqspin .8s linear infinite;flex:none}
+        @keyframes hqspin{to{transform:rotate(360deg)}}
+        #hqari input{width:100%;box-sizing:border-box;height:38px;border:0;border-radius:12px;padding:0 12px;background:rgba(255,255,255,.13);color:#fff;font:13.5px Geist,-apple-system,sans-serif;outline:none}
+        #hqari input::placeholder{color:rgba(255,255,255,.55)}`;
+      document.head.appendChild(acss);
+      const tm = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      let ariKey = '';
+      function inbox(snap) {
+        const M = snap.mergeState || {}; const LA = M.lastAuto; const out = [];
+        if ((M.leftovers || []).length) out.push({ c: 'red', i: 'error', t: 'Your app won’t open', s: 'A merge left broken lines in ' + M.leftovers.map((f) => f.replace(/^.*\//, '')).join(', ') + '. Window A can fix it.', b: 'Copy fix prompt for Window A', go: () => copyFix(M.fixPrompt) });
+        else if (M.stuck && (M.conflicts || []).length) out.push({ c: 'red', i: 'merge', t: 'Merge stuck on a conflict', s: 'Both windows changed ' + M.conflicts.map((f) => f.replace(/^.*\//, '')).join(', ') + '.', b: 'Copy fix prompt for Window A', go: () => copyFix(M.fixPrompt) });
+        else if (LA && !LA.ok) out.push({ c: 'yel', i: 'merge', t: 'Auto-merge is paused', s: LA.text, b: LA.prompt ? 'Copy fix prompt for Window A' : 'Try again', go: () => (LA.prompt ? copyFix(LA.prompt) : mergeNow()) });
+        for (const s of snap.sessions || []) {
+          if (s.status === 'needs-you') out.push({ c: 'yel', i: 'front_hand', t: s.window + ' is asking you something', s: String(s.doing || '').slice(0, 140), b: '', go: null });
+        }
+        for (const t of c.state.tests || []) out.push({ c: '', i: 'phone_iphone', t: 'Test ' + t.from + '’s work on your phone', s: t.checks.length + ' things to check' + (t.title ? ': ' + t.title : ''), b: 'Open the test list', go: () => { c.setState({ focus: null }); c.openBuilding('lab'); } });
+        const f = (snap.runs || [])[0]; if (f && f.st === 'failed') out.push({ c: '', i: 'deployed_code', t: 'Your iOS build failed', s: f.note || '', b: 'See why', go: () => card.buildFail(f) });
+        const u = snap.usage || {}; if (u.hit) out.push({ c: '', i: 'hourglass', t: 'Claude limit hit', s: 'Windows wait and keep going by themselves at ' + tm(u.resetAt) + '.', b: '', go: null });
+        return out;
+      }
+      function winLine(s) {
+        const raw = s._raw || {}; const what = s.title || s.name;
+        if (raw.status === 'limit') return { d: '#ffcf70', t: 'Paused by the Claude limit', s: String(raw.doing || '').replace('Hit the Claude limit. ', '') };
+        if (s.status === 'working') return { spin: true, t: 'Working: ' + (raw.title || raw.jobLine || what), s: raw.doing || '' };
+        if (s.status === 'needs') return { d: '#ffcf70', t: 'Waiting for your answer', s: raw.doing || '' };
+        if (s.status === 'testing' || s.status === 'done') return { d: '#8fe3b4', t: 'Done: ' + (raw.jobLine || raw.title || what), s: 'Finished ' + tm(raw.lastEvent || Date.now()) };
+        return { d: 'rgba(255,255,255,.4)', t: 'Free', s: 'Give it a job' };
+      }
+      function drawAri(force) {
+        const snap = last; if (!snap) return;
+        const plan = snap.plan || {}; const today = plan.todayTasks || []; const dn = today.filter((t) => t.done).length;
+        const items = inbox(snap); const rp = plan.replan || {};
+        const wins = (c.state.sessions || []).filter((x) => /^Window [A-Z]$/.test(x.name));
+        const key = JSON.stringify([today, items.map((x) => x.t + x.s), wins.map((w) => [w.status, w._raw && w._raw.status, w._raw && w._raw.doing, w.title]), rp, plan.planned, (plan.next || []).map((x) => x.id)]);
+        if (!force && key === ariKey) return; ariKey = key;
+        const hr = new Date().getHours();
+        A.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px"><div><h2>${hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening'}, Ari</h2>
+            <div style="margin-top:8px">${plan.launch ? `<span class="tag">${plan.daysToLaunch} days to launch</span><span class="tag">Send to Apple in ${plan.daysToSubmit} days</span>` : ''}</div></div>
+            <button class="x" data-a="close">✕</button></div>
+          <h3>Needs you${items.length ? ' · ' + items.length : ''}</h3>
+          ${items.length ? items.map((x, i) => `<div class="card ${x.c}"><span class="ms">${x.i}</span><div class="t"><div>${esc(x.t)}</div><div class="s">${esc(x.s)}</div>${x.b ? `<button class="b" data-i="${i}">${esc(x.b)}</button>` : ''}</div></div>`).join('')
+            : '<div class="card"><span class="ms">check_circle</span><div class="t">Nothing needs you right now<div class="s">Work on today’s goals below</div></div></div>'}
+          <h3>Today’s goals · ${dn} of ${today.length}</h3>
+          <div class="bar"><i style="width:${today.length ? Math.round(dn / today.length * 100) : 0}%"></i></div>
+          ${plan.planned && plan.planned.why ? `<div style="font-size:12.5px;opacity:.75">${esc(plan.planned.why)}</div>` : ''}
+          ${today.map((t) => `<div class="goal ${t.done ? 'd' : ''}" data-g="${esc(t.id)}"><span class="box" data-check="1">${t.done ? '✓' : ''}</span><div style="flex:1"><div class="gt">${esc(t.t)}</div>${t.sub ? `<div class="who">${esc(t.sub)}</div>` : ''}<div class="who">${t.who === 'ai' ? 'A window does this' : t.who === 'dad' ? 'Needs Dad' : 'You'}</div></div><span class="ms" style="opacity:.5">chevron_right</span></div>`).join('') || '<div class="card"><div class="t s">No goals yet. Press Plan my day.</div></div>'}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="b ${rp.running ? 'g' : ''}" data-a="replan" style="margin:0">${rp.running ? 'Planning…' : 'Plan my day'}</button>
+            <span style="font-size:12px;opacity:.65;flex:1">${rp.running ? 'Claude is looking at what really happened' : rp.error ? esc(rp.error) : plan.planned ? 'Planned ' + tm(plan.planned.at) + ' from what really happened' : 'Picks today’s goals from your real progress'}</span></div>
+          <h3>Your windows</h3>
+          ${wins.map((w) => { const l = winLine(w); return `<div class="win">${l.spin ? '<span class="spin"></span>' : `<span class="dot" style="background:${l.d}"></span>`}<div style="flex:1;min-width:0"><b style="font-weight:500">${esc(w.name)}</b> · ${esc(l.t)}${l.s ? `<div class="who" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.s)}</div>` : ''}</div></div>`; }).join('') || '<div class="who">No windows open</div>'}
+          ${(plan.next || []).length ? `<h3>Coming up</h3>${plan.next.slice(0, 3).map((t) => `<div class="goal" data-n="${esc(t.id)}" style="opacity:.8"><div style="flex:1"><div>${esc(t.t)}</div><div class="who">${t.day ? new Date(t.day + 'T12:00').toLocaleDateString([], { weekday: 'long' }) : ''}</div></div></div>`).join('')}` : ''}
+          <div id="hqari-add"></div>`;
+        if (!addInp) { addInp = document.createElement('input'); addInp.placeholder = 'Add your own goal for today, press Enter';
+          addInp.onkeydown = async (e) => { e.stopPropagation(); if (e.key === 'Enter' && addInp.value.trim()) { await post('/api/plan/add', { text: addInp.value.trim() }); addInp.value = ''; } }; }
+        A.querySelector('#hqari-add').appendChild(addInp);
+        A.querySelector('[data-a=close]').onclick = () => c.setState({ focus: null });
+        A.querySelector('[data-a=replan]').onclick = async () => { if (rp.running) return; const r = await post('/api/replan', {}); if (r.error) c.toast(r.error, 'error'); };
+        A.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => items[Number(b.dataset.i)].go()));
+        const all = plan.tasks || [];
+        A.querySelectorAll('[data-g]').forEach((g) => (g.onclick = async (e) => { const id = g.dataset.g; const t = today.find((x) => x.id === id);
+          if (e.target.closest('[data-check]')) { await post('/api/plan/done', { id, done: !t.done }); return; } card.open(all.find((x) => x.id === id) || t); }));
+        A.querySelectorAll('[data-n]').forEach((n) => (n.onclick = () => card.open(all.find((x) => x.id === n.dataset.n))));
+      }
+      let addInp = null;
       function sync() {
         const on = c.state.layer === 4 && !c.state.focus && !c.state.bld;
         P.classList.toggle('on', on);
         if (on && last && last !== drawnSnap) { drawnSnap = last; drawPulse(last); }
         if (!on) drawnSnap = null;
-        if (c.state.focus === 'pilot' && !ariOpen) { ariOpen = true; drawAri(); }
-        else if (c.state.focus === 'pilot' && !document.getElementById('hqc-bg').classList.contains('open')) { ariOpen = false; c.setState({ focus: null }); }
-        if (c.state.focus !== 'pilot') ariOpen = false;
+        const ariOn = c.state.focus === 'pilot';
+        try { if (ariOn && !A.classList.contains('on')) { drawAri(true); A.classList.add('on'); } else if (ariOn) drawAri(false); }
+        catch (e) { console.error('HQ Ari panel:', e && e.stack || e); A.classList.add('on'); }
+        if (!ariOn) A.classList.remove('on');
       }
-      let ariOpen = false, drawnSnap = null;
-      function drawAri() {
-        if (!last) return; const plan = last.plan || {}; const el = document.getElementById('hqc'), bg = document.getElementById('hqc-bg');
-        const today = plan.todayTasks || []; const dn = today.filter((t) => t.done).length;
-        const M = last.mergeState || {}; const behind = (M.list || []).filter((m) => m.ahead > 0);
-        const tests = c.state.tests || []; const failed = (last.runs || []).filter((r) => r.st === 'failed').slice(0, 1);
-        const needs = (c.state.sessions || []).filter((s) => s.status === 'needs');
-        const doNow = [
-          ...((M.leftovers || []).length || (M.stuck && (M.conflicts || []).length) ? [{ i: 'warning', t: (M.leftovers || []).length ? 'Your app is broken: merge leftovers' : 'Merge stuck on a conflict', s: 'Click to copy the fix prompt, then paste it into Window A', go: () => copyFix(M.fixPrompt) }]
-            : (last.mergeState.lastAuto && !last.mergeState.lastAuto.ok) ? [{ i: 'warning', t: 'Auto-merge is paused', s: last.mergeState.lastAuto.text, go: () => last.mergeState.lastAuto.prompt ? copyFix(last.mergeState.lastAuto.prompt) : mergeNow() }]
-            : M.stuck || behind.length ? [{ i: 'merge', t: M.stuck ? 'Finish the half-done merge' : 'Merge ' + behind.map((m) => m.window).join(' and '), s: 'Your phone runs old code until you do', go: mergeNow }] : []),
-          ...needs.map((s) => ({ i: 'front_hand', t: s.name + ' needs you', s: 'Answer it in VS Code', go: () => {} })),
-          ...tests.map((t) => ({ i: 'phone_iphone', t: 'Test ' + t.from + '’s work', s: t.checks.length + ' things to check on your phone', go: () => { bg.classList.remove('open'); c.setState({ focus: null }); c.openBuilding('lab'); } })),
-          ...failed.map((r) => ({ i: 'error', t: 'A build failed', s: r.note || r.br, go: () => card.buildFail(r) })),
-        ];
-        const next = (plan.next || []).slice(0, 3);
-        el.innerHTML = `<div id="hqa"><div class="top"><div style="flex:1"><h2>${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, Ari</h2>
-            <div class="tags">${plan.launch ? `<span class="tag">${plan.daysToLaunch} days to launch</span><span class="tag">${plan.behind ? 'Behind: days got heavier' : 'On track'}</span>` : ''}</div></div><button class="x" aria-label="Close">✕</button></div>
-          <div class="grid">
-            <div class="col"><h3>Today · ${dn} of ${today.length} done</h3>
-              <div class="bar" style="height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin-bottom:10px"><i style="display:block;height:100%;width:${today.length ? Math.round(dn / today.length * 100) : 0}%;background:#fff;border-radius:3px"></i></div>
-              <div class="steps">${today.map((t) => `<div class="goal ${t.done ? 'd' : ''}" data-g="${esc(t.id)}"><span class="box">${t.done ? '✓' : ''}</span><span style="flex:1">${esc(t.t)}</span><span class="ms" data-open="${esc(t.id)}" style="opacity:.6">chevron_right</span></div>`).join('') || '<div class="panel">Nothing planned today.</div>'}</div>
-              <div class="ask" style="margin-top:10px"><input placeholder="Add a goal for today" /></div>
-            </div>
-            <div class="col side">
-              <h3>Do now</h3>
-              ${doNow.length ? doNow.map((d, i) => `<div class="item" data-d="${i}"><span class="ms">${d.i}</span><div style="flex:1"><div>${esc(d.t)}</div><div class="s">${esc(d.s)}</div></div></div>`).join('') : '<div class="panel">✓ Nothing needs you right now</div>'}
-              <h3 style="margin-top:10px">Next up</h3>
-              ${next.map((t) => `<div class="item" data-n="${esc(t.id)}"><span class="ms">${t.who === 'ai' ? 'smart_toy' : t.who === 'dad' ? 'escalator_warning' : 'person'}</span><div style="flex:1"><div>${esc(t.t)}</div><div class="s">${t.who === 'dad' ? 'Needs Dad' : t.who === 'ai' ? 'AI job' : ''}</div></div></div>`).join('') || '<div class="panel">Nothing yet</div>'}
-            </div>
-          </div></div>`;
-        const closeAri = () => { bg.classList.remove('open'); c.setState({ focus: null }); };
-        el.querySelector('.x').onclick = closeAri;
-        bg.onclick = (e) => { if (e.target === bg && c.state.focus === 'pilot') c.setState({ focus: null }); };
-        const all = plan.tasks || [];
-        el.querySelectorAll('[data-g]').forEach((g) => (g.onclick = async (e) => { const id = g.dataset.g; if (e.target.dataset.open) { card.open(all.find((x) => x.id === id) || today.find((x) => x.id === id)); return; } const t = today.find((x) => x.id === id); await post('/api/plan/done', { id, done: !t.done }); setTimeout(drawAri, 400); }));
-        el.querySelectorAll('[data-d]').forEach((d) => (d.onclick = () => doNow[Number(d.dataset.d)].go()));
-        el.querySelectorAll('[data-n]').forEach((n) => (n.onclick = () => card.open(all.find((x) => x.id === n.dataset.n))));
-        const inp = el.querySelector('#hqa input'); inp.onkeydown = async (e) => { e.stopPropagation(); if (e.key === 'Enter' && inp.value.trim()) { await post('/api/plan/add', { text: inp.value.trim() }); inp.value = ''; setTimeout(drawAri, 400); } };
-        bg.classList.add('open');
-      }
+      let drawnSnap = null;
       setInterval(sync, 300);
       return { refresh() {} };
     })();

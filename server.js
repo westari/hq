@@ -455,7 +455,7 @@ function mergeInfo(r) {
 }
 // Hand waiting "next free window" jobs to any window that's free (checks every 15 seconds).
 setInterval(() => {
-  if (!anyQueue.length) return;
+  if (!anyQueue.length || usage.hit) return; // limit hit: wait for the reset
   const free = freeWindowName(); if (!free) return;
   const j = anyQueue.shift(); const r = startJob(free, j.text, sessionByWindow(free), j.title);
   if (!r.started) { anyQueue.unshift(j); anyError = r.error || 'Could not start'; broadcast(); } else { anyError = ''; }
@@ -586,6 +586,71 @@ const parseDay = (k) => { const [y, m, d] = String(k).split('-').map(Number); re
 function readJSON(fp, fallback) { try { return JSON.parse(fs.readFileSync(fp, 'utf8')); } catch { return fallback; } }
 function planState() { const st = readJSON(PLAN_STATE, {}); st.done = st.done || {}; st.extra = st.extra || []; return st; }
 function savePlanState(st) { fs.writeFileSync(PLAN_STATE, JSON.stringify(st, null, 2)); }
+// ─── Plan my day: Claude Code looks at what REALLY happened and picks today's goals ──
+// Read-only (plan mode). It answers with JSON; HQ applies it to plan-state.json / plan.json.
+let replanState = { running: false, at: 0, error: '' };
+function replan(why) {
+  if (replanState.running) return { error: 'Already planning' };
+  const exe = findClaude(); if (!exe) return { error: 'Could not find Claude Code on this PC.' };
+  const plan = readJSON(PLAN_PATH, null); if (!plan) return { error: 'No plan.json yet' };
+  const st = planState(); const today = dayKey(Date.now());
+  const cwd = (config.git && config.git.mainRepo && fs.existsSync(config.git.mainRepo)) ? config.git.mainRepo : os.homedir();
+  replanState = { running: true, at: Date.now(), error: '' }; broadcast();
+  execFile('git', ['-C', cwd, 'log', '--all', '--since=4.days', '--date=format:%a %I:%M%p', '--format=%ad %s'], { timeout: 10000, windowsHide: true }, (e, gitLog) => {
+    const wins = [...sessions.values()].filter((x) => x.status !== 'ended').map((x) => `${windowName(x.cwd)} (${x.status}): last job "${firstLine(x.prompt).slice(0, 200)}". Its last reply:\n${String(x.lastReply || '').slice(0, 1500)}`).join('\n\n');
+    const prompt = [
+      `You are the planner inside HQ, the dashboard of Ari (14), who is launching the iOS app ${plan.project} on the App Store. Launch: ${plan.launch}. Submit to Apple by: ${plan.submitBy}. Today is ${today} (${new Date().toLocaleDateString('en-US', { weekday: 'long' })}).`,
+      `Weekdays he has school: about ${(plan.capacity && plan.capacity.weekday) || 3} points of his own time. Weekends about ${(plan.capacity && plan.capacity.weekend) || 7}. 1 point = 30-45 min.`,
+      'Look at the facts below (and the code in this folder if you need to). Decide:',
+      '1. Which plan tasks are ALREADY DONE in reality (even if not checked). Only if the facts clearly show it.',
+      '2. New tasks the facts show are needed (bugs from his tests, broken things, things a window said he must do). Short plain titles a 14 year old gets. who = "you", "ai" (a Claude Code window does it; include a full prompt) or "dad".',
+      '3. TODAY: the 3 to 5 most important tasks for today, most important first. Things that block launch and things only he can do first. Use existing ids, or "new:0", "new:1" for new tasks.',
+      'Answer with ONLY this JSON, nothing else:',
+      '{"done":["id"],"add":[{"t":"title","sub":"one short line","who":"you","pts":1,"prompt":""}],"today":["id or new:N"],"why":"one plain sentence: why these today"}',
+      '', 'PLAN TASKS (id | who | title | done?):',
+      ...plan.tasks.map((t) => `${t.id} | ${t.who} | ${t.t}${t.sub ? ' (' + t.sub + ')' : ''} | ${st.done[t.id] ? 'done ' + st.done[t.id] : 'open'}`),
+      '', 'CODE CHANGES IN THE LAST 4 DAYS (all branches):', String(gitLog || '(none)').split('\n').slice(0, 60).join('\n'),
+      '', 'MERGE STATE: ' + JSON.stringify({ ...mergeState, lastAuto: lastAutoInfo && lastAutoInfo.text }),
+      '', 'BUILDS: ' + runs.slice(0, 4).map((r) => `${r.wf} ${r.st} ${r.note || ''}`).join('; '),
+      '', 'WHAT HAPPENED (newest first):', ...activity.slice(0, 30).map((a) => `${new Date(a.t).toLocaleString()} ${a.session}: ${a.text} ${a.job || ''}`),
+      '', 'WINDOWS:', wins || '(none)',
+      why ? '\nARI SAYS: ' + why : '',
+    ].join('\n');
+    let out = '', err = '';
+    let child; try { child = spawn(exe, ['-p', '--permission-mode', 'plan'], { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
+    catch (er) { replanState = { running: false, at: Date.now(), error: er.message }; return broadcast(); }
+    const timer = setTimeout(() => { try { child.kill(); } catch {} }, 6 * 60 * 1000);
+    child.stdout.on('data', (c) => { out += c; }); child.stderr.on('data', (c) => { err += c; });
+    child.on('error', (er) => { clearTimeout(timer); replanState = { running: false, at: Date.now(), error: er.message }; broadcast(); });
+    child.on('exit', () => {
+      clearTimeout(timer);
+      if (limitFrom(out + err)) { replanState = { running: false, at: Date.now(), error: 'You hit the Claude limit. HQ plans your day after it resets.' }; return broadcast(); }
+      let j = null; try { const m = /\{[\s\S]*\}/.exec(out); j = JSON.parse(m[0]); } catch {}
+      if (!j || !Array.isArray(j.today)) { replanState = { running: false, at: Date.now(), error: 'The planner gave a bad answer. Try again.' }; return broadcast(); }
+      const p2 = readJSON(PLAN_PATH, plan); const st2 = planState();
+      const yk = dayKey(Date.now() - 86400000);
+      for (const id of j.done || []) if (p2.tasks.some((t) => t.id === id) && !st2.done[id]) st2.done[id] = yk;
+      const newIds = (j.add || []).slice(0, 8).map((a, i) => {
+        const id = 'n' + Date.now().toString(36) + i;
+        p2.tasks.push({ id, t: String(a.t || 'New task').slice(0, 120), sub: String(a.sub || '').slice(0, 200), pts: Number(a.pts) || 1, who: ['you', 'ai', 'dad'].includes(a.who) ? a.who : 'you', group: 'Blocking', ...(a.prompt ? { prompt: String(a.prompt).slice(0, 3000) } : {}) });
+        return id;
+      });
+      const ids = j.today.map((x) => (/^new:(\d+)$/.exec(x) ? newIds[Number(/^new:(\d+)$/.exec(x)[1])] : x)).filter((id) => id && p2.tasks.some((t) => t.id === id)).slice(0, 6);
+      st2.pin = { day: dayKey(Date.now()), ids, why: String(j.why || '').slice(0, 300), at: Date.now() };
+      fs.writeFileSync(PLAN_PATH, JSON.stringify(p2, null, 2)); fs.writeFileSync(PLAN_STATE, JSON.stringify(st2, null, 2));
+      replanState = { running: false, at: Date.now(), error: '' }; broadcast();
+    });
+    child.stdin.end(prompt);
+  });
+  return { started: true };
+}
+// Plan the day by itself once a day (the first time HQ is open and you're not at the limit).
+setInterval(() => {
+  const st = planState(); const today = dayKey(Date.now());
+  if (config.autoPlan === false || replanState.running || usage.hit || (st.pin && st.pin.day === today) || new Date().getHours() < 6) return;
+  if (replanState.at && Date.now() - replanState.at < 30 * 60000) return; // tried recently
+  if (fs.existsSync(PLAN_PATH)) replan();
+}, 60000);
 function buildPlan() {
   const plan = readJSON(PLAN_PATH, null); if (!plan || !Array.isArray(plan.tasks)) return null;
   const st = planState();
@@ -615,16 +680,20 @@ function buildPlan() {
   open.filter((t) => t.group === 'Blocking').forEach(place);
   open.filter((t) => t.group !== 'Blocking').forEach(place);
   const view = (t) => ({ id: t.id, t: t.t, sub: t.sub || '', steps: Array.isArray(t.steps) ? t.steps : [], links: Array.isArray(t.links) ? t.links : [], who: t.who, pts: t.pts || 1, group: t.group, done: t.done, day: dayOf[t.id] || t.doneOn || null, prompt: t.prompt || '' });
-  const todayTasks = tasks.filter((t) => (!t.done && dayOf[t.id] === today) || t.doneOn === today).map(view);
+  // If the planner picked today's goals (Plan my day), those ARE today. Otherwise use the schedule.
+  const pin = st.pin && st.pin.day === today ? st.pin.ids : null;
+  const todayTasks = pin
+    ? [...pin.map((id) => tasks.find((t) => t.id === id)).filter((t) => t && (!t.done || t.doneOn === today)), ...tasks.filter((t) => t.doneOn === today && !pin.includes(t.id))].map(view)
+    : tasks.filter((t) => (!t.done && dayOf[t.id] === today) || t.doneOn === today).map(view);
   const extra = st.extra.filter((x) => x.day === today).map((x) => ({ id: x.id, t: x.t, sub: '', who: 'you', pts: 0, group: 'Extra', done: !!x.done, day: today, prompt: '' }));
-  const nextTasks = open.filter((t) => dayOf[t.id] && dayOf[t.id] > today).sort((a, b) => (dayOf[a.id] < dayOf[b.id] ? -1 : dayOf[a.id] > dayOf[b.id] ? 1 : a.order - b.order)).slice(0, 6).map(view);
+  const nextTasks = open.filter((t) => !(pin && pin.includes(t.id)) && dayOf[t.id] && (dayOf[t.id] > today || pin)).sort((a, b) => (dayOf[a.id] < dayOf[b.id] ? -1 : dayOf[a.id] > dayOf[b.id] ? 1 : a.order - b.order)).slice(0, 6).map(view);
   const msDay = 86400000;
   return {
     project: plan.project, launch: plan.launch, submitBy: plan.submitBy, today,
     daysToLaunch: Math.max(0, Math.round((parseDay(plan.launch) - parseDay(today)) / msDay)),
     daysToSubmit: Math.max(0, Math.round((parseDay(plan.submitBy) - parseDay(today)) / msDay)),
     behind: squeeze > 1, squeeze: Math.round(squeeze * 100) / 100, needPts: need, havePts: have,
-    todayTasks: [...todayTasks, ...extra], next: nextTasks,
+    todayTasks: [...todayTasks, ...extra], next: nextTasks, planned: pin ? { why: st.pin.why || '', at: st.pin.at || 0 } : null, replan: replanState,
     tasks: tasks.map(view), ideas: plan.ideas || [],
   };
 }
@@ -671,14 +740,24 @@ function startJob(win, text, s, title) {
   const args = ['-p', '--permission-mode', 'acceptEdits', '--add-dir', ARCHIVE_DIR]; // so it can read your test logs
   if (s && s.id && !String(s.id).startsWith('hooktest')) args.push('--resume', s.id);
   let child;
-  try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] }); }
+  try { child = spawn(exe, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); }
   catch (e) { return { error: 'Could not start Claude Code: ' + e.message }; }
   runners.set(win, child);
   let err = '';
   child.stderr.on('data', (c) => { err += c; if (err.length > 4000) err = err.slice(-4000); });
+  let said = ''; child.stdout.on('data', (c) => { said += c; if (said.length > 4000) said = said.slice(-4000); });
   child.on('error', (e) => { runners.delete(win); activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Could not start: ' + e.message, job: '' }); broadcast(); });
   child.on('exit', (code) => {
     runners.delete(win);
+    // The job ended. If the window still looks "working" (no Stop hook came, e.g. the usage limit
+    // stopped it before it began), fix the status so HQ never shows a fake working window.
+    const ss = sessionByWindow(win); const hitAt = limitFrom(said + '\n' + err);
+    if (ss && ss.status === 'working') {
+      ss.inTool = 0; ss.lastEvent = Date.now();
+      if (hitAt) { ss.limitHit = { at: Date.now(), resumeAt: hitAt }; ss.status = 'limit'; ss.doing = 'Hit the Claude limit. Keeps going at ' + new Date(hitAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); logActivity(ss, 'Hit the usage limit'); }
+      else { ss.status = 'done'; ss.doing = code ? 'Stopped: ' + (firstLine(err || said) || 'error').slice(0, 120) : 'Finished'; }
+    }
+    if (hitAt) { broadcast(); return; } // don't hand it more work until the limit resets
     setTimeout(() => { if (!runners.has(win) && anyQueue.length && !isBusy(sessionByWindow(win))) { const j = anyQueue.shift(); startJob(win, j.text, sessionByWindow(win), j.title); } }, 3000);
     if (code) activity.unshift({ t: Date.now(), session: win, project: projectFor(cwd), text: 'Stopped with an error', job: firstLine(err).slice(0, 120) });
     broadcast();
@@ -925,6 +1004,7 @@ const server = http.createServer(async (req, res) => {
   }
   // Ask a question about a task. Runs Claude Code in read-only "plan" mode in your main
   // app folder (it can read your code but can't change anything). Uses your Claude usage.
+  if (req.method === 'POST' && url === '/api/replan') { const b = await readBody(req); return json(res, 200, replan(String(b.note || '').slice(0, 1000))); }
   if (req.method === 'POST' && url === '/api/ask') {
     const b = await readBody(req);
     const q = String(b.question || '').trim().slice(0, 2000); if (!q) return json(res, 400, { error: 'Empty question.' });
