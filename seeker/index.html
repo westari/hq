@@ -1,0 +1,547 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:">
+<title>Seeker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&display=swap">
+<style>html,body{margin:0;background:#0A0A0A}[hidden]{display:none!important}</style></head><body>
+<style>
+/* Layout: icon rail + one scrolling column of Liquid Glass cards over faint letters and soft light.
+   Order answers the launch questions: who's on board, do we have enough in each spot, are people waiting, what's left. */
+:root{
+  color-scheme:dark;
+  --page:#0A0A0A; --inset:rgba(0,0,0,.28); --line:rgba(255,255,255,.06); --line2:rgba(255,255,255,.1);
+  --ink:#EDEDED; --ink2:#9B9B9B; --ink3:#5F5F5F;
+  --accent:#F2552C; --good:#3DDC84; --goodbg:rgba(61,220,132,.12); --wait:#F5C451; --blue:#5B8CFF; --dc:#FF453A; --mia:#40C8E0;
+  --f:"SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", system-ui, sans-serif;
+  --fnum:"SF Pro Display", -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", sans-serif;
+}
+html,body{min-height:100%}
+body{background:var(--page);color:var(--ink);font-family:var(--f);font-weight:400;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+b,strong{font-weight:500}
+#field{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.glow{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(40% 35% at 30% 22%,rgba(120,110,255,.16),transparent 70%),radial-gradient(35% 30% at 80% 75%,rgba(242,85,44,.10),transparent 70%),radial-gradient(30% 25% at 62% 8%,rgba(64,200,224,.08),transparent 70%)}
+.glassy{background:radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.11),rgba(255,255,255,0) 55%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.02));backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(255,255,255,.04),inset 1px 0 0 rgba(255,255,255,.06),0 1px 1px rgba(0,0,0,.5),0 24px 60px -12px rgba(0,0,0,.75);position:relative;isolation:isolate}
+.glassy::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.32),rgba(255,255,255,.06) 35%,rgba(255,255,255,.02) 60%,rgba(255,255,255,.14));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:-1}
+.chipglass{background:rgba(255,255,255,.05);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+
+.app{position:relative;z-index:1;min-height:100vh;display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:12px}
+.rail{border-radius:22px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;position:sticky;top:12px;height:calc(100vh - 24px)}
+.logo{margin-bottom:18px}
+.logo img{width:40px;height:auto;display:block}
+.navb{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--ink3);display:grid;place-items:center}
+.navb svg{width:18px;height:18px}
+.navb:hover{color:var(--ink2)}
+.navb[aria-current="page"]{background:#F2F2F2;color:#0A0A0A}
+
+.main{display:flex;flex-direction:column;gap:12px;min-width:0;padding-bottom:24px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search{flex:1;min-width:180px;max-width:340px;display:flex;align-items:center;gap:8px;border-radius:999px;padding:8px 14px;color:var(--ink3)}
+.search svg{width:14px;height:14px;flex:none}
+.search input{border:0;background:transparent;outline:none;color:var(--ink);width:100%}
+.search input::placeholder{color:var(--ink3)}
+.spacer{flex:1}
+.seg{display:flex;gap:2px;border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--ink2);border-radius:999px;padding:5px 11px;font-size:12px;display:flex;align-items:center;gap:6px}
+.seg button[aria-pressed="true"]{background:rgba(255,255,255,.1);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none}
+.dot.dc{background:var(--dc)}.dot.mia{background:var(--mia)}
+.me{display:flex;align-items:center;gap:9px;border-radius:999px;padding:4px 14px 4px 4px}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3A3A3A,#222);display:grid;place-items:center;font-size:12px;font-weight:500}
+.me div{display:flex;flex-direction:column;line-height:1.2}
+.me small{color:var(--ink3);font-size:11px}
+.bell{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--ink2);position:relative}
+.bell svg{width:16px;height:16px}
+.bell i{position:absolute;top:9px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:16px 0 4px}
+.hero img{width:116px;height:auto;filter:drop-shadow(0 0 22px rgba(255,255,255,.18))}
+.hero h1{margin:0;font-size:19px;font-weight:500;letter-spacing:-.015em;text-shadow:0 2px 12px #0A0A0A,0 0 2px #0A0A0A}
+.hero p{margin:0;color:var(--ink2);font-size:13px;text-shadow:0 2px 10px #0A0A0A,0 0 2px #0A0A0A}
+
+.card{border-radius:22px;padding:16px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.ch{display:flex;align-items:center;gap:9px}
+.ico{width:18px;height:18px;display:grid;place-items:center;color:var(--ink2);flex:none}
+.ico svg{width:16px;height:16px}
+.ct{color:var(--ink2)}
+.push{margin-left:auto}
+.pillbtn{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--ink2);border-radius:999px;padding:5px 11px;font-size:12px;display:flex;align-items:center;gap:6px}
+.pillbtn svg{width:11px;height:11px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.grid4{grid-template-columns:minmax(0,1fr)}}
+.big{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.big b{font-family:var(--fnum);font-size:30px;font-weight:300;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1}
+.delta{font-size:11.5px;color:var(--good);background:var(--goodbg);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.delta.flat{color:var(--ink3);background:rgba(255,255,255,.05)}
+.subl{color:var(--ink3);font-size:12px;margin-top:-6px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.lower{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.two,.lower{grid-template-columns:minmax(0,1fr)}}
+.chart{width:100%;height:200px;display:block}
+.axis{fill:var(--ink3);font-size:10px;font-family:var(--f)}
+
+/* Add bar (its own card, scrolls with the page) */
+.bar{border-radius:20px;padding:12px 12px 10px 14px;width:100%;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:10px;background:linear-gradient(95deg,rgba(35,35,39,.85) 0%,rgba(37,38,58,.85) 45%,rgba(42,45,82,.85) 75%,rgba(36,40,56,.85) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.14);box-shadow:0 0 0 1px rgba(120,110,255,.06),0 10px 40px rgba(70,70,180,.2)}
+.bar input{background:transparent;border:0;outline:none;color:var(--ink);font-size:14px;padding:2px;width:100%}
+.bar input::placeholder{color:var(--ink3)}
+.bar-row{display:flex;justify-content:space-between;align-items:center}
+.circle{width:30px;height:30px;border-radius:50%;background:#2C2C30;border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;color:var(--ink2)}
+.circle svg{width:15px;height:15px}
+.send{width:32px;height:32px;border-radius:50%;background:#111;border:2px solid #fff;display:grid;place-items:center;color:#fff}
+.send svg{width:14px;height:14px}
+.barmore[hidden]{display:none}
+
+/* Funnel */
+.funnel{display:flex;flex-direction:column;gap:12px}
+.fr{display:grid;grid-template-columns:92px minmax(0,1fr) 40px;gap:10px;align-items:center}
+.fr span{color:var(--ink2)}
+.track{height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.85),rgba(255,255,255,.55))}
+.track.yes i{background:linear-gradient(90deg,var(--good),#2BB56B)}
+.fr b{font-family:var(--fnum);font-weight:400;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Coverage grid */
+.cov{display:grid;grid-template-columns:minmax(90px,1fr) repeat(2,minmax(0,1.2fr));gap:8px;align-items:center}
+.cov .h{color:var(--ink3);font-size:11.5px}
+.cell{display:flex;flex-direction:column;gap:5px}
+.cell small{color:var(--ink2);font-size:11.5px;font-variant-numeric:tabular-nums}
+.mini{height:6px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.mini i{display:block;height:100%;border-radius:999px;background:#EDEDED}
+.mini.full i{background:var(--good)}
+
+/* Readiness */
+.ready{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.ready{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rg{border-radius:16px;padding:12px;background:var(--inset);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.ring{width:46px;height:46px}
+.rg b{font-weight:500}
+.rg small{color:var(--ink3);font-size:11.5px}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-weight:400;color:var(--ink3);padding:9px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25)}
+.tbl td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr[data-row]{cursor:pointer}
+.tbl tbody tr[data-row]:hover td{background:rgba(255,255,255,.025)}
+.pn{display:flex;align-items:center;gap:10px;min-width:0}
+.pn .ico{color:var(--ink3)}
+.pn div{display:flex;flex-direction:column;min-width:0}
+.pn small{color:var(--ink3);font-size:11.5px}
+.tag{display:inline-block;font-size:11.5px;border-radius:999px;padding:3px 9px;background:rgba(255,255,255,.06);color:var(--ink2);white-space:nowrap}
+.tag.sent{color:var(--blue);background:rgba(91,140,255,.12)}
+.tag.replied{color:var(--wait);background:rgba(245,196,81,.12)}
+.tag.videos,.tag.featured{color:var(--good);background:var(--goodbg)}
+.tag.passed{color:var(--ink3)}
+.tablewrap{overflow-x:auto;border:1px solid rgba(255,255,255,.06);border-radius:14px}
+.feed{display:flex;flex-direction:column}
+.fi{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.fi:last-child{border-bottom:0}
+.fi .ico{color:var(--ink3)}
+.fi div{display:flex;flex-direction:column;min-width:0}
+.fi b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi small,.fi time{color:var(--ink3);font-size:11.5px;white-space:nowrap}
+.empty{color:var(--ink3);font-size:12.5px;padding:18px 4px;text-align:center}
+
+.view[hidden]{display:none}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.fields{grid-template-columns:minmax(0,1fr)}}
+.wide{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:5px;color:var(--ink3);font-size:12px;min-width:0}
+label.f input,label.f select,label.f textarea{background:var(--inset);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;color:var(--ink);font-size:13px;min-width:0}
+textarea{resize:vertical;min-height:56px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line2);background:rgba(255,255,255,.06);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12.5px}
+.btn.white{background:#F2F2F2;color:#0A0A0A;border-color:#F2F2F2}
+.btn.red{color:var(--dc)}
+.moves{display:flex;flex-wrap:wrap;gap:6px}
+.moves button{border:1px solid var(--line2);background:transparent;color:var(--ink2);border-radius:999px;padding:5px 11px;font-size:12px}
+.moves button[aria-pressed="true"]{background:#F2F2F2;color:#0A0A0A}
+.mail{background:var(--inset);border:1px solid var(--line);border-radius:14px;padding:16px;white-space:pre-wrap;word-break:break-word;color:var(--ink2);font-size:13px;line-height:1.6}
+.mail .subj{display:block;color:var(--ink);margin-bottom:10px}
+.fill{color:var(--wait)}
+.select{background:var(--inset);border:1px solid var(--line2);border-radius:999px;padding:6px 12px;color:var(--ink);font-size:12.5px;max-width:100%}
+.group h3{margin:4px 0 2px;font-size:12px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em}
+.checks{list-style:none;margin:0;padding:0}
+.checks li{border-bottom:1px solid var(--line)}
+.checks li:last-child{border-bottom:0}
+.checks label{display:flex;gap:12px;align-items:center;padding:11px 2px;cursor:pointer}
+.checks input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--ink3);display:grid;place-items:center;flex:none;margin:0}
+.checks input[type=checkbox]:checked{background:var(--good);border-color:var(--good)}
+.checks input[type=checkbox]:checked::after{content:"";width:4px;height:8px;border:solid #000;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.checks .done{color:var(--ink3);text-decoration:line-through}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:5;background:#222;border:1px solid var(--line2);border-radius:999px;padding:8px 14px;font-size:12.5px;max-width:calc(100% - 32px)}
+@media (max-width:640px){.app{grid-template-columns:minmax(0,1fr)}.rail{position:static;height:auto;flex-direction:row;justify-content:center;padding:6px}.logo{margin:0 10px 0 0}.me div{display:none}.me{padding:4px}}
+
+.hero img{width:170px!important}
+@media (min-width:641px){.app{grid-template-columns:52px minmax(0,1fr)}.main{grid-column:2}.rail{position:fixed;left:max(12px,env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%);height:auto;width:52px;padding:8px 0;gap:4px;border-radius:26px}.rail .logo{margin-bottom:6px}.rail .logo img{width:30px}.navb{width:36px;height:36px}.navb svg{width:17px!important;height:17px!important}}
+.ico{width:18px;height:18px}
+.ico svg{width:18px;height:18px}
+.navb svg{width:20px;height:20px}
+.sub-h{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+.lead{color:var(--ink2);margin:0}
+.steps-v{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.steps-v li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.steps-v li:last-child{border-bottom:0}
+.steps-v .n{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:12px;color:var(--ink2)}
+.steps-v b{display:block}
+.steps-v small{color:var(--ink3)}
+.chiplist{display:flex;flex-wrap:wrap;gap:6px}
+.nchip{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);background:rgba(255,255,255,.04);border-radius:999px;padding:5px 6px 5px 11px;font-size:12.5px}
+.nchip button{border:0;background:rgba(255,255,255,.08);color:var(--ink2);width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:12px;line-height:1}
+.addchip{display:flex;gap:6px}
+.addchip input{background:var(--inset);border:1px solid var(--line2);border-radius:999px;padding:5px 11px;color:var(--ink);font-size:12.5px;width:150px}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:4px 10px;background:rgba(255,255,255,.06);color:var(--ink2)}
+.status i{width:6px;height:6px;border-radius:50%;background:var(--wait)}
+.status.on i{background:var(--good)}
+.ramp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rw{border-radius:14px;background:var(--inset);border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:2px}
+.rw b{font-family:var(--fnum);font-weight:300;font-size:22px;letter-spacing:-.03em}
+.rw small{color:var(--ink3);font-size:11.5px}
+.note{color:var(--ink3);font-size:12px;margin:0}
+.syncb{border-radius:999px;padding:0 14px;height:40px;color:var(--ink2);font-size:12.5px;border:0;cursor:pointer}
+.tog{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--inset);border:1px solid var(--line);cursor:pointer}
+.tog input{width:18px;height:18px;margin:2px 0 0;accent-color:#F2F2F2}
+.tog b{display:block;font-weight:500}.tog small{color:var(--ink3)}
+.fi time a{color:inherit}
+.ch .btn+.btn{margin-left:6px}
+textarea.paste{background:var(--inset);border:1px solid var(--line2);border-radius:12px;padding:10px;color:var(--ink);font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;min-height:90px;width:100%;box-sizing:border-box}
+</style>
+<canvas id="field" aria-hidden="true"></canvas><div class="glow" aria-hidden="true"></div>
+<div class="app">
+  <nav class="rail glassy" aria-label="Sections">
+    <button class="navb" data-view="overview" aria-label="Overview" title="Overview"></button>
+    <button class="navb" data-view="places" aria-label="Places" title="Places"></button>
+    <button class="navb" data-view="outreach" aria-label="Emails" title="Emails"></button>
+    <button class="navb" data-view="setup" aria-label="Launch plan" title="Launch plan"></button>
+  </nav>
+
+  <div class="main">
+    <div class="top">
+      <label class="search chipglass"><span data-i="search"></span><input id="q" placeholder="Search places…" aria-label="Search places"></label>
+      <span class="spacer"></span>
+      <div class="seg chipglass" role="group" aria-label="City">
+        <button data-city="all" aria-pressed="true">Both</button>
+        <button data-city="DC" aria-pressed="false"><i class="dot dc"></i>DC</button>
+        <button data-city="Miami" aria-pressed="false"><i class="dot mia"></i>Miami</button>
+      </div>
+      <div class="me chipglass"><span class="avatar">A</span><div><span>Ari</span><small id="appLabel">Name your app in Launch plan</small></div></div>
+      <button class="chipglass syncb" id="sync" title="Get the newest from GitHub"><span id="syncTxt">Loading…</span></button>
+      <button class="bell chipglass" id="bell" aria-label="Replies waiting" title="Replies waiting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2.3 2.3 0 0 0 4 0"/></svg><i id="bellDot" hidden></i></button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="view" id="v-overview" style="display:flex;flex-direction:column;gap:12px">
+      <div class="hero"><img src="data:image/png;base64,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" alt="App logo"><h1>Getting DC and Miami ready to launch</h1><p>Seeker emails the best places for you. You grow the people waiting to use it.</p></div>
+      <form class="bar" id="bar">
+        <div class="barmore" id="more" hidden><div class="fields">
+          <label class="f">City<select id="fCity"><option>DC</option><option>Miami</option></select></label>
+          <label class="f">Type<select id="fCat"><option>Food</option><option>Nightlife</option><option>Things to do</option><option>Events</option><option>Sports</option><option>Movies</option></select></label>
+          <label class="f">Email<input id="fEmail" type="email" maxlength="120" placeholder="hello@place.com"></label>
+          <label class="f">Why we picked them<input id="fReason" maxlength="160" placeholder="your rooftop at sunset"></label>
+        </div></div>
+        <input id="fName" maxlength="80" autocomplete="off" placeholder="Add a place, like “Compass Rose, DC”" aria-label="Add a place">
+        <div class="bar-row">
+          <button class="circle" type="button" id="toggleMore" aria-label="More details" title="More details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button>
+          <button class="send" type="submit" aria-label="Add place"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg></button>
+        </div>
+      </form>
+      <div class="grid4" id="stats"></div>
+      <div class="card glassy">
+        <div class="ch"><span data-i="rocket"></span><span class="ct">Launch readiness</span><span class="pillbtn push" id="readyPct"></span></div>
+        <div class="ready" id="ready"></div>
+      </div>
+      <div class="two">
+        <div class="card glassy">
+          <div class="ch"><span data-i="grid"></span><span class="ct">Coverage</span><span class="pillbtn push" id="covGoal"></span></div>
+          <div class="cov" id="cov"></div>
+        </div>
+        <div class="card glassy">
+          <div class="ch"><span data-i="pulse"></span><span class="ct">Live activity</span></div>
+          <div class="feed" id="feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLACES -->
+    <section class="view" id="v-places" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="card glassy">
+        <div class="ch"><span data-i="funnel"></span><span class="ct">Getting places on board</span></div>
+        <div class="funnel" id="funnel"></div>
+      </div>
+      <div class="card glassy">
+        <div class="ch"><span data-i="pin"></span><span class="ct">All places</span><span class="pillbtn push" id="placeCount"></span></div>
+        <div class="tablewrap"><table class="tbl"><thead><tr><th>Place</th><th>Status</th><th>Videos</th><th>City</th><th>Changed</th></tr></thead><tbody id="allRows"></tbody></table></div>
+        <div id="editor"></div>
+      </div>
+    </section>
+
+    <!-- OUTREACH -->
+    <section class="view" id="v-outreach" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="two">
+        <div class="card glassy">
+          <div class="ch"><span data-i="send"></span><span class="ct">Sending</span><span class="status push" id="sendStatus"><i></i>Practice only</span></div>
+          <p class="lead" id="sendWhy"></p>
+          <div class="fields">
+            <label class="f wide">Upload link (where businesses send videos)<input id="upLink" maxlength="300" placeholder="https://www.dropbox.com/request/…"></label>
+          </div>
+          <label class="tog"><input type="checkbox" id="liveOn"><span><b>Send for real</b><small>Off = GitHub only practices and sends nothing.</small></span></label>
+          <label class="tog"><input type="checkbox" id="fuOn"><span><b>One follow-up after 4 days</b><small>Only to places that never replied. You can read it below.</small></span></label>
+          <div class="ch"><span class="ct">Emails per day, rising slowly so they don't land in spam</span></div>
+          <div class="ramp" id="ramp"></div>
+        </div>
+        <div class="card glassy">
+          <div class="ch"><span data-i="mail"></span><span class="ct">Emails sent</span><span class="pillbtn push">Last 7 days</span></div>
+          <svg class="chart" id="barChart" viewBox="0 0 520 200" preserveAspectRatio="none" role="img" aria-label="Emails sent per day"></svg>
+        </div>
+      </div>
+      <div class="card glassy">
+        <div class="ch"><span data-i="clock"></span><span class="ct">Morning runs</span><button class="btn push" id="runPractice">Practice run now</button><button class="btn white" id="runReal">Send now</button></div>
+        <p class="note" id="runMsg">GitHub runs this by itself every weekday at about 9:45am, even when your PC is off.</p>
+        <div class="feed" id="runs"></div>
+      </div>
+      <div class="card glassy">
+        <div class="ch"><span data-i="mail"></span><span class="ct">The emails</span><select class="select push" id="which" aria-label="Which email" style="width:auto"><option value="first">First email</option><option value="followup">Follow-up</option></select><button class="btn" id="copy">Copy</button></div>
+        <select class="select" id="pick" aria-label="Fill in for a place"></select>
+        <div class="mail" id="mail"></div>
+      </div>
+    </section>
+
+    <!-- LAUNCH PLAN -->
+    <section class="view card glassy" id="v-setup" hidden>
+      <div class="ch"><span data-i="check"></span><span class="ct">Launch plan</span><span class="pillbtn push" id="ckCount"></span></div>
+      <div class="fields">
+        <label class="f wide">App name<input id="appName" maxlength="30" placeholder="Type the app's name"></label>
+        <label class="f">People on the waitlist<input id="wait" type="number" min="0" inputmode="numeric" placeholder="0"></label>
+        <label class="f">TikTok + Instagram followers<input id="fol" type="number" min="0" inputmode="numeric" placeholder="0"></label>
+      </div>
+      <div id="groups"></div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+(function(){const c=document.getElementById("field"),g=c.getContext("2d"),chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+function draw(){const d=Math.min(devicePixelRatio||1,2),w=innerWidth,h=innerHeight;c.width=w*d;c.height=h*d;g.setTransform(d,0,0,d,0,0);g.fillStyle="#0A0A0A";g.fillRect(0,0,w,h);
+g.font='11px "SF Mono", ui-monospace, Menlo, monospace';g.textBaseline="top";let seed=11;const r=()=>(seed=(seed*16807)%2147483647)/2147483647;
+for(let y=0;y<h;y+=13)for(let x=0;x<w;x+=6.7){g.fillStyle=`rgba(235,235,240,${0.015+r()*0.045})`;g.fillText(chars[Math.floor(r()*chars.length)],x,y)}}
+draw();let t;addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(draw,150)})})();
+</script><script>
+(function(){
+  const STEPS=[["todo","Waiting"],["sent","Emailed"],["replied","Replied"],["videos","Sent videos"],["featured","Live"],["passed","Said no"]];
+  const LABEL=Object.fromEntries(STEPS);
+  const CATS=["Food","Nightlife","Things to do","Events","Sports","Movies"];
+  const GOAL=5; // placeholder: live places per type per city before launch
+  const GROUPS=[["places","Places"],["viewers","Viewers"],["app","App"],["legal","Rules & legal"]];
+  const DEFAULT_AREAS={DC:["Georgetown","Dupont Circle","14th St & U St","Navy Yard","Adams Morgan","Capitol Hill"],Miami:["Brickell","Wynwood","South Beach","Design District","Little Havana","Coconut Grove"]};
+  const RAMP=[["Week 1",10],["Week 2",20],["Week 3",35],["Week 4+",50]];
+  const DEFAULT_CHECKLIST=[
+    ["places","Pick the app's name"],["places","Make the app's own Gmail"],["places","Build the first 50 DC places"],["places","Build the first 50 Miami places"],["places","Set up the free upload link for videos"],["places","Set up the sending script (10 emails a day to start)"],
+    ["viewers","Start the DC and Miami TikTok and Instagram accounts"],["viewers","Make a simple waitlist page"],["viewers","Get the first 100 people on the waitlist"],["viewers","Post 3 times a week on each account"],
+    ["app","Video feed with category tabs"],["app","A page for each place (hours, map, website)"],["app","Tonight tab"],["app","Saved places"],["app","Business sign-up and video upload"],
+    ["legal","Video permission: businesses agree we can post their videos"],["legal","Privacy policy and terms"],["legal","Report button for wrong or fake videos"],["legal","Apple Developer account ready (Dad)"]
+  ].map(([g,t])=>({g,t,done:false}));
+  const P={
+    Food:'<path d="M7 3v8a2 2 0 0 0 2 2v8"/><path d="M5 3v5a2 2 0 0 0 2 2M9 3v5a2 2 0 0 1-2 2"/><path d="M17 21V3c-2 1.2-3 3.6-3 6.5V14h3"/>',
+    Nightlife:'<path d="M7 3h10l-1 6a4 4 0 0 1-8 0z"/><path d="M12 13v8M8.5 21h7"/>',
+    "Things to do":'<path d="M4 7a2 2 0 0 0 2-2h12a2 2 0 0 0 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 0-2 2H6a2 2 0 0 0-2-2v-3a2 2 0 0 0 0-4z"/><path d="M14 7v2M14 11v2M14 15v2"/>',
+    Events:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>',
+    Sports:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5l3.4 2.5-1.3 4H9.9l-1.3-4z"/><path d="M12 3.5v4M15.4 10l4.3-1.4M14.1 14l2.6 3.6M9.9 14l-2.6 3.6M8.6 10 4.3 8.6"/>',
+    Movies:'<rect x="3.5" y="6" width="17" height="14" rx="2"/><path d="M3.5 10h17M6.5 6l2.5 4M11 6l2.5 4M15.5 6l2.5 4"/>',
+    pin:'<path d="M12 21s-6.5-5.7-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.3 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/>',
+    video:'<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3z"/>',
+    users:'<circle cx="9" cy="8" r="3.3"/><path d="M3 19.5c.8-3.2 3.2-5 6-5s5.2 1.8 6 5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M17.8 14.6c1.6.6 2.7 2.4 3.2 4.9"/>',
+    heart:'<path d="M12 20s-7.5-4.5-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.5 12 20 12 20z"/>',
+    rocket:'<path d="M12 15c-1.7-1.7-2.6-3-3-4.5C10.4 6 13.6 3.5 19.5 3.5c0 5.9-2.5 9.1-7 10.5z"/><path d="M9 10.5 5.5 11 3.5 14l4 .5M13.5 15l-.5 3.5-3 2-.5-4"/><circle cx="15" cy="8" r="1.4"/><path d="M6.5 17.5 4 20"/>',
+    funnel:'<path d="M3.5 5h17l-6.5 8v6l-4 1.5V13z"/>',
+    grid:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
+    mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 6.5 8 6 8-6"/>',
+    pulse:'<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>',
+    search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    send:'<path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5z"/>',
+    check:'<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.3 2.4 2.4 4.6-5"/>',
+    map:'<path d="M9 4.5 3.5 6.5v13L9 17.5l6 2 5.5-2v-13L15 6.5z"/><path d="M9 4.5v13M15 6.5v13"/>',
+    reply:'<path d="M9.5 6 4 11.5 9.5 17"/><path d="M4 11.5h10a6 6 0 0 1 6 6V19"/>',
+    sparkle:'<path d="M12 3.5c.6 4 2.4 6 6.5 6.5-4.1.6-5.9 2.5-6.5 6.5-.6-4-2.4-5.9-6.5-6.5 4.1-.5 5.9-2.5 6.5-6.5z"/><path d="M18.5 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.3-2.2 1-2.5 2.5-.3-1.5-1-2.2-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
+    clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    sync:'<path d="M20 11a8 8 0 0 0-14.6-4.5M4 13a8 8 0 0 0 14.6 4.5"/><path d="M5 3v4h4M19 21v-4h-4"/>'
+  };
+  const I=(k,cls="ico")=>`<span class="${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${P[k]||P["Things to do"]}</svg></span>`;
+  const icon=c=>I(c);
+  document.querySelectorAll("[data-i]").forEach(el=>{el.outerHTML=I(el.dataset.i)});
+  const NAV={overview:"grid",places:"pin",outreach:"send",setup:"check"};
+  document.querySelectorAll(".navb").forEach(b=>{b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[NAV[b.dataset.view]]}</svg>`});
+
+  const S={places:[],settings:null,city:"all",q:"",open:null,selected:null,db:null,loaded:false};
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  let tt;const toast=m=>{const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2400)};
+  const checklist=()=>{const c=S.settings&&Array.isArray(S.settings.checklist)?S.settings.checklist:null;return c&&c.length&&c[0].g?c:DEFAULT_CHECKLIST};
+  const setting=k=>S.settings?S.settings[k]:undefined;
+  const appName=()=>setting("appName")||"";
+  const areas=()=>setting("areas")||DEFAULT_AREAS;
+  const inCity=()=>S.places.filter(p=>S.city==="all"||p.city===S.city);
+  const vis=()=>inCity().filter(p=>!S.q||(p.name+" "+(p.category||"")).toLowerCase().includes(S.q));
+  const live=p=>p.status==="videos"||p.status==="featured";
+  const dayKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+x.getMonth()+"-"+x.getDate()};
+  const ago=iso=>{if(!iso)return"";const s=(Date.now()-new Date(iso))/1000;if(s<60)return"now";if(s<3600)return Math.floor(s/60)+"m ago";if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago"};
+  const last7=()=>{const o=[];for(let i=6;i>=0;i--){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-i);o.push(d)}return o};
+  const wd=d=>d.toLocaleDateString(undefined,{weekday:"short"});
+  const VIEWS=["overview","places","outreach","setup"];
+
+  function show(v){if(!VIEWS.includes(v))v="overview";VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
+    document.querySelectorAll(".navb").forEach(b=>{if(b.dataset.view===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+    if(location.hash!=="#"+v){try{history.replaceState(null,"","#"+v)}catch{}}scrollTo(0,0)}
+
+  function stats(){
+    const v=inCity(),today=dayKey(Date.now()),livePlaces=v.filter(live).length,vids=v.reduce((a,p)=>a+(+p.videos||0),0),target=GOAL*CATS.length*(S.city==="all"?2:1);
+    const items=[["pin","Live places",livePlaces,`of ${target} needed to launch`,v.filter(p=>p.yesAt&&dayKey(p.yesAt)===today).length],
+      ["video","Videos collected",vids,`about ${Math.max(0,target*3-vids)} more to go`,0],
+      ["users","On the waitlist",+setting("waitlist")||0,"people waiting to download",0],
+      ["heart","Followers",+setting("followers")||0,"TikTok and Instagram",0]];
+    $("stats").innerHTML=items.map(([ic,t,n,sub,d])=>`<div class="card glassy"><div class="ch">${I(ic)}<span class="ct">${t}</span></div><div class="big"><b>${S.loaded?n.toLocaleString():"–"}</b>${d?`<span class="delta">+${d} today</span>`:""}</div><div class="subl">${sub}</div></div>`).join("");
+  }
+  function ring(p){const r=19,c=2*Math.PI*r;return `<svg class="ring" viewBox="0 0 46 46"><circle cx="23" cy="23" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="4"/><circle cx="23" cy="23" r="${r}" fill="none" stroke="${p>=1?"var(--good)":"#EDEDED"}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(c*p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 23 23)"/><text x="23" y="27" text-anchor="middle" fill="var(--ink)" font-size="11" font-family="var(--fnum)">${Math.round(p*100)}%</text></svg>`}
+  function ready(){const items=checklist(),all=items.filter(x=>x.done).length;$("readyPct").textContent=`${Math.round(all/items.length*100)}% ready`;
+    $("ready").innerHTML=GROUPS.map(([g,l])=>{const gi=items.filter(x=>x.g===g),d=gi.filter(x=>x.done).length,next=gi.find(x=>!x.done);return `<div class="rg">${ring(gi.length?d/gi.length:0)}<b>${l}</b><small>${next?"Next: "+esc(next.t):"Done"}</small></div>`}).join("")}
+  function coverage(){const cities=S.city==="all"?["DC","Miami"]:[S.city];$("covGoal").textContent=`Goal: ${GOAL} live per type`;
+    const cov=$("cov");cov.style.gridTemplateColumns=`minmax(110px,1fr) repeat(${cities.length},minmax(0,1.2fr))`;
+    let h=`<span class="h">Type</span>`+cities.map(c=>`<span class="h"><i class="dot ${c==="Miami"?"mia":"dc"}"></i> ${c}</span>`).join("");
+    CATS.forEach(cat=>{h+=`<span style="display:flex;gap:9px;align-items:center">${icon(cat)}${cat}</span>`;cities.forEach(c=>{const n=S.places.filter(p=>p.city===c&&p.category===cat&&live(p)).length;h+=`<div class="cell"><div class="mini${n>=GOAL?" full":""}"><i style="width:${Math.min(1,n/GOAL)*100}%"></i></div><small>${n} / ${GOAL}</small></div>`})});cov.innerHTML=h}
+  function feed(){const ev=[];inCity().forEach(p=>{[["addedAt","Added to the list"],["sentAt","Email sent"],["repliedAt","Replied"],["yesAt","Sent their videos"]].forEach(([k,t])=>{if(p[k])ev.push({p,t,at:p[k]})})});
+    ev.sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+    $("feed").innerHTML=!S.loaded?`<div class="empty">Loading…</div>`:ev.length?ev.slice(0,7).map(e=>`<div class="fi">${icon(e.p.category)}<div><b>${esc(e.p.name)}</b><small>${e.t}</small></div><time>${ago(e.at)}</time></div>`).join(""):`<div class="empty">Nothing yet. Activity shows up here as Seeker works.</div>`;
+    $("bellDot").hidden=!S.places.some(p=>p.status==="replied")}
+  function funnel(){const v=inCity(),n=v.length||1;const rows=[["Found",v.length],["Emailed",v.filter(p=>p.status!=="todo").length],["Replied",v.filter(p=>["replied","videos","featured","passed"].includes(p.status)).length],["Said yes",v.filter(live).length]];
+    $("funnel").innerHTML=rows.map(([l,c],i)=>`<div class="fr"><span>${l}</span><div class="track${i===3?" yes":""}"><i style="width:${v.length?Math.max(c?4:0,c/n*100):0}%"></i></div><b>${S.loaded?c:"–"}</b></div>`).join("")+`<div class="subl" style="margin-top:2px">${v.length?`${Math.round(v.filter(live).length/n*100)}% of places found have said yes`:"Bars fill in as Seeker works."}</div>`}
+  function rowsHtml(list){if(!S.loaded)return `<tr><td colspan="5" class="empty">Loading…</td></tr>`;if(!list.length)return `<tr><td colspan="5" class="empty">${S.places.length?"Nothing matches.":"No places yet. Add one on Home, or ask Claude to find the first DC and Miami spots."}</td></tr>`;
+    return list.map(p=>`<tr data-row="${esc(p.id)}"><td><div class="pn">${icon(p.category)}<div><span>${esc(p.name)}</span><small>${esc(p.category||"")}${p.reason?" · "+esc(p.reason):""}</small></div></div></td><td><span class="tag ${esc(p.status)}">${esc(LABEL[p.status]||p.status)}</span></td><td class="ct">${+p.videos||0}</td><td><i class="dot ${p.city==="Miami"?"mia":"dc"}"></i> ${esc(p.city)}</td><td class="ct">${ago(p.updatedAt)}</td></tr>`).join("")}
+  function tables(){const order=Object.fromEntries(STEPS.map(([k],i)=>[k,i]));const list=vis().slice().sort((a,b)=>(order[a.status]??9)-(order[b.status]??9)||String(a.name).localeCompare(b.name));
+    $("allRows").innerHTML=rowsHtml(list);$("placeCount").textContent=`${list.length} places`;
+    const p=S.places.find(x=>x.id===S.open);
+    $("editor").innerHTML=p?`<div class="card" style="background:var(--inset);border:1px solid var(--line)"><div class="ch">${icon(p.category)}<span>${esc(p.name)}</span><span class="ct">· ${esc(p.city)}</span></div>
+      <div class="moves" role="group" aria-label="Move to">${STEPS.map(([k,l])=>`<button data-set="${k}" aria-pressed="${p.status===k}">${l}</button>`).join("")}</div>
+      <div class="fields"><label class="f">Email<input id="eEmail" value="${esc(p.email||"")}" maxlength="120"></label><label class="f">Website or Instagram<input id="eSite" value="${esc(p.site||"")}" maxlength="200"></label>
+      <label class="f">Type<select id="eCat">${CATS.map(c=>`<option ${c===p.category?"selected":""}>${c}</option>`).join("")}</select></label><label class="f">Videos received<input id="eVids" type="number" min="0" value="${+p.videos||0}"></label>
+      <label class="f wide">Why we picked them<input id="eReason" value="${esc(p.reason||"")}" maxlength="160"></label><label class="f wide">Notes<textarea id="eNotes" maxlength="1000">${esc(p.notes||"")}</textarea></label></div>
+      <div class="acts"><button class="btn white" id="eSave">Save</button><button class="btn" id="eMail">See its email</button><span style="flex:1"></span><button class="btn red" id="eDel">Remove</button></div></div>`:""}
+  function barChart(){const days=last7(),v=inCity(),vals=days.map(d=>v.filter(p=>p.sentAt&&dayKey(p.sentAt)===dayKey(d)).length);
+    const max=Math.max(10,...vals),W=520,H=200,L=28,B=22,T=10,cw=(W-L)/7,bw=cw*0.62;
+    let s=[0,max/2,max].map(Math.round).map(t=>{const y=H-B-(t/max)*(H-B-T);return `<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,.05)"/><text class="axis" x="0" y="${y+3}">${t}</text>`}).join("");
+    days.forEach((d,i)=>{const h=Math.max(6,(vals[i]/max)*(H-B-T)),x=L+i*cw+(cw-bw)/2,y=H-B-h,isT=i===6;
+      s+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="9" fill="${isT?"var(--accent)":"rgba(255,255,255,.07)"}" stroke="${isT?"none":"rgba(255,255,255,.08)"}"/><rect x="${x+bw*0.3}" y="${y+7}" width="${bw*0.4}" height="2.5" rx="1.25" fill="${isT?"#fff":"rgba(255,255,255,.75)"}"/>`;
+      if(isT&&vals[i])s+=`<text x="${x+bw/2}" y="${y+24}" text-anchor="middle" fill="#fff" font-size="11" font-family="var(--f)">${vals[i]}</text>`;
+      s+=`<text class="axis" x="${x+bw/2}" y="${H-6}" text-anchor="middle">${isT?"Today":wd(d)}</text>`});
+    if(!vals.some(Boolean))s+=`<text x="${(W+L)/2}" y="${(H-B)/2}" text-anchor="middle" fill="var(--ink3)" font-size="12" font-family="var(--f)">No emails sent yet</text>`;$("barChart").innerHTML=s}
+  function outreach(){
+    const up=setting("uploadLink")||"",live=!!setting("live"),fu=!!setting("followUpApproved");
+    if(document.activeElement!==$("upLink"))$("upLink").value=up;
+    $("liveOn").checked=live;$("liveOn").disabled=!up&&!live;$("fuOn").checked=fu;
+    $("ramp").innerHTML=RAMP.map(([w,n])=>`<div class="rw"><small>${w}</small><b>${n}</b><small>a day</small></div>`).join("");
+    const on=live&&up;$("sendStatus").className="status push"+(on?" on":"");$("sendStatus").innerHTML=`<i></i>${on?"Sending every weekday":"Practice only"}`;
+    $("sendWhy").textContent=on?"GitHub emails the next places on your list every weekday morning and sorts the replies."
+      :!up?"Add the upload link first. Then turn on Send for real.":"Turn on Send for real when you're ready.";
+    const ev=(S.log||[]).slice(-8).reverse().map(e=>{const t={first:"Emailed",followup:"Followed up",reply:"Reply",refused:"Address didn't work",error:"Problem"}[e.type]||e.type;
+      return `<div class="fi">${I(e.type==="error"?"pulse":e.type==="reply"?"reply":"send")}<div><b>${esc(e.place||t)}</b><small>${esc(e.type==="reply"?(e.status?LABEL[e.status]||e.status:"Reply"):e.type==="error"?e.message:t)}</small></div><time>${ago(e.at)}</time></div>`});
+    const runs=(S.runs||[]).map(r=>{const st=r.status!=="completed"?"Running now":r.result==="success"?"Done":"Didn't finish";
+      return `<div class="fi">${I(r.result==="success"?"check":"clock")}<div><b>${r.event==="schedule"?"Morning run":"Run you started"}</b><small>${st}</small></div><time><a href="${esc(r.url)}" data-gh="${esc(r.url)}">${ago(r.at)}</a></time></div>`});
+    $("runs").innerHTML=runs.concat(ev).join("")||`<div class="empty">No runs yet.</div>`;
+  }
+  function mailText(p){const city=p?(p.city==="Miami"?"Miami":"DC"):"[DC or Miami]",app=appName()||"[App name]",place=p?p.name:"[Place]",reason=p&&p.reason?p.reason:"[a real reason, like your rooftop]";
+    const link=setting("uploadLink")||"[upload link]",hi=p?(p.contactName?`Hi ${p.contactName},`:`Hi ${p.name} team,`):"Hi [Name],";
+    if(S.which==="followup")return {subject:`Re: ${place} on a new ${city} app`,body:`${hi}
+
+Just bumping this in case it got buried. I'd love to have ${place} in ${app} when it launches in ${city}. If you have 2 or 3 short videos, you can send them here: ${link}.
+
+If it's not a fit, no worries. I won't follow up again.
+
+Thanks,
+Ari
+${app} · Washington, DC`};
+    return {subject:`${place} on a new ${city} app`,body:`${hi}
+
+My name is Ari. I'm building ${app}, an app where people in ${city} scroll short videos of local spots to decide where to go. Every video is a real place in the city, with the address, hours, and a directions button right below it.
+
+I'm choosing the first places to feature at launch, and ${place} is on my list because of ${reason}.
+
+Here's how it would work:
+• Getting featured is free. I just want great places in the app from day one.
+• You send 2 or 3 short videos you already have, like your food, your space, or a busy night.
+• They go on your own page in the app with your name, and people can tap straight to directions or your website.
+
+You can send them here: ${link}. Or just reply if you have questions first.
+
+If it's not a good fit, totally fine, just let me know and I won't reach out again.
+
+Thanks,
+Ari
+${app} · Washington, DC`}}
+  function email(){const sel=$("pick");sel.innerHTML=`<option value="">Fill in for a place…</option>`+S.places.slice().sort((a,b)=>String(a.name).localeCompare(b.name)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.city)}</option>`).join("");sel.value=S.selected||"";
+    const m=mailText(S.places.find(x=>x.id===S.selected)),mark=s=>esc(s).replace(/\[[^\]]+\]/g,x=>`<span class="fill">${x}</span>`);$("mail").innerHTML=`<span class="subj">${mark(m.subject)}</span>${mark(m.body)}`}
+  function setup(){const items=checklist();
+    $("groups").innerHTML=GROUPS.map(([g,l])=>`<div class="group"><h3>${l}</h3><ul class="checks">${items.map((it,i)=>it.g!==g?"":`<li><label><input type="checkbox" id="ck-${i}" data-ck="${i}" ${it.done?"checked":""}><span class="${it.done?"done":""}">${esc(it.t)}</span></label></li>`).join("")}</ul></div>`).join("");
+    $("ckCount").textContent=`${items.filter(x=>x.done).length} of ${items.length} done`;
+    [["appName","appName"],["wait","waitlist"],["fol","followers"]].forEach(([id,k])=>{if(document.activeElement!==$(id))$(id).value=setting(k)??""});
+    $("appLabel").textContent=appName()||"Name your app in Launch plan"}
+  function render(){stats();ready();coverage();feed();funnel();tables();barChart();outreach();email();setup()}
+
+  async function write(fn,ok){if(!S.db){toast("Still connecting to GitHub…");return false}
+    try{await fn();if(ok)toast(ok);return true}catch(e){toast("Couldn't save to GitHub. Check your internet and try again.");return false}}
+  const saveSettings=patch=>write(()=>S.db.doc("base/settings").set({...(S.settings||{}),checklist:checklist(),...patch}));
+  document.querySelector(".rail").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)show(b.dataset.view)});
+  addEventListener("hashchange",()=>show(location.hash.slice(1)));
+  $("bell").addEventListener("click",()=>show("places"));
+  document.querySelector(".seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.city=b.dataset.city;document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+  $("q").addEventListener("input",e=>{S.q=e.target.value.trim().toLowerCase();tables();if(S.q)show("places")});
+  $("allRows").addEventListener("click",e=>{const r=e.target.closest("[data-row]");if(!r)return;S.open=S.open===r.dataset.row?null:r.dataset.row;S.selected=S.open;tables();setTimeout(()=>$("editor").scrollIntoView({behavior:"smooth",block:"nearest"}),30)});
+  $("editor").addEventListener("click",async e=>{const id=S.open;if(!id)return;const now=new Date().toISOString();
+    const s=e.target.closest("[data-set]");if(s){const k=s.dataset.set,patch={status:k,updatedAt:now};if(k==="sent")patch.sentAt=now;if(k==="replied")patch.repliedAt=now;if(k==="videos"||k==="featured")patch.yesAt=now;await write(()=>S.db.doc("places/"+id).update(patch));return}
+    if(e.target.id==="eSave"){await write(()=>S.db.doc("places/"+id).update({email:$("eEmail").value.trim(),site:$("eSite").value.trim(),category:$("eCat").value,videos:Math.max(0,+$("eVids").value||0),reason:$("eReason").value.trim(),notes:$("eNotes").value,updatedAt:now}),"Saved");return}
+    if(e.target.id==="eMail"){S.selected=id;email();show("outreach");return}
+    if(e.target.id==="eDel"){const d=e.target;if(d.dataset.confirm!=="1"){d.dataset.confirm="1";d.textContent="Tap again to remove";setTimeout(()=>{if(d.isConnected){d.dataset.confirm="";d.textContent="Remove"}},3000);return}
+      if(await write(()=>S.db.doc("places/"+id).delete(),"Removed")){S.open=null;S.selected=null}}});
+  $("toggleMore").addEventListener("click",()=>{$("more").hidden=!$("more").hidden});
+  $("bar").addEventListener("submit",async e=>{e.preventDefault();let raw=$("fName").value.trim();if(!raw)return;let city=$("fCity").value;
+    const m=raw.match(/,\s*(dc|washington|miami)\s*$/i);if(m){city=/miami/i.test(m[1])?"Miami":"DC";raw=raw.slice(0,m.index).trim()}if(!raw)return;const now=new Date().toISOString();
+    const data={name:raw,city,category:$("fCat").value,email:$("fEmail").value.trim(),site:"",reason:$("fReason").value.trim(),status:"todo",videos:0,notes:"",addedAt:now,updatedAt:now};
+    if(await write(()=>S.db.collection("places").add(data),`Added ${raw}`)){$("bar").reset();$("more").hidden=true}});
+  let ut;$("upLink").addEventListener("input",()=>{clearTimeout(ut);ut=setTimeout(()=>{const v=$("upLink").value.trim();if(v&&!/^https:\/\/\S+$/.test(v)){toast("The link should start with https://");return}saveSettings({uploadLink:v}).then(render)},800)});
+  $("liveOn").addEventListener("change",e=>{if(e.target.checked&&!setting("uploadLink")){e.target.checked=false;toast("Add the upload link first");return}saveSettings({live:e.target.checked}).then(ok=>ok&&toast(e.target.checked?"Sending is on. GitHub sends tomorrow morning.":"Sending is off"))});
+  $("fuOn").addEventListener("change",e=>saveSettings({followUpApproved:e.target.checked}));
+  $("which").addEventListener("change",e=>{S.which=e.target.value;email()});
+  $("runs").addEventListener("click",e=>{const a=e.target.closest("[data-gh]");if(a){e.preventDefault();window.seeker.open(a.dataset.gh)}});
+  const runNow=async practice=>{$("runMsg").textContent="Asking GitHub…";const r=await window.seeker.runNow(practice);
+    $("runMsg").textContent=r&&r.ok?(practice?"Practice run started. It shows up below in a minute.":"Started. GitHub is sending now."):"GitHub didn't accept it. Open the Actions tab on GitHub and press Run workflow there.";setTimeout(loadRuns,8000)};
+  $("runPractice").addEventListener("click",()=>runNow(true));
+  $("runReal").addEventListener("click",e=>{const b=e.target;if(!setting("live")){toast("Turn on Send for real first");return}if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Click again to send";setTimeout(()=>{b.dataset.confirm="";b.textContent="Send now"},3000);return}b.dataset.confirm="";b.textContent="Send now";runNow(false)});
+  $("pick").addEventListener("change",e=>{S.selected=e.target.value||null;email()});
+  $("copy").addEventListener("click",async()=>{const m=mailText(S.places.find(x=>x.id===S.selected)),text=`Subject: ${m.subject}\n\n${m.body}`;
+    try{await navigator.clipboard.writeText(text);toast("Email copied")}catch{const r=document.createRange();r.selectNodeContents($("mail"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Selected. Press Ctrl+C to copy")}});
+  $("groups").addEventListener("change",e=>{if(!e.target.dataset.ck)return;const items=checklist().map(x=>({...x}));items[+e.target.dataset.ck].done=e.target.checked;saveSettings({checklist:items})});
+  const debounced=(id,key,num)=>{let t;$(id).addEventListener("input",e=>{clearTimeout(t);t=setTimeout(()=>{let v=e.target.value.trim();if(num)v=Math.max(0,parseInt(v,10)||0);if(v!==(setting(key)??(num?0:"")))saveSettings({[key]:v})},700)})};
+  debounced("appName","appName",false);debounced("wait","waitlist",true);debounced("fol","followers",true);
+
+  show(location.hash.slice(1)||"overview");render();
+  // Data lives on GitHub. The app reads it through window.seeker (see preload.js).
+  function syncText(){const t=$("syncTxt");if(S.syncErr){t.textContent="Offline · tap to retry";return}t.textContent=S.lastSync?`Synced ${ago(new Date(S.lastSync).toISOString())}`:"Loading…"}
+  function makeDb(api){const L={places:[],settings:[]};let last=null;
+    const emit=d=>{last=d;S.log=d.log||[];S.state=d.state||{};S.lastSync=Date.now();S.syncErr=null;
+      L.places.forEach(f=>f({docs:(d.places||[]).map(p=>({id:p.id,data:()=>p})),metadata:{fromCache:false}}));
+      L.settings.forEach(f=>f({exists:!!d.settings,data:()=>d.settings}));syncText()};
+    const go=async op=>{const r=await api.change(op);if(!r||r.error)throw new Error(r&&r.error);emit(r)};
+    return {refresh:async()=>{const r=await api.load();if(!r||r.error){S.syncErr=r&&r.error;S.loaded=true;render();syncText();return false}emit(r);return true},
+      collection:()=>({onSnapshot:f=>{L.places.push(f);if(last)emit(last)},add:data=>go({type:"add",data})}),
+      doc:p=>p==="base/settings"?{onSnapshot:f=>{L.settings.push(f)},set:data=>go({type:"settings",data})}
+        :{update:patch=>go({type:"update",id:p.split("/")[1],patch}),delete:()=>go({type:"delete",id:p.split("/")[1]})}}}
+  async function loadRuns(){const r=await window.seeker.runs();if(r&&r.ok){S.runs=r.runs;outreach()}}
+  if(window.seeker){const db=makeDb(window.seeker);S.db=db;
+    db.doc("base/settings").onSnapshot(snap=>{S.settings=snap.exists?snap.data():null});
+    db.collection("places").onSnapshot(snap=>{S.places=snap.docs.map(d=>({id:d.id,...d.data()}));S.loaded=true;render()});
+    const refresh=async()=>{const ok=await db.refresh();if(!ok)toast("Couldn't reach GitHub. Showing the last copy.")};
+    refresh();loadRuns();setInterval(()=>{refresh();loadRuns()},60000);setInterval(syncText,15000);
+    $("sync").addEventListener("click",()=>{$("syncTxt").textContent="Syncing…";refresh();loadRuns()});
+    addEventListener("focus",()=>{if(Date.now()-(S.lastSync||0)>20000)refresh()});
+  }else{S.loaded=true;render()}
+})();
+</script></body></html>

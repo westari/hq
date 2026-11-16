@@ -1,0 +1,7 @@
+{
+  "name": "seeker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Seeker launch home base. Uses Electron from the hq folder.",
+  "main": "app.js"
+}
