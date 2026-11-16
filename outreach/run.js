@@ -9,15 +9,20 @@ const E = require('./email');
 const { Smtp, Imap, readBody } = require('./mail');
 
 const ROOT = __dirname;
-const DATA = path.resolve(process.env.OUTREACH_DATA || path.join(ROOT, 'data'));
+let DATA = path.resolve(process.env.OUTREACH_DATA || path.join(ROOT, 'data'));
 const FILES = { places: path.join(DATA, 'places.json'), state: path.join(DATA, 'state.json'), log: path.join(DATA, 'log.jsonl') };
 
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function main({ argv = process.argv.slice(2), env = process.env, now = Date.now(), smtp, imap, wait = sleep } = {}) {
-  const config = readJson(path.join(ROOT, 'config.json'), {});
   fs.mkdirSync(DATA, { recursive: true });
+  // Settings changed in the Seeker app (saved on the data branch) win over config.json.
+  const fromApp = readJson(path.join(DATA, 'settings.json'), {}) || {};
+  const config = readJson(path.join(ROOT, 'config.json'), {});
+  for (const k of ['appName', 'uploadLink', 'live', 'mailingAddress', 'followUpDays', 'followUpApproved']) {
+    if (fromApp[k] !== undefined && fromApp[k] !== '') config[k] = fromApp[k];
+  }
   const places = readJson(FILES.places, []);
   const state = readJson(FILES.state, {});
   state.sentByDay = state.sentByDay || {};

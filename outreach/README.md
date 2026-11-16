@@ -25,3 +25,15 @@ exact rules (`rules.js`), like the Watchdog does. Runs on GitHub, so your PC can
 
 Until all three are done, every run is a practice run: it prints the emails and sends nothing.
 Try one any time: Actions tab → Outreach emails → Run workflow.
+
+## The Seeker app (on your PC)
+Shows your places, who got emailed, who replied, and the morning runs. It reads and saves the list
+straight from GitHub, so it's always up to date. The emails are still sent by GitHub, not your PC.
+
+Set up once (in PowerShell):
+```
+cd "C:\Users\arize\hq"
+git pull
+powershell -ExecutionPolicy Bypass -File seeker\make-shortcut.ps1
+```
+Then double-click **Seeker** on your Desktop. It gets the newest version from GitHub each time it opens.

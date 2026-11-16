@@ -14,3 +14,4 @@ watchdog-heartbeat.json
 brain.md
 feedback-log.jsonl
 jobs/
+.seeker-data/

@@ -235,7 +235,8 @@ test('practice run sends nothing and changes nothing', async () => {
   delete require.cache[require.resolve('../outreach/run')];
   const { main } = require('../outreach/run');
   fs.writeFileSync(path.join(dir, 'places.json'), JSON.stringify([place()]));
-  const log = console.log; console.log = () => {};
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ appName: 'Spotreel', live: true, waitlist: 4 }));
+  const lines = []; const log = console.log; console.log = (s) => lines.push(String(s)); console.log = () => {};
   try {
     const r = await main({ argv: [], env: {}, now: NOW });
     assert.strictEqual(r.live, false);
