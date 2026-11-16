@@ -72,15 +72,30 @@ ipcMain.handle('seeker:runNow', async (_e, practice) => {
   const repo = await repoName(); if (!repo) return { error: 'no-repo' };
   return api('POST', `/repos/${repo}/actions/workflows/outreach.yml/dispatches`, { ref: 'main', inputs: { practice: !!practice } });
 });
+ipcMain.on('seeker:win', (_e, what) => {
+  if (!win) return;
+  if (what === 'min') win.minimize();
+  if (what === 'close') win.close();
+  if (what === 'max') {
+    if (win.isFullScreen()) win.setFullScreen(false);
+    else if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  }
+  if (what === 'update') update().then(() => { app.relaunch(); app.exit(0); });
+});
 ipcMain.on('seeker:open', (_e, url) => { if (/^https:\/\/github\.com\//.test(url)) shell.openExternal(url); });
 
 function open() {
   win = new BrowserWindow({
     width: 1440, height: 920, minWidth: 820, minHeight: 600, show: false, title: 'Seeker',
-    backgroundColor: '#0A0A0A', icon: path.join(__dirname, 'icon.png'), autoHideMenuBar: true,
+    backgroundColor: '#0A0A0A', icon: path.join(__dirname, 'icon.png'), autoHideMenuBar: true, frame: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
   win.once('ready-to-show', () => { win.maximize(); win.show(); });
+  // Tell the glass buttons whether the window fills the screen (to show the right icon).
+  const tell = () => win.webContents.send('seeker:big', win.isMaximized() || win.isFullScreen());
+  ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'].forEach((ev) => win.on(ev, tell));
+  win.webContents.on('did-finish-load', tell);
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.on('before-input-event', (e, i) => {

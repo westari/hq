@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 
 const BRANCH = 'outreach-data';
+// Spelled out in full so it works even if this PC's copy of the repo only follows main.
+const REFSPEC = `+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}`;
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 
 class Store {
@@ -25,13 +27,13 @@ class Store {
   async ensure() {
     if (fs.existsSync(path.join(this.dir, '.git'))) return;
     await this.git(['worktree', 'prune'], this.repo).catch(() => {});
-    await this.git(['fetch', '--quiet', 'origin', BRANCH], this.repo);
+    await this.git(['fetch', '--quiet', 'origin', REFSPEC], this.repo);
     await this.git(['worktree', 'add', '--quiet', '-B', BRANCH, this.dir, `origin/${BRANCH}`], this.repo);
   }
   // Get the newest copy from GitHub.
   async pull() {
     await this.ensure();
-    await this.git(['fetch', '--quiet', 'origin', BRANCH]);
+    await this.git(['fetch', '--quiet', 'origin', REFSPEC]);
     await this.git(['reset', '--quiet', '--hard', `origin/${BRANCH}`]);
   }
   read() {
