@@ -1,0 +1,52 @@
+# Seeker outreach: every weekday morning, check replies and send today's emails.
+# The code lives on main. The list of places lives on the "outreach-data" branch,
+# so HQ's own files are never touched.
+name: Outreach emails
+
+on:
+  schedule:
+    - cron: '43 14 * * 1-5'   # 9:43 am in DC in winter (10:43 am in summer)
+  workflow_dispatch:
+    inputs:
+      practice:
+        description: 'Practice run (send nothing)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: outreach
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: outreach-data
+          path: data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check replies and send
+        env:
+          OUTREACH_DATA: data
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: node outreach/run.js ${{ inputs.practice && '--dry' || '' }}
+      - name: Save the updated list
+        if: always()
+        working-directory: data
+        run: |
+          git config user.name "Outreach bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Outreach: $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1

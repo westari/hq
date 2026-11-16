@@ -1,0 +1,12 @@
+{
+  "appName": "Seeker",
+  "fromName": "Ari",
+  "uploadLink": "",
+  "mailingAddress": "",
+  "live": false,
+  "ramp": [10, 20, 35, 50],
+  "followUpDays": 4,
+  "maxFollowUps": 1,
+  "followUpApproved": false,
+  "secondsBetweenEmails": [20, 45]
+}
